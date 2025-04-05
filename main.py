@@ -13,22 +13,6 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Neododge"
 
-class TitleView(arcade.View):
-    def on_show(self):
-        arcade.set_background_color(arcade.color.DARK_SLATE_BLUE)
-
-    def on_draw(self):
-        self.clear()
-        arcade.draw_text("NEODODGE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50,
-                         arcade.color.CYAN, font_size=40, anchor_x="center")
-        arcade.draw_text("Click to Play", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 20,
-                         arcade.color.LIGHT_GRAY, font_size=20, anchor_x="center")
-
-    def on_mouse_press(self, x, y, button, modifiers):
-        game_view = NeododgeGame()
-        game_view.setup()
-        self.window.show_view(game_view)
-
 class NeododgeGame(arcade.View):
     def __init__(self):
         super().__init__()
