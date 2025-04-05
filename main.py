@@ -42,7 +42,7 @@ class NeododgeGame(arcade.View):
         self.dash_artifact = None
         self.orbs = arcade.SpriteList()
         self.pickup_texts = []
-        self.level_duration = 20.0
+        self.wave_duration = 20.0
         self.level_timer = 0.0
         self.orb_spawn_timer = random.uniform(4, 8)
         self.artifact_spawn_timer = random.uniform(20, 30)
@@ -52,6 +52,7 @@ class NeododgeGame(arcade.View):
         self.wave_pause_timer = 0.0
         self.wave_message_alpha = 255
         self.wave_message = ""
+        self.wave_pause = False
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -103,6 +104,12 @@ class NeododgeGame(arcade.View):
         # Draw Score
         arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
 
+        # Draw wave timer
+        if not self.wave_pause:
+            time_left = max(0, int(self.wave_duration - self.level_timer))
+            arcade.draw_text(f"⏱ {time_left}s left", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60,
+                             arcade.color.LIGHT_GRAY, 16, anchor_x="center")
+
         # Draw wave message if not in wave
         if not self.in_wave and self.wave_message:
             fade_color = (*arcade.color.LIGHT_GREEN[:3], self.wave_message_alpha)  # Add alpha to RGB
@@ -124,7 +131,7 @@ class NeododgeGame(arcade.View):
         if self.in_wave:
             self.level_timer += delta_time
 
-            if self.level_timer >= self.level_duration:
+            if self.level_timer >= self.wave_duration:
                 self.in_wave = False
                 self.wave_pause_timer = 3.0  # 3 second pause
                 self.wave_message_alpha = 255
@@ -137,7 +144,7 @@ class NeododgeGame(arcade.View):
             if self.wave_pause_timer <= 0:
                 self.wave_manager.next_wave()
                 self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
-                self.level_duration = 20 + (self.wave_manager.wave - 1) * 5
+                self.wave_duration = 20 + (self.wave_manager.wave - 1) * 5
                 self.level_timer = 0
                 self.in_wave = True
                 print(f"🚀 Starting Wave {self.wave_manager.wave}")
