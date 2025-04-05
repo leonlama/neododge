@@ -15,6 +15,9 @@ class Player(arcade.Sprite):
         self.target_y = start_y
         self.can_dash = False
         self.dash_timer = 0
+        self.invincible = False
+        self.invincibility_timer = 0
+        self.blink_state = True  # for visual flicker
 
     def set_target(self, x, y):
         self.target_x = x
@@ -32,6 +35,19 @@ class Player(arcade.Sprite):
             self.center_x += direction_x * PLAYER_SPEED * delta_time
             self.center_y += direction_y * PLAYER_SPEED * delta_time
 
+        if self.invincible:
+            self.invincibility_timer += delta_time
+            # Toggle blink every 0.1s
+            if int(self.invincibility_timer * 10) % 2 == 0:
+                self.blink_state = False
+            else:
+                self.blink_state = True
+
+            if self.invincibility_timer >= 1.0:
+                self.invincible = False
+                self.invincibility_timer = 0
+                self.blink_state = True
+
     def try_dash(self):
         if self.can_dash and self.dash_timer >= DASH_COOLDOWN:
             dx = self.target_x - self.center_x
@@ -45,3 +61,7 @@ class Player(arcade.Sprite):
                 self.center_y += direction_y * DASH_DISTANCE
                 self.dash_timer = 0
                 print("💨 Dashed!")
+
+    def draw(self):
+        if not self.invincible or (self.invincible and self.blink_state):
+            super().draw()

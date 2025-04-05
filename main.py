@@ -16,7 +16,7 @@ class NeododgeGame(arcade.Window):
         arcade.set_background_color(arcade.color.BLACK)
         self.player = None
         self.enemies = None
-        self.player_health = 100
+        self.player_hearts = 3.0  # float to handle half-heart damage
         self.dash_artifact = None
 
     def setup(self):
@@ -40,10 +40,19 @@ class NeododgeGame(arcade.Window):
         for enemy in self.enemies:
             enemy.bullets.draw()
 
-        # Draw HP bar
-        health_bar_width = self.player_health * 2
-        arcade.draw_rectangle_filled(100, SCREEN_HEIGHT - 20, health_bar_width, 20, arcade.color.GREEN)
-        arcade.draw_text(f"HP: {self.player_health}", 10, SCREEN_HEIGHT - 45, arcade.color.WHITE, 14)
+        # Draw heart icons
+        full_heart = int(self.player_hearts)
+        half_heart = 1 if self.player_hearts % 1 >= 0.5 else 0
+
+        for i in range(3):
+            x = 30 + i * 40
+            y = SCREEN_HEIGHT - 30
+            if i < full_heart:
+                arcade.draw_text("❤", x, y, arcade.color.RED, 30)
+            elif i < full_heart + half_heart:
+                arcade.draw_text("♥", x, y, arcade.color.LIGHT_RED_OCHRE, 30)  # half-heart style
+            else:
+                arcade.draw_text("♡", x, y, arcade.color.GRAY, 30)
 
     def on_update(self, delta_time):
         self.player.update(delta_time)
@@ -55,13 +64,24 @@ class NeododgeGame(arcade.Window):
 
         for enemy in self.enemies:
             enemy.update(delta_time)
+            if not self.player.invincible and arcade.check_for_collision(enemy, self.player):
+                self.player_hearts -= 1
+                self.player.invincible = True
+                print(f"👾 Touched enemy! Hearts: {self.player_hearts}")
+                if self.player_hearts <= 0:
+                    print("💀 Game Over!")
+                    arcade.close_window()
             for bullet in enemy.bullets:
                 bullet.update(delta_time)
 
-                if bullet.age > 0.2 and arcade.check_for_collision(bullet, self.player):
-                    self.player_health -= 5
-                    print(f"🧨 Bullet hit! HP: {self.player_health}")
+                if bullet.age > 0.2 and not self.player.invincible and arcade.check_for_collision(bullet, self.player):
+                    self.player_hearts -= 0.5
+                    self.player.invincible = True
+                    print(f"💥 Bullet hit! Hearts: {self.player_hearts}")
                     enemy.bullets.remove(bullet)
+                    if self.player_hearts <= 0:
+                        print("💀 Game Over!")
+                        arcade.close_window()
 
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:
