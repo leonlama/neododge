@@ -1,7 +1,7 @@
 import arcade
 import math
 
-PLAYER_SPEED = 300  # pixels per second
+PLAYER_SPEED = 300
 
 class Player(arcade.Sprite):
     def __init__(self, start_x, start_y):
@@ -24,6 +24,5 @@ class Player(arcade.Sprite):
         if distance > 2:
             direction_x = dx / distance
             direction_y = dy / distance
-
             self.center_x += direction_x * PLAYER_SPEED * delta_time
             self.center_y += direction_y * PLAYER_SPEED * delta_time
