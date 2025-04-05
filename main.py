@@ -36,6 +36,10 @@ class NeododgeGame(arcade.View):
         self.dash_artifact = None
         self.orbs = None
         self.pickup_texts = []  # List of (text, x, y, timer)
+        self.level_duration = 90.0
+        self.level_timer = 0.0
+        self.orb_spawn_timer = random.uniform(4, 8)
+        self.artifact_spawn_timer = random.uniform(20, 30)
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -128,6 +132,40 @@ class NeododgeGame(arcade.View):
     def on_update(self, delta_time):
         self.player.update(delta_time)
         self.orbs.update()  # include in on_update()
+
+        self.level_timer += delta_time
+        self.orb_spawn_timer -= delta_time
+        self.artifact_spawn_timer -= delta_time
+
+        # Procedural ORB spawn
+        if self.orb_spawn_timer <= 0:
+            x = random.randint(50, SCREEN_WIDTH - 50)
+            y = random.randint(50, SCREEN_HEIGHT - 50)
+            
+            orb_choices = [
+                "gray", "red", "gold", 
+                "speed_10", "speed_20", "speed_35",
+                "mult_1_5", "mult_2",
+                "cooldown", "shield",
+                # Debuff orbs if implemented
+                "debuff_slow", "debuff_big_hitbox", "debuff_mult_0_5", "debuff_mult_0_25", "debuff_cooldown"
+            ]
+
+            orb_type = random.choice(orb_choices)
+            self.orbs.append(Orb(x, y, orb_type))
+            self.orb_spawn_timer = random.uniform(4, 8)
+
+        # Procedural ARTIFACT spawn (e.g. Dash)
+        if self.artifact_spawn_timer <= 0 and not self.dash_artifact:
+            x = random.randint(50, SCREEN_WIDTH - 50)
+            y = random.randint(50, SCREEN_HEIGHT - 50)
+            self.dash_artifact = DashArtifact(x, y)
+            self.artifact_spawn_timer = random.uniform(20, 30)
+
+        # Check level end
+        if self.level_timer >= self.level_duration:
+            print("✅ Level 1 Complete!")
+            # later: transition to next wave or screen
 
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             self.player.can_dash = True
