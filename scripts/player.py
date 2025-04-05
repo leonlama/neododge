@@ -26,6 +26,8 @@ class Player(arcade.Sprite):
         self.shield = False
         self.mult_timer = 0
         self.cooldown_factor = 1.0  # 1.0 = normal, 0.5 = 2x faster
+        self.artifacts = []  # Active ability names (max 1–3?)
+        self.active_orbs = []  # list of [name:str, time:float]
 
     def set_target(self, x, y):
         self.target_x = x
@@ -39,6 +41,11 @@ class Player(arcade.Sprite):
             if self.mult_timer <= 0:
                 self.multiplier = 1.0
                 print("🔚 Multiplier expired.")
+
+        # Tick down all active orb durations
+        for orb in self.active_orbs:
+            orb[1] -= delta_time
+        self.active_orbs = [orb for orb in self.active_orbs if orb[1] > 0]
 
         dx = self.target_x - self.center_x
         dy = self.target_y - self.center_y

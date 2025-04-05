@@ -20,6 +20,7 @@ class NeododgeGame(arcade.Window):
         self.player_hearts = 3.0  # float to handle half-heart damage
         self.dash_artifact = None
         self.orbs = None
+        self.pickup_texts = []  # List of (text, x, y, timer)
 
     def setup(self):
         self.player = Player(self.width // 2, self.height // 2)
@@ -72,12 +73,29 @@ class NeododgeGame(arcade.Window):
             x = x_start + (self.player.max_slots + i) * 40
             arcade.draw_text("💛", x, y, arcade.color.GOLD, 30)
 
+        # Draw top-right orb status
+        x = SCREEN_WIDTH - 200
+        y = SCREEN_HEIGHT - 30
+
+        for i, orb in enumerate(self.player.active_orbs):
+            label = f"{orb[0]} ({int(orb[1])}s)"
+            arcade.draw_text(label, x, y - i * 20, arcade.color.LIGHT_YELLOW, 14, anchor_x="left")
+
+        # Draw artifact icons (or names) bottom-left
+        for i, art in enumerate(self.player.artifacts):
+            arcade.draw_text(art, 20, 20 + i * 20, arcade.color.GOLD, 14)
+
+        # Draw pickup texts
+        for text, x, y, _ in self.pickup_texts:
+            arcade.draw_text(text, x, y + 20, arcade.color.WHITE, 14, anchor_x="center")
+
     def on_update(self, delta_time):
         self.player.update(delta_time)
         self.orbs.update()  # include in on_update()
 
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             self.player.can_dash = True
+            self.player.artifacts.append("Dash")
             self.dash_artifact = None
             print("✨ Dash unlocked!")
 
@@ -107,41 +125,59 @@ class NeododgeGame(arcade.Window):
             if orb.age > 0.5 and arcade.check_for_collision(orb, self.player):
                 if orb.orb_type == "gray":
                     self.player.max_slots += 1
+                    self.pickup_texts.append(["🩶 Bonus heart slot gained!", self.player.center_x, self.player.center_y, 1.0])
                     print("🩶 Bonus heart slot gained!")
                 elif orb.orb_type == "red":
                     if self.player.current_hearts < self.player.max_slots:
                         self.player.current_hearts += 1
+                        self.pickup_texts.append(["❤️ Heart restored!", self.player.center_x, self.player.center_y, 1.0])
                         print("❤️ Heart restored!")
                     else:
                         print("❌ No empty slot for red orb.")
                 elif orb.orb_type == "gold":
                     self.player.gold_hearts += 1
+                    self.pickup_texts.append(["💛 Golden heart gained!", self.player.center_x, self.player.center_y, 1.0])
                     print("💛 Golden heart gained!")
                 elif orb.orb_type == "speed_10":
                     self.player.speed_bonus += 0.10
+                    self.pickup_texts.append(["⚡ Speed +10%", self.player.center_x, self.player.center_y, 1.0])
                     print("⚡ Speed +10%")
                 elif orb.orb_type == "speed_20":
                     self.player.speed_bonus += 0.20
+                    self.pickup_texts.append(["⚡ Speed +20%", self.player.center_x, self.player.center_y, 1.0])
                     print("⚡ Speed +20%")
                 elif orb.orb_type == "speed_35":
                     self.player.speed_bonus += 0.35
+                    self.pickup_texts.append(["⚡ Speed +35%", self.player.center_x, self.player.center_y, 1.0])
                     print("⚡ Speed +35%")
                 elif orb.orb_type == "mult_1_5":
                     self.player.multiplier = 1.5
                     self.player.mult_timer = 15
+                    self.player.active_orbs.append(["Score x1.5", 15])
+                    self.pickup_texts.append(["💥 Score x1.5 for 15s", self.player.center_x, self.player.center_y, 1.0])
                     print("💥 Score x1.5 for 15s")
                 elif orb.orb_type == "mult_2":
                     self.player.multiplier = 2.0
                     self.player.mult_timer = 15
+                    self.player.active_orbs.append(["Score x2", 15])
+                    self.pickup_texts.append(["💥 Score x2 for 15s", self.player.center_x, self.player.center_y, 1.0])
                     print("💥 Score x2 for 15s")
                 elif orb.orb_type == "cooldown":
                     self.player.cooldown_factor = 0.5
+                    self.player.active_orbs.append(["Cooldown ↓", 15])
+                    self.pickup_texts.append(["🔁 Cooldown reduced!", self.player.center_x, self.player.center_y, 1.0])
                     print("🔁 Cooldown reduced!")
                 elif orb.orb_type == "shield":
                     self.player.shield = True
+                    self.pickup_texts.append(["🛡️ Shield acquired!", self.player.center_x, self.player.center_y, 1.0])
                     print("🛡️ Shield acquired!")
 
                 self.orbs.remove(orb)
+
+        # Update pickup texts
+        for t in self.pickup_texts:
+            t[3] -= delta_time
+        self.pickup_texts = [t for t in self.pickup_texts if t[3] > 0]
 
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:
