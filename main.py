@@ -6,6 +6,8 @@ from scripts.enemy import Enemy
 from scripts.dash_artifact import DashArtifact
 from scripts.orb import Orb
 
+from scripts.start_view import StartView
+
 # --- Constants ---
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -310,7 +312,7 @@ class NeododgeGame(arcade.View):
             self.player.set_target(self.player.center_x, self.player.center_y)
 
 if __name__ == "__main__":
-    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    start_view = TitleView()
+    window = arcade.Window(800, 600, "Neododge")
+    start_view = StartView()
     window.show_view(start_view)
     arcade.run()
