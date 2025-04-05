@@ -71,6 +71,18 @@ class Player(arcade.Sprite):
                 self.dash_timer = 0
                 print("💨 Dashed!")
 
+    def take_damage(self, amount: float):
+        """Handle taking damage, subtracting golden hearts first."""
+        while amount > 0:
+            if self.gold_hearts > 0:
+                self.gold_hearts -= 1
+                amount -= 1
+            elif self.current_hearts > 0:
+                self.current_hearts -= 0.5
+                amount -= 0.5
+            else:
+                break
+
     def draw(self):
         if not self.invincible or (self.invincible and self.blink_state):
             super().draw()

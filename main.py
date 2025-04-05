@@ -80,21 +80,21 @@ class NeododgeGame(arcade.Window):
         for enemy in self.enemies:
             enemy.update(delta_time)
             if not self.player.invincible and arcade.check_for_collision(enemy, self.player):
-                self.player_hearts -= 1
+                self.player.take_damage(1.0)  # for enemy contact
                 self.player.invincible = True
-                print(f"👾 Touched enemy! Hearts: {self.player_hearts}")
-                if self.player_hearts <= 0:
+                print(f"👾 Touched enemy! Hearts: {self.player.current_hearts + self.player.gold_hearts}")
+                if self.player.current_hearts + self.player.gold_hearts <= 0:
                     print("💀 Game Over!")
                     arcade.close_window()
             for bullet in enemy.bullets:
                 bullet.update(delta_time)
 
                 if bullet.age > 0.2 and not self.player.invincible and arcade.check_for_collision(bullet, self.player):
-                    self.player_hearts -= 0.5
+                    self.player.take_damage(0.5)  # for bullets
                     self.player.invincible = True
-                    print(f"💥 Bullet hit! Hearts: {self.player_hearts}")
+                    print(f"💥 Bullet hit! Hearts: {self.player.current_hearts + self.player.gold_hearts}")
                     enemy.bullets.remove(bullet)
-                    if self.player_hearts <= 0:
+                    if self.player.current_hearts + self.player.gold_hearts <= 0:
                         print("💀 Game Over!")
                         arcade.close_window()
 
