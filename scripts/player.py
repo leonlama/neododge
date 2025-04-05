@@ -25,15 +25,21 @@ class Player(arcade.Sprite):
 
     def update(self, delta_time: float = 1 / 60):
         self.dash_timer += delta_time
+
         dx = self.target_x - self.center_x
         dy = self.target_y - self.center_y
         distance = math.hypot(dx, dy)
 
-        if distance > 2:
-            direction_x = dx / distance
-            direction_y = dy / distance
-            self.center_x += direction_x * PLAYER_SPEED * delta_time
-            self.center_y += direction_y * PLAYER_SPEED * delta_time
+        # Stop moving if close enough (snap into place)
+        if distance < 2:
+            self.center_x = self.target_x
+            self.center_y = self.target_y
+            return
+
+        direction_x = dx / distance
+        direction_y = dy / distance
+        self.center_x += direction_x * PLAYER_SPEED * delta_time
+        self.center_y += direction_y * PLAYER_SPEED * delta_time
 
         if self.invincible:
             self.invincibility_timer += delta_time
