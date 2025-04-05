@@ -11,10 +11,25 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Neododge"
 
-class NeododgeGame(arcade.Window):
+class TitleView(arcade.View):
+    def on_show(self):
+        arcade.set_background_color(arcade.color.DARK_SLATE_BLUE)
+
+    def on_draw(self):
+        self.clear()
+        arcade.draw_text("NEODODGE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50,
+                         arcade.color.CYAN, font_size=40, anchor_x="center")
+        arcade.draw_text("Click to Play", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 20,
+                         arcade.color.LIGHT_GRAY, font_size=20, anchor_x="center")
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        game_view = NeododgeGame()
+        game_view.setup()
+        self.window.show_view(game_view)
+
+class NeododgeGame(arcade.View):
     def __init__(self):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-        arcade.set_background_color(arcade.color.BLACK)
+        super().__init__()
         self.player = None
         self.enemies = None
         self.player_hearts = 3.0  # float to handle half-heart damage
@@ -22,8 +37,11 @@ class NeododgeGame(arcade.Window):
         self.orbs = None
         self.pickup_texts = []  # List of (text, x, y, timer)
 
+    def on_show(self):
+        arcade.set_background_color(arcade.color.BLACK)
+
     def setup(self):
-        self.player = Player(self.width // 2, self.height // 2)
+        self.player = Player(self.window.width // 2, self.window.height // 2)
         self.enemies = arcade.SpriteList()
         self.dash_artifact = DashArtifact(600, 300)
         self.orbs = arcade.SpriteList()
@@ -179,16 +197,16 @@ class NeododgeGame(arcade.Window):
                     print("⚡ Speed +35%")
                 elif orb.orb_type == "mult_1_5":
                     self.player.multiplier = 1.5
-                    self.player.mult_timer = 15
-                    self.player.active_orbs.append(["Score x1.5", 15])
-                    self.pickup_texts.append(["💥 Score x1.5 for 15s", self.player.center_x, self.player.center_y, 1.0])
-                    print("💥 Score x1.5 for 15s")
+                    self.player.mult_timer = 30
+                    self.player.active_orbs.append(["Score x1.5", 30])
+                    self.pickup_texts.append(["💥 Score x1.5 for 30s", self.player.center_x, self.player.center_y, 1.0])
+                    print("💥 Score x1.5 for 30s")
                 elif orb.orb_type == "mult_2":
                     self.player.multiplier = 2.0
-                    self.player.mult_timer = 15
-                    self.player.active_orbs.append(["Score x2", 15])
-                    self.pickup_texts.append(["💥 Score x2 for 15s", self.player.center_x, self.player.center_y, 1.0])
-                    print("💥 Score x2 for 15s")
+                    self.player.mult_timer = 30
+                    self.player.active_orbs.append(["Score x2", 30])
+                    self.pickup_texts.append(["💥 Score x2 for 30s", self.player.center_x, self.player.center_y, 1.0])
+                    print("💥 Score x2 for 30s")
                 elif orb.orb_type == "cooldown":
                     self.player.cooldown_factor = 0.5
                     self.player.active_orbs.append(["Cooldown ↓", 15])
@@ -215,6 +233,7 @@ class NeododgeGame(arcade.Window):
             self.player.try_dash()
 
 if __name__ == "__main__":
-    game = NeododgeGame()
-    game.setup()
+    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    start_view = TitleView()
+    window.show_view(start_view)
     arcade.run()
