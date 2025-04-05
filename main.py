@@ -44,6 +44,7 @@ class NeododgeGame(arcade.View):
         self.level_timer = 0.0
         self.orb_spawn_timer = random.uniform(4, 8)
         self.artifact_spawn_timer = random.uniform(20, 30)
+        self.score = 0
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -93,12 +94,16 @@ class NeododgeGame(arcade.View):
         for text, x, y, _ in self.pickup_texts:
             arcade.draw_text(text, x, y + 20, arcade.color.WHITE, 14, anchor_x="center")
 
+        # Draw Score
+        arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
+
     def on_update(self, delta_time):
         self.player.update(delta_time)
         self.orbs.update()
         self.level_timer += delta_time
         self.orb_spawn_timer -= delta_time
         self.artifact_spawn_timer -= delta_time
+        self.score += delta_time * 10  # 10 points per second survived
 
         if self.orb_spawn_timer <= 0:
             x, y = random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50)
@@ -125,13 +130,22 @@ class NeododgeGame(arcade.View):
 
         for enemy in self.enemies:
             enemy.update(delta_time)
-            if not self.player.invincible and arcade.check_for_collision(enemy, self.player):
-                self.player.take_damage(1.0)
             for bullet in enemy.bullets:
                 bullet.update(delta_time)
+
+                # 🔥 Close dodge detection (within 35 px, but not hit)
+                dist = arcade.get_distance_between_sprites(self.player, bullet)
+                if 10 < dist < 35:
+                    self.score += 1
+                    print("🌀 Close dodge! +1 score")
+
+                # Bullet hit check
                 if bullet.age > 0.2 and not self.player.invincible and arcade.check_for_collision(bullet, self.player):
                     self.player.take_damage(0.5)
                     enemy.bullets.remove(bullet)
+
+            if not self.player.invincible and arcade.check_for_collision(enemy, self.player):
+                self.player.take_damage(1.0)
 
         for orb in self.orbs:
             orb.update(delta_time)
