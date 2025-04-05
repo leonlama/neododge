@@ -4,6 +4,7 @@ import random
 from scripts.player import Player
 from scripts.enemy import Enemy
 from scripts.dash_artifact import DashArtifact
+from scripts.orb import Orb
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -18,21 +19,29 @@ class NeododgeGame(arcade.Window):
         self.enemies = None
         self.player_hearts = 3.0  # float to handle half-heart damage
         self.dash_artifact = None
+        self.orbs = None
 
     def setup(self):
         self.player = Player(self.width // 2, self.height // 2)
         self.enemies = arcade.SpriteList()
         self.dash_artifact = DashArtifact(600, 300)
+        self.orbs = arcade.SpriteList()
 
         # Spawn 1 of each type
         self.enemies.append(Enemy(100, 100, self.player, behavior="chaser"))
         self.enemies.append(Enemy(700, 100, self.player, behavior="wander"))
         self.enemies.append(Enemy(400, 500, self.player, behavior="shooter"))
 
+        # Example spawns
+        self.orbs.append(Orb(300, 300, "gray"))
+        self.orbs.append(Orb(300, 500, "red"))
+        self.orbs.append(Orb(500, 300, "gold"))
+
     def on_draw(self):
         self.clear()
         self.player.draw()
         self.enemies.draw()
+        self.orbs.draw()
 
         if self.dash_artifact:
             self.dash_artifact.draw()
@@ -40,22 +49,28 @@ class NeododgeGame(arcade.Window):
         for enemy in self.enemies:
             enemy.bullets.draw()
 
-        # Draw heart icons
-        full_heart = int(self.player_hearts)
-        half_heart = 1 if self.player_hearts % 1 >= 0.5 else 0
+        # Draw heart icons (left-aligned)
+        x_start = 30
+        y = SCREEN_HEIGHT - 30
 
-        for i in range(3):
-            x = 30 + i * 40
-            y = SCREEN_HEIGHT - 30
-            if i < full_heart:
+        # Draw red/gray hearts
+        for i in range(self.player.max_slots):
+            x = x_start + i * 40
+            if i < int(self.player.current_hearts):
                 arcade.draw_text("❤", x, y, arcade.color.RED, 30)
-            elif i < full_heart + half_heart:
-                arcade.draw_text("♥", x, y, arcade.color.LIGHT_RED_OCHRE, 30)  # half-heart style
+            elif i < self.player.current_hearts:
+                arcade.draw_text("♥", x, y, arcade.color.LIGHT_RED_OCHRE, 30)
             else:
                 arcade.draw_text("♡", x, y, arcade.color.GRAY, 30)
 
+        # Draw golden hearts next to them
+        for i in range(self.player.gold_hearts):
+            x = x_start + (self.player.max_slots + i) * 40
+            arcade.draw_text("💛", x, y, arcade.color.GOLD, 30)
+
     def on_update(self, delta_time):
         self.player.update(delta_time)
+        self.orbs.update()  # include in on_update()
 
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             self.player.can_dash = True
@@ -82,6 +97,24 @@ class NeododgeGame(arcade.Window):
                     if self.player_hearts <= 0:
                         print("💀 Game Over!")
                         arcade.close_window()
+
+        for orb in self.orbs:
+            orb.update(delta_time)
+            if orb.age > 0.5 and arcade.check_for_collision(orb, self.player):
+                if orb.orb_type == "gray":
+                    self.player.max_slots += 1
+                    print("🩶 Bonus heart slot gained!")
+                elif orb.orb_type == "red":
+                    if self.player.current_hearts < self.player.max_slots:
+                        self.player.current_hearts += 1
+                        print("❤️ Heart restored!")
+                    else:
+                        print("❌ No empty slot for red orb.")
+                elif orb.orb_type == "gold":
+                    self.player.gold_hearts += 1
+                    print("💛 Golden heart gained!")
+
+                self.orbs.remove(orb)
 
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:

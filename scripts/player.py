@@ -18,6 +18,9 @@ class Player(arcade.Sprite):
         self.invincible = False
         self.invincibility_timer = 0
         self.blink_state = True  # for visual flicker
+        self.max_slots = 3
+        self.current_hearts = 3.0
+        self.gold_hearts = 0
 
     def set_target(self, x, y):
         self.target_x = x
