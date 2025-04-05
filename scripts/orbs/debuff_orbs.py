@@ -41,9 +41,13 @@ class DebuffOrb(arcade.Sprite):
             print(self.message)
 
         elif self.orb_type == "big_hitbox":
-            player.hitbox_scale = 2.0
-            player.active_orbs.append(["⬛ Big Hitbox", 30])
-            print(self.message)
+            if not hasattr(player, "original_size"):
+                player.original_size = (player.width, player.height)
+            player.width = player.original_size[0] * 1.5
+            player.height = player.original_size[1] * 1.5
+            player.big_hitbox_timer = 5.0  # lasts 5 seconds
+            player.set_hit_box(player.texture.hit_box_points)
+            print("⬛ Big Hitbox applied")
 
         elif self.orb_type == "mult_down_0_5":
             player.multiplier = 0.5

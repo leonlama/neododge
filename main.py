@@ -9,6 +9,12 @@ from scripts.orbs.debuff_orbs import DebuffOrb
 from scripts.start_view import StartView
 from scripts.game_over_view import GameOverView
 from scripts.wave_manager import WaveManager
+from scripts.artifacts.artifacts import (
+    MagnetPulseArtifact,
+    SlowFieldArtifact,
+    BulletTimeArtifact,
+    CloneDashArtifact
+)
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -53,6 +59,7 @@ class NeododgeGame(arcade.View):
         self.wave_message_alpha = 255
         self.wave_message = ""
         self.wave_pause = False
+        self.clones = []
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -62,7 +69,8 @@ class NeododgeGame(arcade.View):
         self.player.window = self.window  # 💡 Makes GameOverView possible
         self.player.parent_view = self    # 💡 So player can access score
         self.enemies = arcade.SpriteList()
-        self.dash_artifact = DashArtifact(600, 300)
+        x, y = random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50)
+        self.dash_artifact = DashArtifact(x, y)
         self.orbs = arcade.SpriteList()
         self.wave_manager = WaveManager(self.player)
         self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
@@ -169,7 +177,7 @@ class NeododgeGame(arcade.View):
 
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             self.player.can_dash = True
-            self.player.artifacts.append("Dash")
+            self.player.artifacts.append(DashArtifact())
             self.dash_artifact = None
             print("✨ Dash unlocked!")
 
@@ -213,6 +221,34 @@ class NeododgeGame(arcade.View):
             self.player.try_dash()
         elif symbol == arcade.key.S:
             self.player.set_target(self.player.center_x, self.player.center_y)
+
+        # 🎯 Artifact Activation
+        key_map = {
+            arcade.key.Q: 0,
+            arcade.key.W: 1,
+            arcade.key.E: 2,
+            arcade.key.R: 3,
+        }
+
+        if symbol in key_map:
+            idx = key_map[symbol]
+            if idx < len(self.player.artifacts):
+                artifact = self.player.artifacts[idx]
+                name = artifact.__class__.__name__
+
+                # 💡 Dispatch effect by type
+                if name == "MagnetPulseArtifact":
+                    artifact.apply_effect(self.player, self.orbs)
+                elif name == "SlowFieldArtifact":
+                    for enemy in self.enemies:
+                        for bullet in enemy.bullets:
+                            artifact.apply_effect(self.player, [bullet])
+                elif name == "BulletTimeArtifact":
+                    artifact.apply_effect(self.enemies)
+                elif name == "CloneDashArtifact":
+                    artifact.apply_effect(self.player, self.enemies)
+                elif name == "DashArtifact":
+                    self.player.try_dash()
 
 if __name__ == "__main__":
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)

@@ -94,6 +94,13 @@ class Player(arcade.Sprite):
                 self.invincibility_timer = 0
                 self.blink_state = True
 
+        if hasattr(self, "big_hitbox_timer") and self.big_hitbox_timer > 0:
+            self.big_hitbox_timer -= delta_time
+            if self.big_hitbox_timer <= 0:
+                self.width, self.height = self.original_size
+                self.set_hit_box(self.texture.hit_box_points)
+                print("🧼 Big Hitbox expired")
+
     def try_dash(self):
         if self.can_dash and self.dash_timer >= DASH_COOLDOWN * self.cooldown_factor:
             dx = self.target_x - self.center_x
@@ -190,4 +197,4 @@ class Player(arcade.Sprite):
     def draw_artifacts(self):
         """Draw artifact names or icons at bottom-left of the screen."""
         for i, art in enumerate(self.artifacts):
-            arcade.draw_text(art, 20, 20 + i * 20, arcade.color.GOLD, 14)
+            arcade.draw_text(art.name, 20, 20 + i * 20, arcade.color.GOLD, 14)
