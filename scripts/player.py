@@ -3,7 +3,7 @@ import math
 
 PLAYER_SPEED = 300
 DASH_DISTANCE = 150
-DASH_COOLDOWN = 1.5  # seconds
+DASH_COOLDOWN = 3  # seconds
 
 class Player(arcade.Sprite):
     def __init__(self, start_x, start_y):
@@ -78,7 +78,7 @@ class Player(arcade.Sprite):
     def try_dash(self):
         if self.can_dash and self.dash_timer >= DASH_COOLDOWN * self.cooldown_factor:
             dx = self.target_x - self.center_x
-            dy = self.target_y - self.center_y
+            dy = self.target_y - self.target_y
             distance = math.hypot(dx, dy)
 
             if distance > 0:
@@ -90,11 +90,18 @@ class Player(arcade.Sprite):
                 print("💨 Dashed!")
 
     def take_damage(self, amount: float):
-        """Handle taking damage, subtracting golden hearts first."""
+        if self.invincible:
+            print("🚫 Player is invincible! No damage taken.")
+            return
+
         if self.shield:
             self.shield = False
             print("🛡️ Shield blocked the damage!")
             return
+
+        print(f"💔 Damage taken: {amount}")
+        self.invincible = True
+        self.invincibility_timer = 0
 
         while amount > 0:
             if self.gold_hearts > 0:
@@ -106,6 +113,59 @@ class Player(arcade.Sprite):
             else:
                 break
 
+        total_health = self.current_hearts + self.gold_hearts
+        print(f"💔 Damage taken! Remaining Hearts: {total_health}")
+        if total_health <= 0:
+            print("💀 Game Over!")
+            arcade.close_window()
+
     def draw(self):
-        if not self.invincible or (self.invincible and self.blink_state):
+        if not self.invincible or self.blink_state:
             super().draw()
+
+    def draw_hearts(self, x_start=30, y=570):
+        for i in range(self.max_slots):
+            x = x_start + i * 40
+            if i < int(self.current_hearts):
+                arcade.draw_text("❤", x, y, arcade.color.RED, 30)
+            elif i < self.current_hearts:
+                arcade.draw_text("♥", x, y, arcade.color.LIGHT_RED_OCHRE, 30)
+            else:
+                arcade.draw_text("♡", x, y, arcade.color.GRAY, 30)
+
+        for i in range(self.gold_hearts):
+            x = x_start + (self.max_slots + i) * 40
+            arcade.draw_text("💛", x, y, arcade.color.GOLD, 30)
+
+    def draw_orb_status(self, screen_width=800, screen_height=600):
+        x = screen_width - 220
+        y = screen_height - 30
+        line_height = 20
+        i = 0
+
+        # Shield icon
+        if self.shield:
+            arcade.draw_text("🛡️ Shield Active", x, y - i * line_height, arcade.color.LIGHT_GREEN, 14)
+            i += 1
+
+        # Speed bonus
+        if self.speed_bonus > 1.0:
+            percent = int((self.speed_bonus - 1) * 100)
+            arcade.draw_text(f"⚡ Speed +{percent}%", x, y - i * line_height, arcade.color.LIGHT_BLUE, 14)
+            i += 1
+
+        # Cooldown reduction
+        if self.cooldown_factor < 1.0:
+            arcade.draw_text(f"⏱️ Cooldown x{self.cooldown_factor}", x, y - i * line_height, arcade.color.ORCHID, 14)
+            i += 1
+
+        # Timed orb effects (e.g., multipliers)
+        for orb in self.active_orbs:
+            label, time_left = orb
+            arcade.draw_text(f"{label} ({int(time_left)}s)", x, y - i * line_height, arcade.color.LIGHT_YELLOW, 14)
+            i += 1
+
+    def draw_artifacts(self):
+        """Draw artifact names or icons at bottom-left of the screen."""
+        for i, art in enumerate(self.artifacts):
+            arcade.draw_text(art, 20, 20 + i * 20, arcade.color.GOLD, 14)
