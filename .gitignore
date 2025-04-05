@@ -1,6 +1,2 @@
-.import/
-export.cfg
-export_presets.cfg
-*.import
-project.godot.tmp
-.godot/
+# Python venv
+venv/
