@@ -21,16 +21,18 @@ class NeododgeGame(arcade.Window):
         self.player = Player(self.width // 2, self.height // 2)
         self.enemies = arcade.SpriteList()
 
-        for _ in range(3):
-            x = random.randint(0, SCREEN_WIDTH)
-            y = random.randint(0, SCREEN_HEIGHT)
-            enemy = Enemy(x, y, self.player)
-            self.enemies.append(enemy)
+        # Spawn 1 of each type
+        self.enemies.append(Enemy(100, 100, self.player, behavior="chaser"))
+        self.enemies.append(Enemy(700, 100, self.player, behavior="wander"))
+        self.enemies.append(Enemy(400, 500, self.player, behavior="shooter"))
 
     def on_draw(self):
         self.clear()
         self.player.draw()
         self.enemies.draw()
+
+        for enemy in self.enemies:
+            enemy.bullets.draw()
 
         # Draw HP bar
         health_bar_width = self.player_health * 2
@@ -39,16 +41,16 @@ class NeododgeGame(arcade.Window):
 
     def on_update(self, delta_time):
         self.player.update(delta_time)
+
         for enemy in self.enemies:
             enemy.update(delta_time)
+            for bullet in enemy.bullets:
+                bullet.update(delta_time)
 
-        # Collision detection
-        for enemy in self.enemies:
-            if arcade.check_for_collision(enemy, self.player):
-                self.player_health -= 1
-                print(f"💥 Hit! HP: {self.player_health}")
-                if self.player_health <= 0:
-                    print("💀 Game Over!")
+                if bullet.age > 0.2 and arcade.check_for_collision(bullet, self.player):
+                    self.player_health -= 5
+                    print(f"🧨 Bullet hit! HP: {self.player_health}")
+                    enemy.bullets.remove(bullet)
 
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:
