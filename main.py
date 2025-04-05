@@ -231,6 +231,8 @@ class NeododgeGame(arcade.View):
     def on_key_press(self, symbol, modifiers):
         if symbol == arcade.key.SPACE:
             self.player.try_dash()
+        elif symbol == arcade.key.S:
+            self.player.set_target(self.player.center_x, self.player.center_y)
 
 if __name__ == "__main__":
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
