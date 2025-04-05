@@ -28,10 +28,20 @@ class Player(arcade.Sprite):
         self.cooldown_factor = 1.0  # 1.0 = normal, 0.5 = 2x faster
         self.artifacts = []  # Active ability names (max 1–3?)
         self.active_orbs = []  # list of [name:str, time:float]
+        self.vision_blur = False
+        self.vision_timer = 0.0
+        self.inverse_move = False
 
     def set_target(self, x, y):
-        self.target_x = x
-        self.target_y = y
+        if self.inverse_move:
+            # Invert the direction: move away from the target click
+            dx = x - self.center_x
+            dy = y - self.center_y
+            self.target_x = self.center_x - dx
+            self.target_y = self.center_y - dy
+        else:
+            self.target_x = x
+            self.target_y = y
 
     def update(self, delta_time: float = 1 / 60):
         self.dash_timer += delta_time * self.cooldown_factor
@@ -46,6 +56,11 @@ class Player(arcade.Sprite):
         for orb in self.active_orbs:
             orb[1] -= delta_time
         self.active_orbs = [orb for orb in self.active_orbs if orb[1] > 0]
+
+        if self.vision_blur:
+            self.vision_timer -= delta_time
+            if self.vision_timer <= 0:
+                self.vision_blur = False
 
         dx = self.target_x - self.center_x
         dy = self.target_y - self.center_y

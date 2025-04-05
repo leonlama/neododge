@@ -13,6 +13,25 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Neododge"
 
+def draw_vision_blur(player):
+    shape = arcade.ShapeElementList()
+
+    # Full screen black rectangle
+    bg = arcade.create_rectangle_filled(
+        SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT, arcade.color.BLACK
+    )
+    shape.append(bg)
+
+    # Transparent vision circle centered on player
+    vision_radius = 100  # Adjust as needed
+    vision = arcade.create_ellipse_filled(
+        player.center_x, player.center_y, vision_radius * 2, vision_radius * 2, (0, 0, 0, 0)
+    )
+    shape.append(vision)
+
+    # Use stencil-style blend to cut hole
+    shape.draw()
+
 class NeododgeGame(arcade.View):
     def __init__(self):
         super().__init__()
@@ -42,6 +61,18 @@ class NeododgeGame(arcade.View):
 
     def on_draw(self):
         self.clear()
+
+        if self.player.vision_blur:
+            arcade.draw_lrtb_rectangle_filled(
+                0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, arcade.color.BLACK
+            )
+            arcade.draw_circle_filled(
+                self.player.center_x,
+                self.player.center_y,
+                120,  # radius of visibility
+                (0, 0, 0, 0)
+            )
+
         self.player.draw()
         self.enemies.draw()
         self.orbs.draw()
@@ -50,6 +81,10 @@ class NeododgeGame(arcade.View):
             self.dash_artifact.draw()
         for enemy in self.enemies:
             enemy.bullets.draw()
+
+        # Draw vision blur if active
+        if self.player.vision_blur:
+            draw_vision_blur(self.player)
 
         # Draw HUD & GUI
         self.player.draw_hearts()

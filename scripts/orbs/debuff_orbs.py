@@ -69,6 +69,7 @@ class DebuffOrb(arcade.Sprite):
 
         elif self.orb_type == "vision_blur":
             player.vision_blur = True
+            player.vision_timer = 15.0
             player.active_orbs.append(["👁️ Vision Blur", 30])
             print(self.message)
 
