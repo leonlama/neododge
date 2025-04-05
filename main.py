@@ -36,6 +36,10 @@ class NeododgeGame(arcade.Window):
         self.orbs.append(Orb(300, 300, "gray"))
         self.orbs.append(Orb(300, 500, "red"))
         self.orbs.append(Orb(500, 300, "gold"))
+        self.orbs.append(Orb(200, 300, "speed_10"))
+        self.orbs.append(Orb(250, 300, "mult_1_5"))
+        self.orbs.append(Orb(300, 300, "cooldown"))
+        self.orbs.append(Orb(350, 300, "shield"))
 
     def on_draw(self):
         self.clear()
@@ -113,6 +117,29 @@ class NeododgeGame(arcade.Window):
                 elif orb.orb_type == "gold":
                     self.player.gold_hearts += 1
                     print("💛 Golden heart gained!")
+                elif orb.orb_type == "speed_10":
+                    self.player.speed_bonus += 0.10
+                    print("⚡ Speed +10%")
+                elif orb.orb_type == "speed_20":
+                    self.player.speed_bonus += 0.20
+                    print("⚡ Speed +20%")
+                elif orb.orb_type == "speed_35":
+                    self.player.speed_bonus += 0.35
+                    print("⚡ Speed +35%")
+                elif orb.orb_type == "mult_1_5":
+                    self.player.multiplier = 1.5
+                    self.player.mult_timer = 15
+                    print("💥 Score x1.5 for 15s")
+                elif orb.orb_type == "mult_2":
+                    self.player.multiplier = 2.0
+                    self.player.mult_timer = 15
+                    print("💥 Score x2 for 15s")
+                elif orb.orb_type == "cooldown":
+                    self.player.cooldown_factor = 0.5
+                    print("🔁 Cooldown reduced!")
+                elif orb.orb_type == "shield":
+                    self.player.shield = True
+                    print("🛡️ Shield acquired!")
 
                 self.orbs.remove(orb)
 

@@ -21,13 +21,24 @@ class Player(arcade.Sprite):
         self.max_slots = 3
         self.current_hearts = 3.0
         self.gold_hearts = 0
+        self.speed_bonus = 1.0
+        self.multiplier = 1.0
+        self.shield = False
+        self.mult_timer = 0
+        self.cooldown_factor = 1.0  # 1.0 = normal, 0.5 = 2x faster
 
     def set_target(self, x, y):
         self.target_x = x
         self.target_y = y
 
     def update(self, delta_time: float = 1 / 60):
-        self.dash_timer += delta_time
+        self.dash_timer += delta_time * self.cooldown_factor
+
+        if self.mult_timer > 0:
+            self.mult_timer -= delta_time
+            if self.mult_timer <= 0:
+                self.multiplier = 1.0
+                print("🔚 Multiplier expired.")
 
         dx = self.target_x - self.center_x
         dy = self.target_y - self.center_y
@@ -41,8 +52,8 @@ class Player(arcade.Sprite):
 
         direction_x = dx / distance
         direction_y = dy / distance
-        self.center_x += direction_x * PLAYER_SPEED * delta_time
-        self.center_y += direction_y * PLAYER_SPEED * delta_time
+        self.center_x += direction_x * PLAYER_SPEED * self.speed_bonus * delta_time
+        self.center_y += direction_y * PLAYER_SPEED * self.speed_bonus * delta_time
 
         if self.invincible:
             self.invincibility_timer += delta_time
@@ -58,7 +69,7 @@ class Player(arcade.Sprite):
                 self.blink_state = True
 
     def try_dash(self):
-        if self.can_dash and self.dash_timer >= DASH_COOLDOWN:
+        if self.can_dash and self.dash_timer >= DASH_COOLDOWN * self.cooldown_factor:
             dx = self.target_x - self.center_x
             dy = self.target_y - self.center_y
             distance = math.hypot(dx, dy)
@@ -73,6 +84,11 @@ class Player(arcade.Sprite):
 
     def take_damage(self, amount: float):
         """Handle taking damage, subtracting golden hearts first."""
+        if self.shield:
+            self.shield = False
+            print("🛡️ Shield blocked the damage!")
+            return
+
         while amount > 0:
             if self.gold_hearts > 0:
                 self.gold_hearts -= 1
