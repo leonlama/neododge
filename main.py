@@ -216,6 +216,43 @@ class NeododgeGame(arcade.View):
                     self.player.shield = True
                     self.pickup_texts.append(["🛡️ Shield acquired!", self.player.center_x, self.player.center_y, 1.0])
                     print("🛡️ Shield acquired!")
+                elif orb.orb_type == "slow":
+                    self.player.speed_bonus -= 0.2
+                    self.player.active_orbs.append(["🐢 Speed -20%", 30])
+                    self.pickup_texts.append(["🐢 Speed -20%", self.player.center_x, self.player.center_y, 1.0])
+                    print("🐢 Speed -20%")
+                elif orb.orb_type == "mult_down_0_5":
+                    self.player.multiplier = 0.5
+                    self.player.mult_timer = 30
+                    self.player.active_orbs.append(["Score x0.5", 30])
+                    self.pickup_texts.append(["💥 Score x0.5 for 30s", self.player.center_x, self.player.center_y, 1.0])
+                    print("💥 Score x0.5 for 30s")
+                elif orb.orb_type == "mult_down_0_25":
+                    self.player.multiplier = 0.25
+                    self.player.mult_timer = 30
+                    self.player.active_orbs.append(["Score x0.25", 30])
+                    self.pickup_texts.append(["💥 Score x0.25 for 30s", self.player.center_x, self.player.center_y, 1.0])
+                    print("💥 Score x0.25 for 30s")
+                elif orb.orb_type == "cooldown_up":
+                    self.player.cooldown_factor = 2.0
+                    self.player.active_orbs.append(["Cooldown ↑", 15])
+                    self.pickup_texts.append(["🔁 Cooldown increased!", self.player.center_x, self.player.center_y, 1.0])
+                    print("🔁 Cooldown increased!")
+                elif orb.orb_type == "inverse_move":
+                    self.player.inverse_move = True
+                    self.player.active_orbs.append(["🔄 Inverse Move", 30])
+                    self.pickup_texts.append(["🔄 Inverse Move", self.player.center_x, self.player.center_y, 1.0])
+                    print("🔄 Inverse Move")
+                elif orb.orb_type == "vision_blur":
+                    self.player.vision_blur = True
+                    self.player.active_orbs.append(["👁️ Vision Blur", 30])
+                    self.pickup_texts.append(["👁️ Vision Blur", self.player.center_x, self.player.center_y, 1.0])
+                    print("👁️ Vision Blur")
+                elif orb.orb_type == "big_hitbox":
+                    self.player.hitbox_scale = 2.0
+                    self.player.active_orbs.append(["⬛ Big Hitbox", 30])
+                    self.pickup_texts.append(["⬛ Big Hitbox", self.player.center_x, self.player.center_y, 1.0])
+                    print("⬛ Big Hitbox")
 
                 self.orbs.remove(orb)
 
