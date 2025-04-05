@@ -1,6 +1,8 @@
 import arcade
 import math
 
+from scripts.game_over_view import GameOverView
+
 PLAYER_SPEED = 300
 DASH_DISTANCE = 150
 DASH_COOLDOWN = 3  # seconds
@@ -31,6 +33,8 @@ class Player(arcade.Sprite):
         self.vision_blur = False
         self.vision_timer = 0.0
         self.inverse_move = False
+        self.window = None
+        self.parent_view = None
 
     def set_target(self, x, y):
         if self.inverse_move:
@@ -132,7 +136,10 @@ class Player(arcade.Sprite):
         print(f"💔 Damage taken! Remaining Hearts: {total_health}")
         if total_health <= 0:
             print("💀 Game Over!")
-            arcade.close_window()
+            if self.window and self.parent_view:
+                self.window.show_view(GameOverView(self.parent_view.score))
+            else:
+                print("❌ Could not show game over screen – missing view or window reference.")
 
     def draw(self):
         if not self.invincible or self.blink_state:

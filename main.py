@@ -7,6 +7,7 @@ from scripts.artifacts.dash_artifact import DashArtifact
 from scripts.orbs.buff_orbs import BuffOrb
 from scripts.orbs.debuff_orbs import DebuffOrb
 from scripts.start_view import StartView
+from scripts.game_over_view import GameOverView
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -51,6 +52,8 @@ class NeododgeGame(arcade.View):
 
     def setup(self):
         self.player = Player(self.window.width // 2, self.window.height // 2)
+        self.player.window = self.window  # 💡 Makes GameOverView possible
+        self.player.parent_view = self    # 💡 So player can access score
         self.enemies = arcade.SpriteList()
         self.dash_artifact = DashArtifact(600, 300)
         self.orbs = arcade.SpriteList()
