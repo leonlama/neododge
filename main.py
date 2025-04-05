@@ -151,7 +151,22 @@ class NeododgeGame(arcade.View):
 
             if self.wave_pause_timer <= 0:
                 self.wave_manager.next_wave()
-                self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
+                wave_info = self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
+
+                # Orbs
+                self.wave_manager.spawn_orbs(self.orbs, wave_info["orbs"], self.window.width, self.window.height)
+
+                # Artifact
+                if wave_info["artifact"]:
+                    artifact = self.wave_manager.maybe_spawn_artifact(
+                        self.player.artifacts,
+                        self.dash_artifact,
+                        self.window.width,
+                        self.window.height
+                    )
+                    if artifact:
+                        self.dash_artifact = artifact
+
                 self.wave_duration = 20 + (self.wave_manager.wave - 1) * 5
                 self.level_timer = 0
                 self.in_wave = True
