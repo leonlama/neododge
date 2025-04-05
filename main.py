@@ -73,13 +73,31 @@ class NeododgeGame(arcade.Window):
             x = x_start + (self.player.max_slots + i) * 40
             arcade.draw_text("💛", x, y, arcade.color.GOLD, 30)
 
-        # Draw top-right orb status
-        x = SCREEN_WIDTH - 200
+        # --- TOP RIGHT ORB STATUS ---
+        x = SCREEN_WIDTH - 220
         y = SCREEN_HEIGHT - 30
+        line_height = 20
+        i = 0
 
-        for i, orb in enumerate(self.player.active_orbs):
-            label = f"{orb[0]} ({int(orb[1])}s)"
-            arcade.draw_text(label, x, y - i * 20, arcade.color.LIGHT_YELLOW, 14, anchor_x="left")
+        # 🛡️ Show shield only if active
+        if self.player.shield:
+            arcade.draw_text("🛡️ Shield Active", x, y - i * line_height, arcade.color.LIGHT_GREEN, 14)
+            i += 1
+
+        # ⚡ Show speed bonus if > 1.0
+        if self.player.speed_bonus > 1.0:
+            arcade.draw_text(f"⚡ Speed +{int((self.player.speed_bonus - 1) * 100)}%", x, y - i * line_height, arcade.color.LIGHT_BLUE, 14)
+            i += 1
+
+        # ⏱️ Show cooldown reduction if < 1.0
+        if self.player.cooldown_factor < 1.0:
+            arcade.draw_text(f"⏱️ Cooldown x{self.player.cooldown_factor}", x, y - i * line_height, arcade.color.ORCHID, 14)
+            i += 1
+
+        # 💥 Show timed orb effects (like multiplier)
+        for orb in self.player.active_orbs:
+            arcade.draw_text(f"{orb[0]} ({int(orb[1])}s)", x, y - i * line_height, arcade.color.LIGHT_YELLOW, 14)
+            i += 1
 
         # Draw artifact icons (or names) bottom-left
         for i, art in enumerate(self.player.artifacts):
@@ -102,7 +120,10 @@ class NeododgeGame(arcade.Window):
         for enemy in self.enemies:
             enemy.update(delta_time)
             if not self.player.invincible and arcade.check_for_collision(enemy, self.player):
-                self.player.take_damage(1.0)  # for enemy contact
+                if not self.player.shield:
+                    self.player.take_damage(1.0)  # for enemy contact
+                else:
+                    self.player.take_damage(0)  # shield blocks damage
                 self.player.invincible = True
                 print(f"👾 Touched enemy! Hearts: {self.player.current_hearts + self.player.gold_hearts}")
                 if self.player.current_hearts + self.player.gold_hearts <= 0:
@@ -112,7 +133,10 @@ class NeododgeGame(arcade.Window):
                 bullet.update(delta_time)
 
                 if bullet.age > 0.2 and not self.player.invincible and arcade.check_for_collision(bullet, self.player):
-                    self.player.take_damage(0.5)  # for bullets
+                    if not self.player.shield:
+                        self.player.take_damage(0.5)  # for bullets
+                    else:
+                        self.player.take_damage(0)  # shield blocks damage
                     self.player.invincible = True
                     print(f"💥 Bullet hit! Hearts: {self.player.current_hearts + self.player.gold_hearts}")
                     enemy.bullets.remove(bullet)
@@ -140,14 +164,17 @@ class NeododgeGame(arcade.Window):
                     print("💛 Golden heart gained!")
                 elif orb.orb_type == "speed_10":
                     self.player.speed_bonus += 0.10
+                    self.player.active_orbs.append(["⚡ Speed +10%", 45])
                     self.pickup_texts.append(["⚡ Speed +10%", self.player.center_x, self.player.center_y, 1.0])
                     print("⚡ Speed +10%")
                 elif orb.orb_type == "speed_20":
                     self.player.speed_bonus += 0.20
+                    self.player.active_orbs.append(["⚡ Speed +20%", 40])
                     self.pickup_texts.append(["⚡ Speed +20%", self.player.center_x, self.player.center_y, 1.0])
                     print("⚡ Speed +20%")
                 elif orb.orb_type == "speed_35":
                     self.player.speed_bonus += 0.35
+                    self.player.active_orbs.append(["⚡ Speed +35%", 30])
                     self.pickup_texts.append(["⚡ Speed +35%", self.player.center_x, self.player.center_y, 1.0])
                     print("⚡ Speed +35%")
                 elif orb.orb_type == "mult_1_5":
