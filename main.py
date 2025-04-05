@@ -3,6 +3,7 @@ import random
 
 from scripts.player import Player
 from scripts.enemy import Enemy
+from scripts.dash_artifact import DashArtifact
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -16,10 +17,12 @@ class NeododgeGame(arcade.Window):
         self.player = None
         self.enemies = None
         self.player_health = 100
+        self.dash_artifact = None
 
     def setup(self):
         self.player = Player(self.width // 2, self.height // 2)
         self.enemies = arcade.SpriteList()
+        self.dash_artifact = DashArtifact(600, 300)
 
         # Spawn 1 of each type
         self.enemies.append(Enemy(100, 100, self.player, behavior="chaser"))
@@ -31,6 +34,9 @@ class NeododgeGame(arcade.Window):
         self.player.draw()
         self.enemies.draw()
 
+        if self.dash_artifact:
+            self.dash_artifact.draw()
+
         for enemy in self.enemies:
             enemy.bullets.draw()
 
@@ -41,6 +47,11 @@ class NeododgeGame(arcade.Window):
 
     def on_update(self, delta_time):
         self.player.update(delta_time)
+
+        if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
+            self.player.can_dash = True
+            self.dash_artifact = None
+            print("✨ Dash unlocked!")
 
         for enemy in self.enemies:
             enemy.update(delta_time)
@@ -55,6 +66,10 @@ class NeododgeGame(arcade.Window):
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:
             self.player.set_target(x, y)
+
+    def on_key_press(self, symbol, modifiers):
+        if symbol == arcade.key.SPACE:
+            self.player.try_dash()
 
 if __name__ == "__main__":
     game = NeododgeGame()
