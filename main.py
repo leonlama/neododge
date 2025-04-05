@@ -3,7 +3,7 @@ import random
 
 from scripts.player import Player
 from scripts.enemy import Enemy
-from scripts.artifacts.dash_artifact import DashArtifact
+from scripts.artifacts.artifacts import DashArtifact
 from scripts.orbs.buff_orbs import BuffOrb
 from scripts.orbs.debuff_orbs import DebuffOrb
 from scripts.start_view import StartView
