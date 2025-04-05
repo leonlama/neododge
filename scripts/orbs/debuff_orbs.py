@@ -14,7 +14,7 @@ class DebuffOrb(arcade.Sprite):
             "mult_down_0_5": "💥 Score x0.5 for 30s",
             "mult_down_0_25": "💥 Score x0.25 for 30s",
             "cooldown_up": "🔁 Cooldown increased!",
-            "inverse_move": "🔄 Inverse Move",
+            #"inverse_move": "🔄 Inverse Move",
             "vision_blur": "👁️ Vision Blur",
             "big_hitbox": "⬛ Big Hitbox",
         }.get(self.orb_type, "⚠️ Debuff Orb")
@@ -25,7 +25,7 @@ class DebuffOrb(arcade.Sprite):
             "mult_down_0_5": arcade.color.DARK_GOLDENROD,
             "mult_down_0_25": arcade.color.DARK_ORANGE,
             "cooldown_up": arcade.color.DARK_MAGENTA,
-            "inverse_move": arcade.color.DARK_BROWN,
+            #"inverse_move": arcade.color.DARK_BROWN,
             "vision_blur": arcade.color.DARK_SLATE_GRAY
         }
 
@@ -62,10 +62,10 @@ class DebuffOrb(arcade.Sprite):
             player.active_orbs.append(["🔁 Cooldown ↑", 15])
             print(self.message)
 
-        elif self.orb_type == "inverse_move":
-            player.inverse_move = True
-            player.active_orbs.append(["🔄 Inverse Move", 30])
-            print(self.message)
+        #elif self.orb_type == "inverse_move":
+        #    player.inverse_move = True
+        #    player.active_orbs.append(["🔄 Inverse Move", 30])
+        #    print(self.message)
 
         elif self.orb_type == "vision_blur":
             player.vision_blur = True

@@ -8,6 +8,7 @@ from scripts.orbs.buff_orbs import BuffOrb
 from scripts.orbs.debuff_orbs import DebuffOrb
 from scripts.start_view import StartView
 from scripts.game_over_view import GameOverView
+from scripts.wave_manager import WaveManager
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -41,11 +42,16 @@ class NeododgeGame(arcade.View):
         self.dash_artifact = None
         self.orbs = arcade.SpriteList()
         self.pickup_texts = []
-        self.level_duration = 90.0
+        self.level_duration = 20.0
         self.level_timer = 0.0
         self.orb_spawn_timer = random.uniform(4, 8)
         self.artifact_spawn_timer = random.uniform(20, 30)
         self.score = 0
+        self.wave_manager = None
+        self.in_wave = True
+        self.wave_pause_timer = 0.0
+        self.wave_message_alpha = 255
+        self.wave_message = ""
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -57,11 +63,8 @@ class NeododgeGame(arcade.View):
         self.enemies = arcade.SpriteList()
         self.dash_artifact = DashArtifact(600, 300)
         self.orbs = arcade.SpriteList()
-
-        # Test spawns
-        self.enemies.append(Enemy(100, 100, self.player, behavior="chaser"))
-        self.enemies.append(Enemy(700, 100, self.player, behavior="wander"))
-        self.enemies.append(Enemy(400, 500, self.player, behavior="shooter"))
+        self.wave_manager = WaveManager(self.player)
+        self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
 
     def on_draw(self):
         self.clear()
@@ -100,10 +103,45 @@ class NeododgeGame(arcade.View):
         # Draw Score
         arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
 
+        # Draw wave message if not in wave
+        if not self.in_wave and self.wave_message:
+            fade_color = (*arcade.color.LIGHT_GREEN[:3], self.wave_message_alpha)  # Add alpha to RGB
+
+            arcade.draw_text(
+                self.wave_message,
+                SCREEN_WIDTH / 2,
+                SCREEN_HEIGHT / 2,
+                fade_color,
+                font_size=24,
+                anchor_x="center",
+                font_name="Kenney Pixel"
+            )
+
     def on_update(self, delta_time):
         self.player.update(delta_time)
         self.orbs.update()
-        self.level_timer += delta_time
+        
+        if self.in_wave:
+            self.level_timer += delta_time
+
+            if self.level_timer >= self.level_duration:
+                self.in_wave = False
+                self.wave_pause_timer = 3.0  # 3 second pause
+                self.wave_message_alpha = 255
+                self.wave_message = f"Successfully survived Wave {self.wave_manager.wave}!"
+                print(self.wave_message)
+        else:
+            self.wave_pause_timer -= delta_time
+            self.wave_message_alpha = max(0, int(255 * (self.wave_pause_timer / 3.0)))  # fade out
+
+            if self.wave_pause_timer <= 0:
+                self.wave_manager.next_wave()
+                self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
+                self.level_duration = 20 + (self.wave_manager.wave - 1) * 5
+                self.level_timer = 0
+                self.in_wave = True
+                print(f"🚀 Starting Wave {self.wave_manager.wave}")
+
         self.orb_spawn_timer -= delta_time
         self.artifact_spawn_timer -= delta_time
         self.score += delta_time * 10  # 10 points per second survived
@@ -121,9 +159,6 @@ class NeododgeGame(arcade.View):
             x, y = random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50)
             self.dash_artifact = DashArtifact(x, y)
             self.artifact_spawn_timer = random.uniform(20, 30)
-
-        if self.level_timer >= self.level_duration:
-            print("✅ Level 1 Complete!")
 
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             self.player.can_dash = True
