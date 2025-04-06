@@ -13,13 +13,11 @@ class WaveManager:
         self.player = player
 
     def generate_wave(self, wave_number):
-        # Calculate enemy count; cap at 25 for balance.
         num_enemies = min(3 + wave_number + wave_number // 3, 25)
         enemy_types = ["chaser", "wander"]
         if wave_number >= 5:
             enemy_types.append("shooter")
 
-        # Every 6th wave is a rest wave (with minimal enemies and no orb spawns)
         if wave_number % 6 == 0:
             return {
                 "type": "rest",
@@ -29,7 +27,6 @@ class WaveManager:
                 "artifact": False
             }
 
-        # Determine number of orb spawns based on wave number:
         if wave_number < 5:
             orb_count = 0
         elif wave_number < 10:
@@ -39,7 +36,6 @@ class WaveManager:
         else:
             orb_count = 3
 
-        # Artifact appearance only on waves that are a multiple of 5.
         spawn_artifact = (wave_number % 5 == 0)
 
         return {
@@ -66,15 +62,16 @@ class WaveManager:
         for _ in range(count):
             x = random.randint(50, screen_width - 50)
             y = random.randint(50, screen_height - 50)
-            # Choose between a BuffOrb and a DebuffOrb with an 80:20 chance.
             orb = random.choices(
                 [BuffOrb(x, y), DebuffOrb(x, y)],
                 weights=[0.8, 0.2]
             )[0]
             orb_list.append(orb)
 
-    def maybe_spawn_artifact(self, player_artifacts, screen_width, screen_height):
-        # Define all possible artifact types.
+    def maybe_spawn_artifact(self, player_artifacts, current_artifact, screen_width, screen_height):
+        if current_artifact is not None:
+            return None
+
         all_types = {
             "Dash": DashArtifact,
             "Magnet Pulse": MagnetPulseArtifact,
@@ -82,7 +79,7 @@ class WaveManager:
             "Bullet Time": BulletTimeArtifact,
             "Clone Dash": CloneDashArtifact
         }
-        # Only spawn an artifact if the player doesn't already have it.
+
         available = [name for name in all_types if name not in player_artifacts]
         if not available:
             return None
