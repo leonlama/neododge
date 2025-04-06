@@ -10,7 +10,7 @@ class DebuffOrb(arcade.Sprite):
             "mult_down_0_5": "💥 Score x0.5 for 30s",
             "mult_down_0_25": "💥 Score x0.25 for 30s",
             "cooldown_up": "🔁 Cooldown increased!",
-            "inverse_move": "🔄 Inverse Move",
+            #"inverse_move": "🔄 Inverse Move",
             "vision_blur": "👁️ Vision Blur",
             "big_hitbox": "⬛ Big Hitbox"
         }.get(orb_type, "⚠️ Debuff Orb")
@@ -20,7 +20,7 @@ class DebuffOrb(arcade.Sprite):
             "mult_down_0_5": arcade.color.DARK_GOLDENROD,
             "mult_down_0_25": arcade.color.BRONZE,
             "cooldown_up": arcade.color.DARK_MAGENTA,
-            "inverse_move": arcade.color.DARK_BROWN,
+            #"inverse_move": arcade.color.DARK_BROWN,
             "vision_blur": arcade.color.DARK_SLATE_GRAY,
             "big_hitbox": arcade.color.LIGHT_YELLOW,
             "inverse": arcade.color.LIGHT_PINK  # default color for inverse if not specified
