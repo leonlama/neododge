@@ -2,7 +2,7 @@ import random
 from scripts.characters.enemy import Enemy
 from scripts.orbs.buff_orbs import BuffOrb
 from scripts.orbs.debuff_orbs import DebuffOrb
-from scripts.artifacts.artifacts import (
+from scripts.mechanics.artifacts.artifacts import (
     DashArtifact, MagnetPulseArtifact, SlowFieldArtifact,
     BulletTimeArtifact, CloneDashArtifact
 )

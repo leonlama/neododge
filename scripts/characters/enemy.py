@@ -1,7 +1,7 @@
 import arcade
 import math
 import random
-from scripts.bullet import Bullet
+from scripts.mechanics.bullet import Bullet
 
 ENEMY_SPEED = 100
 WANDER_SPEED = 80

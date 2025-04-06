@@ -7,13 +7,21 @@ import array
 
 from scripts.characters.player import Player
 from scripts.characters.enemy import Enemy
+<<<<<<< HEAD
 from scripts.artifacts.artifacts import DashArtifact
+=======
+from scripts.mechanics.artifacts.artifacts import DashArtifact
+>>>>>>> c2aa5a5 (refactor: start modularizing project structure and extract utils)
 from scripts.orbs.buff_orbs import BuffOrb
 from scripts.orbs.debuff_orbs import DebuffOrb
 from scripts.views.start_view import StartView
 from scripts.views.game_over_view import GameOverView
 from scripts.mechanics.wave_manager import WaveManager
+<<<<<<< HEAD
 from scripts.artifacts.artifacts import (
+=======
+from scripts.mechanics.artifacts.artifacts import (
+>>>>>>> c2aa5a5 (refactor: start modularizing project structure and extract utils)
     MagnetPulseArtifact,
     SlowFieldArtifact,
     BulletTimeArtifact,
