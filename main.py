@@ -115,9 +115,7 @@ class NeododgeGame(arcade.View):
 
         # Wave timer and message
         if not self.wave_pause:
-            time_left = max(0, int(self.wave_duration - self.level_timer))
-            arcade.draw_text(f"⏱ {time_left}s left", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60,
-                             arcade.color.LIGHT_GRAY, 16, anchor_x="center")
+            draw_wave_timer(self.level_timer, self.wave_duration)
         if not self.in_wave and self.wave_message:
             draw_wave_message(self.wave_message, self.wave_message_alpha)
 

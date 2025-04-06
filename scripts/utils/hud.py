@@ -10,7 +10,7 @@ def draw_pickup_texts(pickup_texts):
 
 def draw_wave_timer(level_timer, wave_duration):
     time_left = max(0, int(wave_duration - level_timer))
-    arcade.draw_text(f"⏱ {time_left}s left", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60,
+    arcade.draw_text(f"⏱ {time_left}s left", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70,
                      arcade.color.LIGHT_GRAY, 16, anchor_x="center")
 
 def draw_wave_message(wave_message, alpha):
@@ -26,17 +26,15 @@ def draw_wave_message(wave_message, alpha):
     )
 
 def draw_wave_number(current_wave):
-    wave_text = f"Wave {current_wave}"
-    wave_color = arcade.color.GOLD if current_wave % 5 == 0 else arcade.color.LIGHT_GREEN
-
+    color = arcade.color.GOLD if current_wave % 5 == 0 else arcade.color.LIGHT_GREEN
     arcade.draw_text(
-        wave_text,
-        SCREEN_WIDTH - 120,
-        10,
-        wave_color,
-        font_size=20,
-        font_name="Kenney Pixel",
-        anchor_x="left"
+        f"Wave {current_wave}",
+        SCREEN_WIDTH // 2,
+        SCREEN_HEIGHT - 35,
+        color,
+        font_size=18,
+        anchor_x="center",
+        font_name="Kenney Pixel"
     )
 
 def draw_coin_count(player_coins):
