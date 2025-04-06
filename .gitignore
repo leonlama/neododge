@@ -9,3 +9,8 @@ venv/
 /tests/
 
 favicon.ico
+
+# PyInstaller build artifacts
+dist/
+build/
+*.spec
