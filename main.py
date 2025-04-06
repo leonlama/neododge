@@ -1,5 +1,9 @@
 import arcade
 import random
+import math
+
+import arcade.gl
+import array
 
 from scripts.player import Player
 from scripts.enemy import Enemy
@@ -15,31 +19,12 @@ from scripts.artifacts.artifacts import (
     BulletTimeArtifact,
     CloneDashArtifact
 )
-from scripts.test_orbs_view import TestOrbsView
+from scripts.test_orbs_view import OrbTestView
 
 # --- Constants ---
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Neododge"
-
-def draw_vision_blur(player):
-    shape = arcade.ShapeElementList()
-
-    # Full screen black rectangle
-    bg = arcade.create_rectangle_filled(
-        SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT, arcade.color.BLACK
-    )
-    shape.append(bg)
-
-    # Transparent vision circle centered on player
-    vision_radius = 100  # Adjust as needed
-    vision = arcade.create_ellipse_filled(
-        player.center_x, player.center_y, vision_radius * 2, vision_radius * 2, (0, 0, 0, 0)
-    )
-    shape.append(vision)
-
-    # Use stencil-style blend to cut hole
-    shape.draw()
 
 class NeododgeGame(arcade.View):
     def __init__(self):
@@ -61,9 +46,63 @@ class NeododgeGame(arcade.View):
         self.wave_message = ""
         self.wave_pause = False
         self.clones = []
+        self.vision_mask = arcade.make_soft_circle_texture(
+            300,
+            arcade.color.BLACK,
+            outer_alpha=255,
+            center_alpha=0
+        )
+        self.vision_shader = None
+        self.vision_geometry = None
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
+
+        # Shader setup
+        self.vision_shader = self.window.ctx.load_program(
+            vertex_shader="""
+            #version 330
+            in vec2 in_vert;
+            in vec2 in_tex;
+            out vec2 uv;
+            void main() {
+                gl_Position = vec4(in_vert, 0.0, 1.0);
+                uv = in_tex;
+            }
+            """,
+            fragment_shader="""
+            #version 330
+            uniform vec2 resolution;
+            uniform vec2 center;
+            uniform float radius;
+            in vec2 uv;
+            out vec4 fragColor;
+
+            void main() {
+                vec2 fragCoord = uv * resolution;
+                float dist = distance(fragCoord, center);
+                float alpha = smoothstep(radius, radius - 25.0, dist);
+                fragColor = vec4(0, 0, 0, alpha);
+            }
+            """
+        )
+
+        # Fullscreen triangle pair (2 triangles)
+        quad = array.array(
+            'f', [
+                -1.0, -1.0, 0.0, 0.0,
+                 1.0, -1.0, 1.0, 0.0,
+                -1.0,  1.0, 0.0, 1.0,
+
+                 1.0, -1.0, 1.0, 0.0,
+                 1.0,  1.0, 1.0, 1.0,
+                -1.0,  1.0, 0.0, 1.0
+            ]
+        )
+        vbo = self.window.ctx.buffer(data=quad)
+        self.vision_geometry = self.window.ctx.geometry(
+            [arcade.gl.BufferDescription(vbo, "2f 2f", ["in_vert", "in_tex"])]
+        )
 
     def setup(self):
         self.player = Player(self.window.width // 2, self.window.height // 2)
@@ -79,39 +118,31 @@ class NeododgeGame(arcade.View):
     def on_draw(self):
         self.clear()
 
-        if self.player.vision_blur:
-            arcade.draw_lrtb_rectangle_filled(
-                0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, arcade.color.BLACK
-            )
-            arcade.draw_circle_filled(
-                self.player.center_x,
-                self.player.center_y,
-                120,  # radius of visibility
-                (0, 0, 0, 0)
-            )
-
+        # --- World Layer ---
+        # Everything that should be affected by blur
         self.player.draw()
-        self.enemies.draw()
         self.orbs.draw()
-
-        if self.dash_artifact:
-            self.dash_artifact.draw()
+        self.enemies.draw()
         for enemy in self.enemies:
             enemy.bullets.draw()
+        if self.dash_artifact:
+            self.dash_artifact.draw()
 
         # Draw vision blur if active
         if self.player.vision_blur:
-            draw_vision_blur(self.player)
+            self.vision_shader["resolution"] = self.window.get_size()
+            self.vision_shader["center"] = (self.player.center_x, self.player.center_y)
+            self.vision_shader["radius"] = 130.0
+            self.vision_geometry.render(self.vision_shader)
 
-        # Draw HUD & GUI
+        # --- HUD Layer ---
         self.player.draw_hearts()
         self.player.draw_orb_status()
         self.player.draw_artifacts()
+        arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
+
         for text, x, y, _ in self.pickup_texts:
             arcade.draw_text(text, x, y + 20, arcade.color.WHITE, 14, anchor_x="center")
-
-        # Draw Score
-        arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
 
         # Draw wave timer
         if not self.wave_pause:
@@ -132,6 +163,34 @@ class NeododgeGame(arcade.View):
                 anchor_x="center",
                 font_name="Kenney Pixel"
             )
+
+    def draw_vision_blur(self):
+        # Create a shape list
+        shape_list = arcade.ShapeElementList()
+
+        # Full black screen
+        full_black = arcade.create_rectangle_filled(
+            SCREEN_WIDTH // 2,
+            SCREEN_HEIGHT // 2,
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            arcade.color.BLACK
+        )
+        shape_list.append(full_black)
+
+        # Transparent circular hole (by setting blend mode properly)
+        vision_radius = 150
+        transparent_circle = arcade.create_ellipse_filled(
+            self.player.center_x,
+            self.player.center_y,
+            vision_radius * 2,
+            vision_radius * 2,
+            (0, 0, 0, 0)
+        )
+        shape_list.append(transparent_circle)
+
+        # Enable stencil-style blending
+        shape_list.draw()
 
     def on_update(self, delta_time):
         self.player.update(delta_time)
@@ -278,7 +337,7 @@ class NeododgeGame(arcade.View):
 
 if __name__ == "__main__":
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    test_view = TestOrbsView()
+    test_view = OrbTestView()
     test_view.setup()
     window.show_view(test_view)
     arcade.run()

@@ -37,6 +37,7 @@ class Player(arcade.Sprite):
         self.window = None
         self.parent_view = None
         self.artifact_cooldowns = {}  # Dict[str, float]
+        self.pickup_texts = []  # Tracks floating messages like "💛 Golden heart gained!"
 
     def set_target(self, x, y):
         if self.inverse_move:
