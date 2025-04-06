@@ -28,6 +28,7 @@ class Player(arcade.Sprite):
         self.shield = False
         self.mult_timer = 0
         self.cooldown_factor = 1.0  # 1.0 = normal, 0.5 = 2x faster
+        self.cooldown = 1.0  # Base value, can be reduced by orbs
         self.artifacts = []  # Active ability names (max 1–3?)
         self.active_orbs = []  # list of [name:str, time:float]
         self.vision_blur = False
@@ -35,6 +36,7 @@ class Player(arcade.Sprite):
         self.inverse_move = False
         self.window = None
         self.parent_view = None
+        self.artifact_cooldowns = {}  # Dict[str, float]
 
     def set_target(self, x, y):
         if self.inverse_move:
@@ -65,6 +67,12 @@ class Player(arcade.Sprite):
             self.vision_timer -= delta_time
             if self.vision_timer <= 0:
                 self.vision_blur = False
+
+        # Cool down artifacts
+        for key in list(self.artifact_cooldowns.keys()):
+            self.artifact_cooldowns[key] -= delta_time
+            if self.artifact_cooldowns[key] <= 0:
+                del self.artifact_cooldowns[key]
 
         dx = self.target_x - self.center_x
         dy = self.target_y - self.center_y

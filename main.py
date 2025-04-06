@@ -15,6 +15,7 @@ from scripts.artifacts.artifacts import (
     BulletTimeArtifact,
     CloneDashArtifact
 )
+from scripts.test_orbs_view import TestOrbsView
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -265,8 +266,19 @@ class NeododgeGame(arcade.View):
                 elif name == "DashArtifact":
                     self.player.try_dash()
 
-if __name__ == "__main__":
+# Game Loop with wave manager
+
+"""if __name__ == "__main__":
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     start_view = StartView()
     window.show_view(start_view)
+    arcade.run()"""
+
+# TESTING ORBS
+
+if __name__ == "__main__":
+    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    test_view = TestOrbsView()
+    test_view.setup()
+    window.show_view(test_view)
     arcade.run()
