@@ -3,9 +3,11 @@ import math
 
 from scripts.views.game_over_view import GameOverView
 
+damage_sound = arcade.load_sound("assets/audio/damage.wav")
+
 PLAYER_SPEED = 300
 DASH_DISTANCE = 150
-DASH_COOLDOWN = 3  # seconds
+#DASH_COOLDOWN = 3  # seconds
 
 class Player(arcade.Sprite):
     def __init__(self, start_x, start_y):
@@ -131,6 +133,8 @@ class Player(arcade.Sprite):
         if self.shield:
             self.shield = False
             return
+
+        arcade.play_sound(damage_sound)
         self.invincible = True
         self.invincibility_timer = 0
         while amount > 0:

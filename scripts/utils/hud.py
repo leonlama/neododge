@@ -24,3 +24,17 @@ def draw_wave_message(wave_message, alpha):
         anchor_x="center",
         font_name="Kenney Pixel"
     )
+
+def draw_wave_number(current_wave):
+    wave_text = f"Wave {current_wave}"
+    wave_color = arcade.color.GOLD if current_wave % 5 == 0 else arcade.color.LIGHT_GREEN
+
+    arcade.draw_text(
+        wave_text,
+        SCREEN_WIDTH - 120,
+        10,
+        wave_color,
+        font_size=20,
+        font_name="Kenney Pixel",
+        anchor_x="left"
+    )

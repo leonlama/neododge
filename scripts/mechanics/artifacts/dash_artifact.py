@@ -1,7 +1,7 @@
 class DashArtifact:
     def __init__(self):
         self.name = "Dash"
-        self.cooldown = 3.0  # seconds
+        self.cooldown = 10.0  # seconds
         self.cooldown_timer = self.cooldown  # Start fully ready!
 
     def apply_effect(self, player, *_):

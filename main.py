@@ -29,8 +29,15 @@ from scripts.mechanics.wave_manager import WaveManager
 from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE
 from scripts.utils.shaders import load_vision_shader, create_vision_geometry
 from scripts.utils.spawner import spawn_random_orb, spawn_dash_artifact
-from scripts.utils.pickup_text import draw_pickup_texts, update_pickup_texts
-from scripts.utils.wave_text import draw_wave_message, fade_wave_message_alpha
+from scripts.utils.pickup_text import update_pickup_texts
+from scripts.utils.hud import (
+    draw_pickup_texts,
+    draw_wave_message,
+    draw_wave_timer,
+    draw_score,
+    draw_wave_number,
+)
+from scripts.utils.wave_text import fade_wave_message_alpha
 
 
 class NeododgeGame(arcade.View):
@@ -103,6 +110,9 @@ class NeododgeGame(arcade.View):
                              arcade.color.LIGHT_GRAY, 16, anchor_x="center")
         if not self.in_wave and self.wave_message:
             draw_wave_message(self.wave_message, self.wave_message_alpha)
+
+        # Draw wave number
+        draw_wave_number(self.wave_manager.wave)
 
     def on_update(self, delta_time):
         self.player.update(delta_time)
