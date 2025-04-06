@@ -53,7 +53,7 @@ class NeododgeGame(arcade.View):
         self.coins = arcade.SpriteList()
         self.dash_artifact = None
         self.pickup_texts = []
-        self.wave_duration = 2.0
+        self.wave_duration = 20.0
         self.level_timer = 0.0
         self.orb_spawn_timer = random.uniform(4, 8)
         self.artifact_spawn_timer = random.uniform(20, 30)
@@ -170,6 +170,12 @@ class NeododgeGame(arcade.View):
                 self.level_timer = 0
                 self.in_wave = True
                 print(f"🚀 Starting Wave {self.wave_manager.wave}")
+
+                # Check if it's time to go to the shop
+                if self.wave_manager.wave % 5 == 0:
+                    from scripts.views.shop_view import ShopView
+                    shop_view = ShopView(self.player, self)
+                    self.window.show_view(shop_view)
 
         if self.orb_spawn_timer <= 0:
             self.orbs.append(spawn_random_orb(SCREEN_WIDTH, SCREEN_HEIGHT))
