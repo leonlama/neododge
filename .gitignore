@@ -1,2 +1,9 @@
-# Python venv
+# Python
+__pycache__/
+*.py[cod]
+
+# venv
 venv/
+
+# Ignore all test scripts
+/tests/
