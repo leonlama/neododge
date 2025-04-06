@@ -5,21 +5,21 @@ import math
 import arcade.gl
 import array
 
-from scripts.player import Player
-from scripts.enemy import Enemy
+from scripts.characters.player import Player
+from scripts.characters.enemy import Enemy
 from scripts.artifacts.artifacts import DashArtifact
 from scripts.orbs.buff_orbs import BuffOrb
 from scripts.orbs.debuff_orbs import DebuffOrb
-from scripts.start_view import StartView
-from scripts.game_over_view import GameOverView
-from scripts.wave_manager import WaveManager
+from scripts.views.start_view import StartView
+from scripts.views.game_over_view import GameOverView
+from scripts.mechanics.wave_manager import WaveManager
 from scripts.artifacts.artifacts import (
     MagnetPulseArtifact,
     SlowFieldArtifact,
     BulletTimeArtifact,
     CloneDashArtifact
 )
-from scripts.test_orbs_view import OrbTestView
+from scripts.views.test_views.test_orbs_view import OrbTestView
 
 # --- Constants ---
 SCREEN_WIDTH = 800

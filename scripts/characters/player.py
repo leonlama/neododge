@@ -1,7 +1,7 @@
 import arcade
 import math
 
-from scripts.game_over_view import GameOverView
+from scripts.views.game_over_view import GameOverView
 
 PLAYER_SPEED = 300
 DASH_DISTANCE = 150
