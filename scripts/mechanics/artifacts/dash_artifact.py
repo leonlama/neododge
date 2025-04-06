@@ -1,17 +1,13 @@
-import arcade
-from .base import BaseArtifact
-
-class DashArtifact(BaseArtifact):
-    def __init__(self, x=None, y=None):
-        super().__init__(x or 0, y or 0)
-        self.texture = arcade.make_circle_texture(30, arcade.color.BLUE)
+class DashArtifact:
+    def __init__(self):
         self.name = "Dash"
-        self.cooldown = 5.0
-        self.cooldown_timer = 0.0
+        self.cooldown = 3.0  # seconds
+        self.cooldown_timer = self.cooldown  # Start fully ready!
 
-    def apply_effect(self, player):
-        player.try_dash()
-
-    def update(self, delta_time):
-        if self.cooldown_timer > 0:
-            self.cooldown_timer -= delta_time
+    def apply_effect(self, player, *_):
+        if self.cooldown_timer >= self.cooldown:
+            player.perform_dash()
+            self.cooldown_timer = 0
+            print("⚡ Dash used!")
+        else:
+            print("❌ Dash on cooldown.")

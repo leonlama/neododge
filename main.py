@@ -153,10 +153,13 @@ class NeododgeGame(arcade.View):
             self.dash_artifact = spawn_dash_artifact(SCREEN_WIDTH, SCREEN_HEIGHT)
             self.artifact_spawn_timer = random.uniform(20, 30)
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
+            # Only add if not already collected
             if not any(isinstance(a, DashArtifact) for a in self.player.artifacts):
-                self.player.can_dash = True
                 self.player.artifacts.append(DashArtifact())
                 print("✨ Dash unlocked!")
+            else:
+                print("⚠️ Dash already unlocked.")
+            self.player.can_dash = True
             self.dash_artifact = None
 
         for enemy in self.enemies:
