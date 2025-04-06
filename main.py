@@ -59,7 +59,7 @@ class NeododgeGame(arcade.View):
         arcade.set_background_color(arcade.color.BLACK)
 
         # Shader setup
-        self.vision_shader = self.window.ctx.load_program(
+        self.vision_shader = self.window.ctx.program(
             vertex_shader="""
             #version 330
             in vec2 in_vert;
