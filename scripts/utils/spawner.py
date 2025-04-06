@@ -7,8 +7,7 @@ from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 def spawn_random_orb():
     x = random.randint(50, SCREEN_WIDTH - 50)
     y = random.randint(50, SCREEN_HEIGHT - 50)
-    orb_cls = random.choice([BuffOrb, DebuffOrb])
-    return orb_cls(x, y)
+    return random.choice([BuffOrb(x, y), DebuffOrb(x, y)])
 
 def spawn_dash_artifact():
     x = random.randint(50, SCREEN_WIDTH - 50)
