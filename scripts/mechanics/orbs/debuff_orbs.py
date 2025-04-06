@@ -35,37 +35,44 @@ class DebuffOrb(arcade.Sprite):
 
     def apply_effect(self, player):
         if self.orb_type == "slow":
+            self.message = "🐢 Speed -20%"
             player.speed_bonus -= 0.2
             player.active_orbs.append(["🐢 Speed -20%", 30])
-            print("🐢 Speed -20%")
+            print(self.message)
         elif self.orb_type == "big_hitbox":
+            self.message = "⬛ Big Hitbox applied"
             if not hasattr(player, "original_size"):
                 player.original_size = (player.width, player.height)
             player.width = player.original_size[0] * 1.5
             player.height = player.original_size[1] * 1.5
             player.set_hit_box(player.texture.hit_box_points)
             player.active_orbs.append(["⬛ Big Hitbox", 30])
-            print("⬛ Big Hitbox applied")
+            print(self.message)
         elif self.orb_type == "mult_down_0_5":
+            self.message = "💥 Score x0.5 for 30s"
             player.multiplier = 0.5
             player.mult_timer = 30
             player.active_orbs.append(["Score x0.5", 30])
-            print("💥 Score x0.5 for 30s")
+            print(self.message)
         elif self.orb_type == "mult_down_0_25":
+            self.message = "💥 Score x0.25 for 30s"
             player.multiplier = 0.25
             player.mult_timer = 30
             player.active_orbs.append(["Score x0.25", 30])
-            print("💥 Score x0.25 for 30s")
+            print(self.message)
         elif self.orb_type == "cooldown_up":
+            self.message = "🔁 Cooldown increased!"
             player.cooldown_factor = 2.0
             player.active_orbs.append(["⏱️ Cooldown ↑", 15])
-            print("🔁 Cooldown increased!")
+            print(self.message)
         elif self.orb_type == "inverse_move":
+            self.message = "🔄 Inverse Move"
             player.inverse_move = True
             player.active_orbs.append(["🔄 Inverse Move", 30])
-            print("🔄 Inverse Move")
+            print(self.message)
         elif self.orb_type == "vision_blur":
+            self.message = "👁️ Vision Blur"
             player.vision_blur = True
             player.vision_timer = 30
             player.active_orbs.append(["👁️ Vision Blur", 30])
-            print("👁️ Vision Blur")
+            print(self.message)

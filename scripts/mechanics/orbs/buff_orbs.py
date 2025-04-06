@@ -76,8 +76,8 @@ class BuffOrb(arcade.Sprite):
             player.active_orbs.append(["Score x2", 30])
             print(self.message)
         elif self.orb_type == "cooldown":
+            self.message = "🔁 Cooldown reduced! (20%)"
             player.cooldown *= 0.8
-            player.pickup_messages.append("🔁 Cooldown reduced! (20%)")
             print(self.message)
         elif self.orb_type == "shield":
             player.shield = True
