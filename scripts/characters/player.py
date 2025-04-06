@@ -42,6 +42,15 @@ class Player(arcade.Sprite):
         self.pickup_texts = []
         self.coins = 0
 
+        # New attributes to support upgrades
+        self.orb_spawn_chance = 0
+        self.coin_spawn_chance = 0
+        self.damage_negate_chance = 0
+        self.has_shield = False
+        self.second_chance = False
+        self.score_multiplier = 1
+        self.base_speed = 4
+
     def set_target(self, x, y):
         if self.inverse_move:
             dx = x - self.center_x

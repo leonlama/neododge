@@ -11,6 +11,7 @@ class ShopView(arcade.View):
         self.player = player
         self.return_view = return_view
         self.music = None
+        self.music_player = None
         self.items = []
         self.selected_item = None
         self.message = ""
@@ -18,7 +19,7 @@ class ShopView(arcade.View):
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
         self.music = arcade.load_sound(resource_path(SHOP_MUSIC_PATH))
-        arcade.play_sound(self.music, volume=0.5, looping=True)
+        self.music_player = arcade.play_sound(self.music, volume=0.5, looping=True)
         self.generate_shop_items()
 
     def generate_shop_items(self):
@@ -68,6 +69,8 @@ class ShopView(arcade.View):
         arcade.draw_text(f"Coins: {self.player.coins}", SCREEN_WIDTH - 150, SCREEN_HEIGHT - 50, arcade.color.YELLOW, 18)
         if self.message:
             arcade.draw_text(self.message, SCREEN_WIDTH // 2, 60, arcade.color.WHITE, 16, anchor_x="center")
+        
+        arcade.draw_text("Press ESC to skip shop", SCREEN_WIDTH // 2, 100, arcade.color.GRAY, 16, anchor_x="center")
 
     def on_key_press(self, symbol, modifiers):
         from arcade.key import KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9
@@ -75,17 +78,44 @@ class ShopView(arcade.View):
         if symbol in keys:
             idx = keys.index(symbol)
             if idx < len(self.items):
-                self.attempt_purchase(idx)
+                self.attempt_purchase(self.items[idx])
+        elif symbol == arcade.key.ESCAPE:
+            arcade.stop_sound(self.music_player)
+            self.window.show_view(self.return_view)
+            
+    def attempt_purchase(self, item):
+        cost = item["cost"]
+        if self.player.coins >= cost:
+            self.player.coins -= cost
+            effect = item["effect"]
 
-    def attempt_purchase(self, idx):
-        item = self.items[idx]
-        if self.player.coins >= item["cost"]:
-            self.player.coins -= item["cost"]
-            self.message = f"✅ Bought {item['name']}!"
-            # TODO: Apply effect based on item["effect"]
+            # 💥 Apply actual effect
+            if effect == "hp_3":
+                self.player.max_hearts += 3
+                self.player.current_hearts += 3
+            elif effect == "speed_5":
+                self.player.speed += self.player.base_speed * 0.05
+            elif effect == "orb_rate_3":
+                self.player.orb_spawn_chance += 3
+            elif effect == "coin_rate_5":
+                self.player.coin_spawn_chance += 5
+            elif effect == "ignore_damage_5":
+                self.player.damage_negate_chance += 5
+            elif effect == "shield":
+                self.player.has_shield = True
+            elif effect == "multiplier":
+                self.player.score_multiplier = 2  # Temporary for N waves
+            elif effect == "skip_wave":
+                self.skip_next_wave = True
+            elif effect == "second_chance":
+                self.player.second_chance = True
+
+            self.message = f"Purchased {item['name']}!"
+            self.text_color = arcade.color.LIGHT_GREEN
         else:
-            self.message = "❌ Not enough coins!"
+            self.message = "Not enough coins!"
+            self.text_color = arcade.color.RED
 
     def on_mouse_press(self, x, y, button, modifiers):
-        arcade.stop_sound(self.music)
+        arcade.stop_sound(self.music_player)
         self.window.show_view(self.return_view)
