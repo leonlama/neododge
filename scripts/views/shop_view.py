@@ -1,6 +1,7 @@
 import arcade
 import random
 from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from scripts.utils.resource_helper import resource_path
 
 SHOP_MUSIC_PATH = "assets/audio/shop.mp3"
 
@@ -16,8 +17,8 @@ class ShopView(arcade.View):
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
-        self.music = arcade.load_sound(SHOP_MUSIC_PATH, volume=0.5)
-        arcade.play_sound(self.music, looping=True)
+        self.music = arcade.load_sound(resource_path(SHOP_MUSIC_PATH))
+        arcade.play_sound(self.music, volume=0.5, looping=True)
         self.generate_shop_items()
 
     def generate_shop_items(self):

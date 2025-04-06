@@ -1,6 +1,6 @@
 import arcade
-import os
 import pyglet
+from scripts.utils.resource_helper import resource_path
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -16,7 +16,7 @@ class StartView(arcade.View):
         arcade.set_background_color(arcade.color.BLACK)
 
         # Load music
-        music_path = os.path.join("assets", "audio", "themev1.mp3")
+        music_path = resource_path("assets/audio/themev1.mp3")
         try:
             self.music = arcade.load_sound(music_path)
             self.media_player = arcade.play_sound(self.music, volume=0.4, looping=True)
@@ -45,8 +45,8 @@ class StartView(arcade.View):
             self.media_player.pause()
 
         # Play click sound and voice line
-        click_sound = arcade.load_sound("assets/audio/start_click.wav")
-        #voice_line = arcade.load_sound("assets/audio/lets_go.wav")
+        click_sound = arcade.load_sound(resource_path("assets/audio/start_click.wav"))
+        #voice_line = arcade.load_sound(resource_path("assets/audio/lets_go.wav"))
         arcade.play_sound(click_sound)
         #arcade.play_sound(voice_line)
 

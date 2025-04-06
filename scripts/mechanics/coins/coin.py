@@ -1,12 +1,13 @@
 import arcade
 from arcade import AnimationKeyframe
+from scripts.utils.resource_helper import resource_path
 
 class Coin(arcade.AnimatedTimeBasedSprite):
     def __init__(self, x, y):
         super().__init__()
 
         texture_list = arcade.load_spritesheet(
-            "assets/items/coin2_20x20.png",  # Adjust path as needed
+            resource_path("assets/items/coin2_20x20.png"),  # Adjust path as needed
             sprite_width=20,
             sprite_height=20,
             columns=9,

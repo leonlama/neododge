@@ -42,6 +42,7 @@ from scripts.utils.hud import (
     draw_coin_count,
 )
 from scripts.utils.wave_text import fade_wave_message_alpha
+from scripts.utils.resource_helper import resource_path
 
 
 class NeododgeGame(arcade.View):
@@ -69,7 +70,7 @@ class NeododgeGame(arcade.View):
         self.vision_geometry = None
         self.coins_to_spawn = 0
         self.coin_spawn_timer = 0.0
-        self.coin_sound = arcade.load_sound("assets/audio/coin.flac")
+        self.coin_sound = arcade.load_sound(resource_path("assets/audio/coin.flac"))
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -224,9 +225,9 @@ class NeododgeGame(arcade.View):
 
                 # Play orb sound
                 if isinstance(orb, BuffOrb):
-                    arcade.play_sound(arcade.load_sound("assets/audio/buff.wav"))
+                    arcade.play_sound(arcade.load_sound(resource_path("assets/audio/buff.wav")))
                 elif isinstance(orb, DebuffOrb):
-                    arcade.play_sound(arcade.load_sound("assets/audio/debuff.wav"), volume=0.1)
+                    arcade.play_sound(arcade.load_sound(resource_path("assets/audio/debuff.wav")), volume=0.1)
 
                 self.orbs.remove(orb)
 
