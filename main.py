@@ -41,7 +41,7 @@ class NeododgeGame(arcade.View):
         self.orbs = arcade.SpriteList()
         self.dash_artifact = None
         self.pickup_texts = []
-        self.wave_duration = 20.0
+        self.wave_duration = 2.0
         self.level_timer = 0.0
         self.orb_spawn_timer = random.uniform(4, 8)
         self.artifact_spawn_timer = random.uniform(20, 30)

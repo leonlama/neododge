@@ -4,6 +4,7 @@ from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 from scripts.mechanics.artifacts.dash_artifact import DashArtifact
 from scripts.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact
+from scripts.mechanics.artifacts.slow_field import SlowFieldArtifact
 from scripts.mechanics.artifacts.bullet_time import BulletTimeArtifact
 from scripts.mechanics.artifacts.clone_dash import CloneDashArtifact
 
