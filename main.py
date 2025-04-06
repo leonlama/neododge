@@ -113,6 +113,10 @@ class NeododgeGame(arcade.View):
         self.artifact_spawn_timer -= delta_time
         self.pickup_texts = update_pickup_texts(self.pickup_texts, delta_time)
 
+        for artifact in self.player.artifacts:
+            if hasattr(artifact, 'update'):
+                artifact.update(delta_time)
+
         if self.in_wave:
             self.level_timer += delta_time
             if self.level_timer >= self.wave_duration:
@@ -149,10 +153,11 @@ class NeododgeGame(arcade.View):
             self.dash_artifact = spawn_dash_artifact(SCREEN_WIDTH, SCREEN_HEIGHT)
             self.artifact_spawn_timer = random.uniform(20, 30)
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
-            self.player.can_dash = True
-            self.player.artifacts.append(DashArtifact())
+            if not any(isinstance(a, DashArtifact) for a in self.player.artifacts):
+                self.player.can_dash = True
+                self.player.artifacts.append(DashArtifact())
+                print("✨ Dash unlocked!")
             self.dash_artifact = None
-            print("✨ Dash unlocked!")
 
         for enemy in self.enemies:
             for bullet in enemy.bullets:

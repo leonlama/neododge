@@ -25,8 +25,8 @@ def load_vision_shader(window):
         void main() {
             vec2 fragCoord = uv * resolution;
             float dist = distance(fragCoord, center);
-            float alpha = smoothstep(radius, radius - 25.0, dist);
-            fragColor = vec4(0, 0, 0, alpha);
+            float alpha = 1.0 - smoothstep(radius, radius - 25.0, dist);
+            fragColor = vec4(0.0, 0.0, 0.0, 1.0 - alpha);
         }
         """
     )
