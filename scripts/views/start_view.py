@@ -1,5 +1,6 @@
 import arcade
 import os
+import pyglet
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -38,7 +39,19 @@ class StartView(arcade.View):
         from main import NeododgeGame
         game_view = NeododgeGame()
         game_view.setup()
-        self.window.show_view(game_view)
+
+        # Stop title music
+        if self.media_player:
+            self.media_player.pause()
+
+        # Play click sound and voice line
+        click_sound = arcade.load_sound("assets/audio/start_click.wav")
+        #voice_line = arcade.load_sound("assets/audio/lets_go.wav")
+        arcade.play_sound(click_sound)
+        #arcade.play_sound(voice_line)
+
+        # Delay switching views using pyglet
+        pyglet.clock.schedule_once(lambda dt: self.window.show_view(game_view), 1.2)
 
     def on_key_press(self, key, modifiers):
         self.start_game()

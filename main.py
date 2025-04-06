@@ -179,6 +179,13 @@ class NeododgeGame(arcade.View):
             if orb.age > 0.5 and arcade.check_for_collision(orb, self.player):
                 orb.apply_effect(self.player)
                 self.pickup_texts.append([orb.message, self.player.center_x, self.player.center_y, 1.0])
+
+                # Play orb sound
+                if isinstance(orb, BuffOrb):
+                    arcade.play_sound(arcade.load_sound("assets/audio/buff.wav"))
+                elif isinstance(orb, DebuffOrb):
+                    arcade.play_sound(arcade.load_sound("assets/audio/debuff.wav"), volume=0.1)
+
                 self.orbs.remove(orb)
 
     def on_mouse_press(self, x, y, button, modifiers):
