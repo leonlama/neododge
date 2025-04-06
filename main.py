@@ -7,21 +7,13 @@ import array
 
 from scripts.characters.player import Player
 from scripts.characters.enemy import Enemy
-<<<<<<< HEAD
-from scripts.artifacts.artifacts import DashArtifact
-=======
 from scripts.mechanics.artifacts.artifacts import DashArtifact
->>>>>>> c2aa5a5 (refactor: start modularizing project structure and extract utils)
-from scripts.orbs.buff_orbs import BuffOrb
-from scripts.orbs.debuff_orbs import DebuffOrb
+from scripts.mechanics.orbs.buff_orbs import BuffOrb
+from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 from scripts.views.start_view import StartView
 from scripts.views.game_over_view import GameOverView
 from scripts.mechanics.wave_manager import WaveManager
-<<<<<<< HEAD
-from scripts.artifacts.artifacts import (
-=======
 from scripts.mechanics.artifacts.artifacts import (
->>>>>>> c2aa5a5 (refactor: start modularizing project structure and extract utils)
     MagnetPulseArtifact,
     SlowFieldArtifact,
     BulletTimeArtifact,
@@ -335,17 +327,25 @@ class NeododgeGame(arcade.View):
 
 # Game Loop with wave manager
 
-"""if __name__ == "__main__":
+if __name__ == "__main__":
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     start_view = StartView()
     window.show_view(start_view)
-    arcade.run()"""
+    arcade.run()
 
 # TESTING ORBS
 
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     test_view = OrbTestView()
     test_view.setup()
     window.show_view(test_view)
-    arcade.run()
+    arcade.run()"""
+
+# TESTING ARTIFACTS
+
+"""if __name__ == "__main__":
+    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    test_view = TestArtifactsView()
+    window.show_view(test_view)
+    arcade.run()"""
