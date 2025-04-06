@@ -1,11 +1,11 @@
+import arcade
 from .base import BaseArtifact
 
 class DashArtifact(BaseArtifact):
     def __init__(self, x=None, y=None):
-        super().__init__()
+        super().__init__(x or 0, y or 0)
+        self.texture = arcade.make_circle_texture(30, arcade.color.BLUE)
         self.name = "Dash"
-        self.center_x = x if x is not None else 0
-        self.center_y = y if y is not None else 0
 
     def apply_effect(self, player):
         player.try_dash()

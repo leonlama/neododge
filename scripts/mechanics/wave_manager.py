@@ -2,10 +2,10 @@ import random
 from scripts.characters.enemy import Enemy
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
-from scripts.mechanics.artifacts.artifacts import (
-    DashArtifact, MagnetPulseArtifact, SlowFieldArtifact,
-    BulletTimeArtifact, CloneDashArtifact
-)
+from scripts.mechanics.artifacts.dash_artifact import DashArtifact
+from scripts.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact
+from scripts.mechanics.artifacts.bullet_time import BulletTimeArtifact
+from scripts.mechanics.artifacts.clone_dash import CloneDashArtifact
 
 class WaveManager:
     def __init__(self, player):
