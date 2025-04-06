@@ -1,4 +1,5 @@
 import arcade
+import os
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -7,7 +8,24 @@ SCREEN_TITLE = "Neododge"
 class StartView(arcade.View):
     def __init__(self):
         super().__init__()
+        self.music = None
+        self.media_player = None
+
+    def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
+
+        # Load music
+        music_path = os.path.join("assets", "audio", "themev1.mp3")
+        try:
+            self.music = arcade.load_sound(music_path)
+            self.media_player = arcade.play_sound(self.music, volume=0.4, looping=True)
+        except Exception as e:
+            print("Failed to load music:", e)
+
+    def on_hide_view(self):
+        # Stop music when view changes
+        if self.media_player:
+            self.media_player.pause()
 
     def on_draw(self):
         self.clear()
