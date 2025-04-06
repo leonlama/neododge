@@ -7,6 +7,7 @@ from scripts.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact
 from scripts.mechanics.artifacts.slow_field import SlowFieldArtifact
 from scripts.mechanics.artifacts.bullet_time import BulletTimeArtifact
 from scripts.mechanics.artifacts.clone_dash import CloneDashArtifact
+from scripts.mechanics.coins.coin import Coin
 
 class WaveManager:
     def __init__(self, player):
@@ -56,8 +57,20 @@ class WaveManager:
             y = random.randint(50, screen_height - 50)
             sprite_list.append(Enemy(x, y, self.player, behavior=behavior))
 
+        # Coin spawning logic
+        num_coins = random.randint(1, 5)
+        coins = []
+        for _ in range(num_coins):
+            x = random.randint(50, screen_width - 50)
+            y = random.randint(50, screen_height - 50)
+            coins.append(Coin(x, y))
+
         print(f"🌊 Wave {self.wave} ({wave_info['type']}) started with {len(sprite_list)} enemies")
-        return wave_info
+        return {
+            "orbs": wave_info["orbs"],
+            "artifact": wave_info["artifact"],
+            "coins": coins
+        }
 
     def spawn_orbs(self, orb_list, count, screen_width, screen_height):
         for _ in range(count):

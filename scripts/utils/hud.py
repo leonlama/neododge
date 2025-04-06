@@ -38,3 +38,6 @@ def draw_wave_number(current_wave):
         font_name="Kenney Pixel",
         anchor_x="left"
     )
+
+def draw_coin_count(player_coins):
+    arcade.draw_text(f"Coins: {player_coins}", SCREEN_WIDTH - 100, 30, arcade.color.GOLD, 18)

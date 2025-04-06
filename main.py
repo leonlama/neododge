@@ -17,6 +17,9 @@ from scripts.mechanics.artifacts.clone_dash import CloneDashArtifact
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 
+# Coins
+from scripts.mechanics.coins.coin import Coin
+
 # Views
 from scripts.views.start_view import StartView
 from scripts.views.game_over_view import GameOverView
@@ -36,6 +39,7 @@ from scripts.utils.hud import (
     draw_wave_timer,
     draw_score,
     draw_wave_number,
+    draw_coin_count,
 )
 from scripts.utils.wave_text import fade_wave_message_alpha
 
@@ -46,6 +50,7 @@ class NeododgeGame(arcade.View):
         self.player = None
         self.enemies = arcade.SpriteList()
         self.orbs = arcade.SpriteList()
+        self.coins = arcade.SpriteList()
         self.dash_artifact = None
         self.pickup_texts = []
         self.wave_duration = 2.0
@@ -62,6 +67,9 @@ class NeododgeGame(arcade.View):
         self.clones = []
         self.vision_shader = None
         self.vision_geometry = None
+        self.coins_to_spawn = 0
+        self.coin_spawn_timer = 0.0
+        self.coin_sound = arcade.load_sound("assets/audio/coin.flac")
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -83,6 +91,7 @@ class NeododgeGame(arcade.View):
         # --- World Layer ---
         self.player.draw()
         self.orbs.draw()
+        self.coins.draw()
         self.enemies.draw()
         for enemy in self.enemies:
             enemy.bullets.draw()
@@ -102,6 +111,7 @@ class NeododgeGame(arcade.View):
         self.player.draw_artifacts()
         arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
         draw_pickup_texts(self.pickup_texts)
+        draw_coin_count(self.player.coins)
 
         # Wave timer and message
         if not self.wave_pause:
@@ -117,6 +127,7 @@ class NeododgeGame(arcade.View):
     def on_update(self, delta_time):
         self.player.update(delta_time)
         self.orbs.update()
+        self.coins.update()
         self.enemies.update()
         self.score += delta_time * 10
         self.orb_spawn_timer -= delta_time
@@ -142,6 +153,12 @@ class NeododgeGame(arcade.View):
                 self.wave_manager.next_wave()
                 info = self.wave_manager.spawn_enemies(self.enemies, SCREEN_WIDTH, SCREEN_HEIGHT)
                 self.wave_manager.spawn_orbs(self.orbs, info["orbs"], SCREEN_WIDTH, SCREEN_HEIGHT)
+
+                # Set up the coin plan
+                self.coins_to_spawn = random.randint(1, 5)
+                self.coin_spawn_timer = random.uniform(3, 7)
+                print(f"🪙 Will spawn {self.coins_to_spawn} coins over time")
+
                 if info["artifact"]:
                     artifact = self.wave_manager.maybe_spawn_artifact(
                         self.player.artifacts,
@@ -172,6 +189,17 @@ class NeododgeGame(arcade.View):
             self.player.can_dash = True
             self.dash_artifact = None
 
+        # Staggered coin spawning
+        if self.coins_to_spawn > 0:
+            self.coin_spawn_timer -= delta_time
+            if self.coin_spawn_timer <= 0:
+                x = random.randint(50, SCREEN_WIDTH - 50)
+                y = random.randint(50, SCREEN_HEIGHT - 50)
+                self.coins.append(Coin(x, y))
+                self.coins_to_spawn -= 1
+                self.coin_spawn_timer = random.uniform(3, 7)
+                print(f"🪙 Spawned a coin! Remaining: {self.coins_to_spawn}")
+
         for enemy in self.enemies:
             for bullet in enemy.bullets:
                 bullet.update(delta_time)
@@ -197,6 +225,13 @@ class NeododgeGame(arcade.View):
                     arcade.play_sound(arcade.load_sound("assets/audio/debuff.wav"), volume=0.1)
 
                 self.orbs.remove(orb)
+
+        for coin in self.coins:
+            coin.update_animation(delta_time)
+            if arcade.check_for_collision(self.player, coin):
+                self.player.coins += coin.coin_value
+                arcade.play_sound(self.coin_sound)
+                self.coins.remove(coin)
 
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:
