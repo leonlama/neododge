@@ -42,6 +42,7 @@ from scripts.utils.hud import (
     draw_coin_count,
 )
 from scripts.utils.wave_text import fade_wave_message_alpha
+from scripts.utils.resource_helper import resource_path
 
 
 class NeododgeGame(arcade.View):
@@ -53,7 +54,7 @@ class NeododgeGame(arcade.View):
         self.coins = arcade.SpriteList()
         self.dash_artifact = None
         self.pickup_texts = []
-        self.wave_duration = 2.0
+        self.wave_duration = 20.0
         self.level_timer = 0.0
         self.orb_spawn_timer = random.uniform(4, 8)
         self.artifact_spawn_timer = random.uniform(20, 30)
@@ -69,7 +70,7 @@ class NeododgeGame(arcade.View):
         self.vision_geometry = None
         self.coins_to_spawn = 0
         self.coin_spawn_timer = 0.0
-        self.coin_sound = arcade.load_sound("assets/audio/coin.flac")
+        self.coin_sound = arcade.load_sound(resource_path("assets/audio/coin.flac"))
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -171,6 +172,12 @@ class NeododgeGame(arcade.View):
                 self.in_wave = True
                 print(f"🚀 Starting Wave {self.wave_manager.wave}")
 
+                # Check if it's time to go to the shop
+                if self.wave_manager.wave % 5 == 0:
+                    from scripts.views.shop_view import ShopView
+                    shop_view = ShopView(self.player, self)
+                    self.window.show_view(shop_view)
+
         if self.orb_spawn_timer <= 0:
             self.orbs.append(spawn_random_orb(SCREEN_WIDTH, SCREEN_HEIGHT))
             self.orb_spawn_timer = random.uniform(4, 8)
@@ -218,9 +225,9 @@ class NeododgeGame(arcade.View):
 
                 # Play orb sound
                 if isinstance(orb, BuffOrb):
-                    arcade.play_sound(arcade.load_sound("assets/audio/buff.wav"))
+                    arcade.play_sound(arcade.load_sound(resource_path("assets/audio/buff.wav")))
                 elif isinstance(orb, DebuffOrb):
-                    arcade.play_sound(arcade.load_sound("assets/audio/debuff.wav"), volume=0.1)
+                    arcade.play_sound(arcade.load_sound(resource_path("assets/audio/debuff.wav")), volume=0.1)
 
                 self.orbs.remove(orb)
 

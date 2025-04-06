@@ -2,8 +2,9 @@ import arcade
 import math
 
 from scripts.views.game_over_view import GameOverView
+from scripts.utils.resource_helper import resource_path
 
-damage_sound = arcade.load_sound("assets/audio/damage.wav")
+damage_sound = arcade.load_sound(resource_path("assets/audio/damage.wav"))
 
 PLAYER_SPEED = 300
 DASH_DISTANCE = 150
