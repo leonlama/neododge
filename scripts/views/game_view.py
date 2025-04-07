@@ -21,8 +21,8 @@ from scripts.utils.hud import (
 )
 from scripts.utils.wave_text import fade_wave_message_alpha
 from scripts.utils.resource_helper import resource_path
-from scripts.skins.skin_manager import skin_manager
 from scripts.utils.orb_utils import get_texture_name_from_orb_type
+from scripts.skins.skin_manager import skin_manager
 
 class NeododgeGame(arcade.View):
     def __init__(self):
@@ -226,53 +226,37 @@ class NeododgeGame(arcade.View):
             self.player.move_towards_mouse(self, delta_time)
             
     def apply_skin_toggle(self):
-        """Toggle between available skins and update all game elements"""
-        # Get available skins and toggle to next one
-        available_skins = skin_manager.data["unlocked"]
-        current_skin = skin_manager.get_selected()
-        
-        # Find next skin in rotation
-        current_index = available_skins.index(current_skin)
-        next_index = (current_index + 1) % len(available_skins)
-        next_skin = available_skins[next_index]
-        
-        # Apply the new skin
-        if skin_manager.select(next_skin):
-            print(f"🎨 Switched to {next_skin} skin")
-            
-            # Rebuild textures for dash artifact
-            if self.dash_artifact:
-                self.dash_artifact.update_texture()
-            
-            # Rebuild textures for player hearts and artifacts
-            if self.player:
-                self.player.update_hearts()
-                self.player.update_orb_icons()
-                for artifact in self.player.artifacts:
-                    if hasattr(artifact, "update_texture"):
-                        artifact.update_texture()
-            
-            # Reapply orb textures
-            for orb in self.orbs:
-                if hasattr(orb, "update_texture"):
-                    orb.update_texture()
-                elif hasattr(orb, "orb_type"):
-                    texture_name = get_texture_name_from_orb_type(orb.orb_type)
-                    orb.texture = skin_manager.get_texture("orbs", texture_name)
-                    orb.scale = skin_manager.get_orb_scale()
-            
-            # Update enemy bullets
-            for enemy in self.enemies:
-                for bullet in enemy.bullets:
-                    if hasattr(bullet, "update_texture"):
-                        bullet.update_texture()
-            
-            # Update coins
-            for coin in self.coins:
-                if hasattr(coin, "update_texture"):
-                    coin.update_texture()
+        """Toggle between available skin sets"""
+        if skin_manager.get_selected() == "default":
+            new_skin = "mdma"
         else:
-            print("⚠️ Skin not found or not unlocked")
+            new_skin = "default"
+            
+        # Apply the new skin if it's unlocked
+        if skin_manager.is_unlocked(new_skin):
+            skin_manager.select(new_skin)
+            
+            # Update visual elements that depend on the skin
+            self.update_visual_elements()
+            
+            # Play feedback sound
+            arcade.play_sound(arcade.load_sound(resource_path("assets/audio/buff.wav")))
+            print(f"🎨 Switched to skin: {new_skin}")
+        else:
+            print(f"❌ Cannot select locked skin: {new_skin}")
+
+    def update_visual_elements(self):
+        """Update all visual elements after a skin change"""
+        # Update player appearance
+        self.player.update_appearance()
+
+        # Update orbs
+        for orb in self.orbs:
+            orb.update_appearance()
+
+        # Update artifacts
+        for artifact in self.player.artifacts:
+            artifact.update_appearance()
 
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:

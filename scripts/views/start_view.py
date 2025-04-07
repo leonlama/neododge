@@ -1,7 +1,9 @@
 import arcade
 import pyglet
+import math
 from scripts.utils.resource_helper import resource_path
 from scripts.views.game_view import NeododgeGame
+from scripts.utils.skin_loader import SkinManager
 from scripts.skins.skin_manager import skin_manager
 
 SCREEN_WIDTH = 800
@@ -13,6 +15,8 @@ class StartView(arcade.View):
         super().__init__()
         self.music = None
         self.media_player = None
+        self.last_skin_update = 0  # For animation timing
+        self.skin_change_indicator = 0.0  # Pulse animation
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -32,24 +36,64 @@ class StartView(arcade.View):
 
     def on_draw(self):
         self.clear()
-        arcade.draw_text("NEODODGE", self.window.width // 2, self.window.height // 2 + 50,
+        arcade.draw_text("NEODODGE", int(self.window.width // 2), int(self.window.height // 2 + 50),
                          arcade.color.WHITE, font_size=36, anchor_x="center", font_name="Kenney Pixel")
-        arcade.draw_text("Click to Start", self.window.width // 2, self.window.height // 2 - 50,
-                         arcade.color.LIGHT_GRAY, font_size=20, anchor_x="center")
-        arcade.draw_text("Press 'T' to toggle skin", self.window.width // 2, self.window.height // 2 - 80,
-                         arcade.color.LIGHT_GRAY, font_size=16, anchor_x="center")
-        arcade.draw_text(f"Current skin: {skin_manager.data['selected']}", self.window.width // 2, self.window.height // 2 - 110,
-                         arcade.color.LIGHT_GRAY, font_size=14, anchor_x="center")
+        arcade.draw_text("Press SPACE to start", int(self.window.width // 2), int(self.window.height // 2 - 20),
+                         arcade.color.WHITE, font_size=20, anchor_x="center")
+        arcade.draw_text("Press 'T' to toggle skin", int(self.window.width // 2), int(self.window.height // 2 - 50),
+                         arcade.color.WHITE, font_size=20, anchor_x="center")
+        
+        # Pulse effect for visual feedback
+        pulse = abs(math.sin(self.skin_change_indicator * 3)) * 50 + 205
+        self.skin_change_indicator = max(0, self.skin_change_indicator - 0.1)
 
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.T:
-            # Toggle skin
-            current = skin_manager.data["selected"]
-            new_skin = "default" if current == "mdma" else "mdma"
-            skin_manager.select(new_skin)
-            print(f"🎨 Switched to skin: {new_skin}")
-        else:
+        # Draw skin name with animation
+        arcade.draw_text(
+            f"Current skin: {skin_manager.get_selected()}",
+            int(self.window.width // 2),
+            int(self.window.height // 2 - 80),
+            arcade.color.YELLOW,
+            font_size=16,
+            anchor_x="center",
+            bold=True
+        )
+
+    def on_key_press(self, symbol, modifiers):
+        if symbol == arcade.key.T:
+            self.toggle_skin()
+        elif symbol == arcade.key.SPACE:
             self.start_game()
+
+    def toggle_skin(self):
+        """Toggle between available skin sets"""
+        # Determine the next skin
+        current_skin = skin_manager.get_selected()
+        next_skin = "mdma" if current_skin == "default" else "default"
+
+        # Make sure the skin is unlocked
+        if next_skin not in skin_manager.unlocked_skins:
+            skin_manager.unlock_skin(next_skin)
+
+        # Toggle to the next skin
+        skin_manager.select(next_skin)
+        
+        # Update any visual elements in the start view
+        self.update_visual_elements()
+        
+        # Visual feedback
+        self.skin_change_indicator = 1.0
+        arcade.play_sound(arcade.load_sound(
+            resource_path("assets/audio/buff.wav")
+        ))
+        print(f"🎨 Switched to skin: {next_skin}")
+        
+        return skin_manager.get_selected()
+
+    def update_visual_elements(self):
+        """Update visual elements in the start view after skin change"""
+        # Update any skin-dependent elements in the start view
+        # For example, if you show sample artifacts or player icon
+        pass
 
     def start_game(self):
         # Stop title music

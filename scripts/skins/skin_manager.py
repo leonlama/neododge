@@ -44,10 +44,12 @@ class SkinManager:
         return SKIN_SETS.get(current_skin, SKIN_SETS[DEFAULT_SKIN]).get(f"{category}_scale", 1.0)
 
     def get_artifact_scale(self):
+        """Return the scale value for artifacts based on current skin."""
         skin_name = self.data["selected"]
         return SKIN_SETS.get(skin_name, SKIN_SETS[DEFAULT_SKIN])["artifact_scale"]
 
     def get_orb_scale(self):
+        """Return the scale value for orbs based on current skin."""
         skin_name = self.data["selected"]
         return SKIN_SETS.get(skin_name, SKIN_SETS[DEFAULT_SKIN])["orb_scale"]
 
@@ -64,16 +66,12 @@ class SkinManager:
         """Return relative path like assets/skins/mdma/hearts/red.png."""
         return os.path.join(self.get_path(), category, f"{name}.png")
 
-    def get_texture(self, category, name):
+    def get_texture(self, category, name, force_reload=False):
         """Load and cache texture via resource_path (PyInstaller-safe)."""
-        # Use the skin path for the key
-        key = f"{self.get_path()}/{category}/{name}"
-        
-        # Check if texture is cached and load if not
-        if key not in self.textures:
-            texture_path = self.get_texture_path(category, name)
+        key = f"{category}/{name}"
+        if force_reload or key not in self.textures:
+            texture_path = os.path.join(self.get_path(), category, f"{name}.png")
             self.textures[key] = arcade.load_texture(resource_path(texture_path))
-        
         return self.textures[key]
 
     def unlock(self, skin_name):
@@ -82,11 +80,19 @@ class SkinManager:
             self.save()
 
     def select(self, skin_name):
-        if skin_name in self.data["unlocked"] and skin_name in SKIN_SETS:
-            self.data["selected"] = skin_name
-            self.clear_cache()  # Clear cache when selecting a new skin
-            self.save()
-            return True
+        """Select a skin and save the selection"""
+        if skin_name in SKIN_SETS:
+            # Check if skin is unlocked before selecting
+            if skin_name in self.data["unlocked"]:
+                self.data["selected"] = skin_name
+                self.clear_cache()
+                self.save()  # Save to config file for persistence between game sessions
+                print(f"✅ Selected skin: {skin_name} (Cache cleared)")  # Debug log
+                return True
+            else:
+                print(f"❌ Cannot select locked skin: {skin_name}")
+                return False
+        print(f"❌ Failed to select skin: {skin_name} (not found in SKIN_SETS)")
         return False
     
     def clear_cache(self):

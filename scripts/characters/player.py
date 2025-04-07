@@ -1,6 +1,6 @@
 import arcade
 import math
-from scripts.utils.constants import MDMA_SKIN_PATH
+from scripts.utils.skin_loader import SkinManager
 from scripts.views.game_over_view import GameOverView
 from scripts.utils.resource_helper import resource_path
 from scripts.skins.skin_manager import skin_manager

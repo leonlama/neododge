@@ -38,8 +38,8 @@ class DebuffOrb(arcade.Sprite):
         # Get the texture name for this orb type
         texture_name = get_texture_name_from_orb_type(self.orb_type)
         
-        # Get the texture from skin manager
-        self.texture = skin_manager.get_texture("orbs", texture_name)
+        # Get the texture from skin manager with force_reload=True to ensure we get the latest texture
+        self.texture = skin_manager.get_texture("orbs", texture_name, force_reload=True)
         
         # If texture is None, use the fallback
         if self.texture is None:

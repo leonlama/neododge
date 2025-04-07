@@ -1,5 +1,6 @@
 from .base import BaseArtifact
 from scripts.skins.skin_manager import skin_manager
+from scripts.utils.skin_logic import apply_skin_to_artifact
 
 class DashArtifact(BaseArtifact):
     def __init__(self, x, y):
@@ -12,7 +13,7 @@ class DashArtifact(BaseArtifact):
     
     def update_texture(self):
         """Update the texture based on current skin settings"""
-        self.texture = skin_manager.get_texture("artifacts", "dash")
+        self.texture = skin_manager.get_texture("artifacts", "dash", force_reload=True)
         self.scale = skin_manager.get_artifact_scale()
 
     def update(self, delta_time: float = 0):
