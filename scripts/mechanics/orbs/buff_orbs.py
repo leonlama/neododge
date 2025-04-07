@@ -1,5 +1,7 @@
 import arcade
 
+from scripts.utils.constants import MDMA_SKIN_PATH
+
 class BuffOrb(arcade.Sprite):
     def __init__(self, x, y, orb_type="gray"):
         super().__init__()
@@ -21,6 +23,18 @@ class BuffOrb(arcade.Sprite):
 
         color = color_map.get(orb_type, arcade.color.WHITE)
         self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
+
+        # Override texture if specific PNGs are available
+        if orb_type == "cooldown":
+            self.texture = arcade.load_texture(MDMA_SKIN_PATH + "/orbs/cd_tesla.png")
+            self.scale = 0.05
+        elif orb_type == "shield":
+            self.texture = arcade.load_texture(MDMA_SKIN_PATH + "/orbs/shield_tictac.png")
+            self.scale = 0.05
+        elif orb_type.startswith("speed_"):
+            self.texture = arcade.load_texture(MDMA_SKIN_PATH + "/orbs/speed_punisher.png")
+            self.scale = 0.05
+
         self.center_x = x
         self.center_y = y
 

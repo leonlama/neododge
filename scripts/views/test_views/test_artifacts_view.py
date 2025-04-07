@@ -48,7 +48,10 @@ class TestArtifactsView(arcade.View):
             BulletTimeArtifact, CloneDashArtifact
         ]
         for i, ArtifactClass in enumerate(artifact_classes):
-            artifact = ArtifactClass()
+            if ArtifactClass == DashArtifact:
+                artifact = ArtifactClass(self.player.center_x, self.player.center_y)
+            else:
+                artifact = ArtifactClass()
             artifact.center_x = 100 + i * 140
             artifact.center_y = 400
             artifact.name = artifact.__class__.__name__.replace("Artifact", "").replace("CloneDash", "Clone Dash")

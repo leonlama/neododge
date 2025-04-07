@@ -82,7 +82,7 @@ class NeododgeGame(arcade.View):
         self.player.window = self.window
         self.player.parent_view = self
         self.wave_manager = WaveManager(self.player)
-        self.wave_manager.wave = 4  # Start at wave 4 for debugging the shop
+        self.wave_manager.wave = 1  # Start at wave 4 for debugging the shop
         self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
         self.dash_artifact = spawn_dash_artifact(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.orbs = arcade.SpriteList()
@@ -98,7 +98,7 @@ class NeododgeGame(arcade.View):
         for enemy in self.enemies:
             enemy.bullets.draw()
         if self.dash_artifact:
-            self.dash_artifact.draw()
+            self.dash_artifact.sprite.draw()
 
         # Draw vision blur if active
         if self.player.vision_blur:
@@ -185,10 +185,10 @@ class NeododgeGame(arcade.View):
         if self.artifact_spawn_timer <= 0 and not self.dash_artifact:
             self.dash_artifact = spawn_dash_artifact(SCREEN_WIDTH, SCREEN_HEIGHT)
             self.artifact_spawn_timer = random.uniform(20, 30)
-        if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
+        if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact.sprite):
             # Only add if not already collected
             if not any(isinstance(a, DashArtifact) for a in self.player.artifacts):
-                self.player.artifacts.append(DashArtifact())
+                self.player.artifacts.append(DashArtifact(self.player.center_x, self.player.center_y))
                 print("✨ Dash unlocked!")
             else:
                 print("⚠️ Dash already unlocked.")

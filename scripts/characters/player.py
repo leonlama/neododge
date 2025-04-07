@@ -1,6 +1,6 @@
 import arcade
 import math
-
+from scripts.utils.constants import MDMA_SKIN_PATH
 from scripts.views.game_over_view import GameOverView
 from scripts.utils.resource_helper import resource_path
 
@@ -50,6 +50,13 @@ class Player(arcade.Sprite):
         self.second_chance = False
         self.score_multiplier = 1
         self.base_speed = 4
+
+        # Load heart textures
+        self.heart_textures = {
+            "gray": arcade.load_texture(MDMA_SKIN_PATH + "/hearts/grey_heart.png"),
+            "red": arcade.load_texture(MDMA_SKIN_PATH + "/hearts/red_heart.png"),
+            "gold": arcade.load_texture(MDMA_SKIN_PATH + "/hearts/gold_heart.png"),
+        }
 
     def set_target(self, x, y):
         if self.inverse_move:
@@ -168,14 +175,14 @@ class Player(arcade.Sprite):
         for i in range(self.max_slots):
             x = x_start + i * 40
             if i < int(self.current_hearts):
-                arcade.draw_text("❤", x, y, arcade.color.RED, 30)
+                arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["red"])
             elif i < self.current_hearts:
-                arcade.draw_text("♥", x, y, arcade.color.LIGHT_RED_OCHRE, 30)
+                arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["red"], alpha=128)
             else:
-                arcade.draw_text("♡", x, y, arcade.color.GRAY, 30)
+                arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["gray"])
         for i in range(self.gold_hearts):
             x = x_start + (self.max_slots + i) * 40
-            arcade.draw_text("💛", x, y, arcade.color.GOLD, 30)
+            arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["gold"])
 
     def draw_orb_status(self, screen_width=800, screen_height=600):
         x = screen_width - 220

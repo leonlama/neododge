@@ -100,7 +100,7 @@ class WaveManager:
 
         name = random.choice(available)
         artifact_class = all_types[name]
-        art = artifact_class()
+        art = artifact_class(self.player.center_x, self.player.center_y)
         art.center_x = random.randint(50, screen_width - 50)
         art.center_y = random.randint(50, screen_height - 50)
         art.name = name
