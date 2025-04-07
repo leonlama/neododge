@@ -36,20 +36,13 @@ def preload_all_skins():
                     continue
     
     # Preload all orb types
-    orb_types = ["speed", "shield", "cooldown", "multiplier", "vision", "inverse"]
+    orb_types = ["speed", "shield", "cooldown", "multiplier", "vision"]
     for orb_type in orb_types:
         try:
-            # Try to load both buff and debuff versions
-            buff_path = resource_path(f"assets/orbs/buff_{orb_type}.png")
-            debuff_path = resource_path(f"assets/orbs/debuff_{orb_type}.png")
-            
-            if arcade.os.path.exists(buff_path):
-                texture = arcade.load_texture(buff_path)
-                sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999)
-                preload_list.append(sprite)
-                
-            if arcade.os.path.exists(debuff_path):
-                texture = arcade.load_texture(debuff_path)
+            # Load orb texture using skin manager
+            path = resource_path(skin_manager.get_texture_path("orbs", orb_type))
+            if arcade.os.path.exists(path):
+                texture = arcade.load_texture(path)
                 sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999)
                 preload_list.append(sprite)
         except Exception:
