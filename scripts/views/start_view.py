@@ -3,7 +3,6 @@ import pyglet
 import math
 from scripts.utils.resource_helper import resource_path
 from scripts.views.game_view import NeododgeGame
-from scripts.utils.skin_loader import SkinManager
 from scripts.skins.skin_manager import skin_manager
 
 SCREEN_WIDTH = 800
@@ -66,28 +65,25 @@ class StartView(arcade.View):
 
     def toggle_skin(self):
         """Toggle between available skin sets"""
-        # Determine the next skin
-        current_skin = skin_manager.get_selected()
-        next_skin = "mdma" if current_skin == "default" else "default"
+        try:
+            # Use the window's skin manager to toggle
+            if hasattr(self.window.skin_manager, 'toggle_skin'):
+                self.window.skin_manager.toggle_skin()
+            else:
+                # Determine the next skin
+                current_skin = self.window.skin_manager.current_skin if hasattr(self.window.skin_manager, 'current_skin') else self.window.skin_manager.data["selected"]
+                next_skin = "mdma" if current_skin == "default" else "default"
+                self.window.skin_manager.select(next_skin)
 
-        # Make sure the skin is unlocked
-        if next_skin not in skin_manager.unlocked_skins:
-            skin_manager.unlock_skin(next_skin)
-
-        # Toggle to the next skin
-        skin_manager.select(next_skin)
-        
-        # Update any visual elements in the start view
-        self.update_visual_elements()
-        
-        # Visual feedback
-        self.skin_change_indicator = 1.0
-        arcade.play_sound(arcade.load_sound(
-            resource_path("assets/audio/buff.wav")
-        ))
-        print(f"🎨 Switched to skin: {next_skin}")
-        
-        return skin_manager.get_selected()
+            print(f"🎨 Toggled skin in start view")
+            
+            # Visual feedback
+            self.skin_change_indicator = 1.0
+            arcade.play_sound(arcade.load_sound(
+                resource_path("assets/audio/buff.wav")
+            ))
+        except Exception as e:
+            print(f"❌ Error toggling skin: {e}")
 
     def update_visual_elements(self):
         """Update visual elements in the start view after skin change"""

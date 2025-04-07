@@ -9,15 +9,31 @@ from scripts.views.start_view import StartView
 from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, ARTIFACT_SCALE, SKINS_DIR
 from scripts.utils.resource_helper import resource_path
 from scripts.utils.skin_loader import SkinManager
+from scripts.skins.skin_manager import skin_manager
 
 class GameWindow(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.skin_manager = SkinManager()
         self.skin_manager.load_skin("default")  # Initial load
+        
         # Unlock all skins for testing
-        self.skin_manager.unlock_skin("mdma")
+        if hasattr(self.skin_manager, 'unlock_skin'):
+            self.skin_manager.unlock_skin("mdma")
+        elif hasattr(self.skin_manager, 'data'):
+            if "mdma" not in self.skin_manager.data["unlocked"]:
+                self.skin_manager.data["unlocked"].append("mdma")
+                if hasattr(self.skin_manager, 'save_unlocks'):
+                    self.skin_manager.save_unlocks()
+                elif hasattr(self.skin_manager, 'save'):
+                    self.skin_manager.save()
+        
+        # Also unlock skins in the global skin manager
+        if hasattr(skin_manager, 'unlock'):
+            skin_manager.unlock("mdma")
+        
         print(f"🎨 [INIT] Using skin: {self.skin_manager.current_skin}")
+        print(f"Using skin manager class: {type(self.skin_manager).__name__}")
         self.preload_all_skins()
 
     def preload_all_skins(self):

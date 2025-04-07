@@ -37,6 +37,9 @@ class SkinManager:
             self.data["selected"] = DEFAULT_SKIN
 
         self.textures = {}  # In-memory texture cache
+        
+        # Add this line to track unlocked skins
+        self.unlocked_skins = ["default", "mdma"]  # Unlock all skins for testing
 
     def get_scale(self, category):
         """Return the scale value for a given category like 'player', 'orb', 'artifact', 'heart'."""
@@ -110,6 +113,25 @@ class SkinManager:
         """Save unlock data to disk."""
         with open(UNLOCKS_FILE, "w") as f:
             json.dump(self.data, f, indent=4)
+            
+    def toggle_skin(self):
+        """Toggle between available skins"""
+        current_skin = self.data["selected"]
+        next_skin = "mdma" if current_skin == "default" else "default"
+
+        # Select the next skin
+        self.select(next_skin)
+        print(f"🎨 Toggled skin to: {self.data['selected']}")
+        return self.data["selected"]
+
+    def unlock_skin(self, skin_name):
+        """Unlock a skin"""
+        if skin_name not in self.data["unlocked"]:
+            self.data["unlocked"].append(skin_name)
+            self.save()
+            print(f"🔓 Unlocked skin: {skin_name}")
+            return True
+        return False
 
 # Global instance (singleton)
 skin_manager = SkinManager()
