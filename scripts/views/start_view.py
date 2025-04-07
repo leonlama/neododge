@@ -56,10 +56,13 @@ class StartView(arcade.View):
         pyglet.clock.schedule_once(lambda dt: self.window.show_view(game_view), 1.2)
 
     def on_mouse_press(self, x, y, button, modifiers):
-        arcade.stop_sound(self.music)
+        if self.media_player:
+            arcade.stop_sound(self.media_player)  # ✅ Correct
         try:
             from scripts.views.game_view import NeododgeGame
-            self.window.show_view(NeododgeGame())
+            game_view = NeododgeGame()
+            game_view.setup()  # Make sure setup() is called to initialize self.player
+            self.window.show_view(game_view)
         except Exception as e:
             print("🚨 Failed to start game:", e)
             arcade.play_sound(arcade.sound.Sound(":resources:onscreen_controls/shaded_dark/shaded_dark_action1.png"))  # tiny feedback
