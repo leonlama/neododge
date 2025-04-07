@@ -169,7 +169,7 @@ class NeododgeGame(arcade.View):
         self.player.window = self.window
         self.player.parent_view = self
         self.wave_manager = WaveManager(self.player)
-        self.wave_manager.wave = 4  # Start at wave 4 for debugging the shop
+        self.wave_manager.wave = 1  # Start at wave 4 for debugging the shop
         self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
         self.dash_artifact = spawn_dash_artifact(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.orbs = arcade.SpriteList()
