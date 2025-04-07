@@ -71,6 +71,9 @@ class NeododgeGame(arcade.View):
         self.coins_to_spawn = 0
         self.coin_spawn_timer = 0.0
         self.coin_sound = arcade.load_sound(resource_path("assets/audio/coin.flac"))
+        self.right_mouse_down = False
+        self.mouse_x = 0
+        self.mouse_y = 0
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -239,9 +242,21 @@ class NeododgeGame(arcade.View):
                 arcade.play_sound(self.coin_sound)
                 self.coins.remove(coin)
 
+        if self.right_mouse_down:
+            self.player.move_towards_mouse(self, delta_time)
+
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:
-            self.player.set_target(x, y)
+            self.right_mouse_down = True
+        self.player.set_target(x, y)
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        if button == arcade.MOUSE_BUTTON_RIGHT:
+            self.right_mouse_down = False
+
+    def on_mouse_motion(self, x, y, dx, dy):
+        self.mouse_x = x
+        self.mouse_y = y
 
     def on_key_press(self, symbol, modifiers):
         if symbol == arcade.key.SPACE:

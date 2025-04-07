@@ -255,3 +255,17 @@ class Player(arcade.Sprite):
                     bar_height,
                     arcade.color.YELLOW
                 )
+
+    def move_towards_mouse(self, game, delta_time):
+        mouse_x, mouse_y = game.mouse_x, game.mouse_y
+        dx = mouse_x - self.center_x
+        dy = mouse_y - self.center_y
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+
+        if distance > 5:
+            # Normalize
+            dx /= distance
+            dy /= distance
+            # Multiply by speed and delta_time for consistent movement
+            self.center_x += dx * self.base_speed * delta_time * 60
+            self.center_y += dy * self.base_speed * delta_time * 60

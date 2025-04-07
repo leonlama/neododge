@@ -26,7 +26,7 @@ class BuffOrb(arcade.Sprite):
 
         # Override texture if specific PNGs are available
         if orb_type == "cooldown":
-            self.texture = arcade.load_texture(MDMA_SKIN_PATH + "/orbs/cd_tesla.png")
+            self.texture = arcade.load_texture(MDMA_SKIN_PATH + "/orbs/cd_telsa.png")
             self.scale = 0.05
         elif orb_type == "shield":
             self.texture = arcade.load_texture(MDMA_SKIN_PATH + "/orbs/shield_tictac.png")
