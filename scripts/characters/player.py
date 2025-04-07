@@ -134,15 +134,24 @@ class Player(arcade.Sprite):
                     print("❌ Dash on cooldown.")
 
     def perform_dash(self):
+        # Fallback if target is None
+        if self.target_x is None or self.target_y is None:
+            self.target_x = self.center_x + 1  # minimal dash
+            self.target_y = self.center_y
+
         dx = self.target_x - self.center_x
         dy = self.target_y - self.center_y
         distance = math.hypot(dx, dy)
-        if distance > 0:
-            direction_x = dx / distance
-            direction_y = dy / distance
-            self.center_x += direction_x * DASH_DISTANCE
-            self.center_y += direction_y * DASH_DISTANCE
-            self.dash_timer = 0
+
+        if distance == 0:
+            return
+
+        dash_distance = DASH_DISTANCE
+        self.center_x += (dx / distance) * dash_distance
+        self.center_y += (dy / distance) * dash_distance
+        self.invincible = True
+        self.invincibility_timer = 0
+        self.dash_timer = 0
 
     def take_damage(self, amount: float):
         if self.invincible:
@@ -217,11 +226,11 @@ class Player(arcade.Sprite):
             x = start_x + 70 * idx
             text = artifact.name
 
-            # ✅ Determine if artifact is ready or on cooldown
+            # Determine if artifact is ready or on cooldown
             ready = hasattr(artifact, "cooldown_timer") and artifact.cooldown_timer >= artifact.cooldown
             text_color = arcade.color.YELLOW if ready else arcade.color.DARK_GRAY
 
-            # 📝 Draw artifact name
+            # Draw artifact name
             arcade.draw_text(
                 text,
                 x,
@@ -232,7 +241,7 @@ class Player(arcade.Sprite):
                 anchor_x="left"
             )
 
-            # ⏳ Draw cooldown bar
+            # Draw cooldown bar
             if hasattr(artifact, "cooldown") and hasattr(artifact, "cooldown_timer"):
                 # Ratio goes from 0 (just used) to 1 (ready)
                 cooldown_ratio = min(artifact.cooldown_timer / artifact.cooldown, 1.0)

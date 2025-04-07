@@ -2,8 +2,8 @@ import arcade
 from scripts.utils.constants import ARTIFACT_SCALE
 
 class BaseArtifact(arcade.Sprite):
-    def __init__(self, image_path):
-        super().__init__(filename=image_path, scale=ARTIFACT_SCALE)
+    def __init__(self, image_path, scale=ARTIFACT_SCALE):
+        super().__init__(filename=image_path, scale=scale)
         self.name = "Unnamed"
         self.cooldown = 0
         self.cooldown_timer = 0

@@ -4,10 +4,9 @@ from scripts.utils.constants import ARTIFACT_SCALE
 
 class DashArtifact(BaseArtifact):
     def __init__(self, x, y):
-        super().__init__(skin_manager.get_texture_path("artifacts", "dash"))
+        super().__init__(skin_manager.get_texture_path("artifacts", "dash"), scale=ARTIFACT_SCALE)
         self.center_x = x
         self.center_y = y
-        self.scale = ARTIFACT_SCALE 
         self.name = "Dash"
         self.cooldown = 10.0  # seconds
         self.cooldown_timer = self.cooldown  # Start fully ready!
