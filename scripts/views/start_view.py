@@ -1,112 +1,117 @@
 import arcade
-import pyglet
-import math
-from scripts.utils.resource_helper import resource_path
 from scripts.views.game_view import NeododgeGame
-from scripts.skins.skin_manager import skin_manager
-
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-SCREEN_TITLE = "Neododge"
 
 class StartView(arcade.View):
+    """
+    Main menu view for the game.
+
+    Responsibilities:
+    - Display the game title and instructions
+    - Handle user input for starting the game
+    - Allow toggling between available skins
+    """
+
     def __init__(self):
         super().__init__()
         self.music = None
         self.media_player = None
-        self.last_skin_update = 0  # For animation timing
-        self.skin_change_indicator = 0.0  # Pulse animation
+        self.setup()
 
-    def on_show(self):
-        arcade.set_background_color(arcade.color.BLACK)
-
-        # Load music
-        music_path = resource_path("assets/audio/themev1.mp3")
-        try:
-            self.music = arcade.load_sound(music_path)
-            self.media_player = arcade.play_sound(self.music, volume=0.4, looping=True)
-        except Exception as e:
-            print("Failed to load music:", e)
-
-    def on_hide_view(self):
-        # Stop music when view changes
-        if self.media_player:
-            self.media_player.pause()
-
-    def on_draw(self):
-        self.clear()
-        arcade.draw_text("NEODODGE", int(self.window.width // 2), int(self.window.height // 2 + 50),
-                         arcade.color.WHITE, font_size=36, anchor_x="center", font_name="Kenney Pixel")
-        arcade.draw_text("Press SPACE to start", int(self.window.width // 2), int(self.window.height // 2 - 20),
-                         arcade.color.WHITE, font_size=20, anchor_x="center")
-        arcade.draw_text("Press 'T' to toggle skin", int(self.window.width // 2), int(self.window.height // 2 - 50),
-                         arcade.color.WHITE, font_size=20, anchor_x="center")
-        
-        # Pulse effect for visual feedback
-        pulse = abs(math.sin(self.skin_change_indicator * 3)) * 50 + 205
-        self.skin_change_indicator = max(0, self.skin_change_indicator - 0.1)
-
-        # Draw skin name with animation
-        arcade.draw_text(
-            f"Current skin: {skin_manager.get_selected()}",
-            int(self.window.width // 2),
-            int(self.window.height // 2 - 80),
-            arcade.color.YELLOW,
-            font_size=16,
-            anchor_x="center",
-            bold=True
-        )
-
-    def on_key_press(self, symbol, modifiers):
-        if symbol == arcade.key.T:
-            self.toggle_skin()
-        elif symbol == arcade.key.SPACE:
-            self.start_game()
-
-    def toggle_skin(self):
-        """Toggle between available skin sets"""
-        try:
-            # Use the skin_manager's toggle_skin method
-            skin_manager.toggle_skin()
-            
-            # Visual feedback
-            self.skin_change_indicator = 1.0
-            arcade.play_sound(arcade.load_sound(
-                resource_path("assets/audio/buff.wav")
-            ))
-        except Exception as e:
-            print(f"❌ Error toggling skin: {e}")
-
-    def update_visual_elements(self):
-        """Update visual elements in the start view after skin change"""
-        # Update any skin-dependent elements in the start view
-        # For example, if you show sample artifacts or player icon
+    def setup(self):
+        """Set up the start view elements."""
+        # Any setup code here
         pass
 
-    def start_game(self):
-        # Stop title music
-        if self.media_player:
-            self.media_player.pause()
-
-        # Play click sound and voice line
-        click_sound = arcade.load_sound(resource_path("assets/audio/start_click.wav"))
-        arcade.play_sound(click_sound)
-
-        # Create game view and show it
-        game_view = NeododgeGame()
-        game_view.setup()
+    def on_show(self):
+        """Called when this view becomes active."""
+        arcade.set_background_color(arcade.color.BLACK)
         
-        # Delay switching views using pyglet
-        pyglet.clock.schedule_once(lambda dt: self.window.show_view(game_view), 1.2)
+        # Load and play music
+        self._load_music()
 
-    def on_mouse_press(self, x, y, button, modifiers):
-        if self.media_player:
-            arcade.stop_sound(self.media_player)  # ✅ Correct
+    def on_draw(self):
+        """Render the screen."""
+        arcade.start_render()
+
+        # Draw title and instructions
+        self._draw_title()
+        self._draw_instructions()
+        self._draw_skin_info()
+
+    def _draw_title(self):
+        """Draw the game title."""
+        arcade.draw_text("NeoDodge", 
+                         self.window.width/2, 
+                         self.window.height/2 + 50,
+                         arcade.color.WHITE, 
+                         font_size=50, 
+                         anchor_x="center")
+
+    def _draw_instructions(self):
+        """Draw game instructions."""
+        arcade.draw_text("Press SPACE to start", 
+                         self.window.width/2, 
+                         self.window.height/2 - 20,
+                         arcade.color.WHITE, 
+                         font_size=20, 
+                         anchor_x="center")
+
+        arcade.draw_text("Press T to toggle skin", 
+                         self.window.width/2, 
+                         self.window.height/2 - 50,
+                         arcade.color.WHITE, 
+                         font_size=20, 
+                         anchor_x="center")
+
+    def _draw_skin_info(self):
+        """Draw current skin information."""
+        arcade.draw_text(f"Current skin: {self.window.skin_manager.data['selected']}", 
+                         self.window.width/2, 
+                         self.window.height/2 - 80,
+                         arcade.color.YELLOW, 
+                         font_size=16, 
+                         anchor_x="center")
+
+    def _load_music(self):
+        """Load and play background music."""
         try:
+            from scripts.utils.resource_helper import resource_path
+            self.music = arcade.load_sound(resource_path("assets/audio/menu_music.mp3"))
+            self.media_player = arcade.play_sound(self.music, looping=True)
+        except Exception as e:
+            print(f"Warning: Could not load or play music: {e}")
+
+    def on_key_press(self, symbol, modifiers):
+        """Handle key press events."""
+        if symbol == arcade.key.T:
+            self.toggle_skin()
+        else:
+            self._start_game()
+
+    def _start_game(self):
+        """Start a new game."""
+        try:
+            # Play click sound if available
+            try:
+                from scripts.utils.resource_helper import resource_path
+                click_sound = arcade.load_sound(resource_path("assets/audio/start_click.wav"))
+                arcade.play_sound(click_sound)
+            except Exception as e:
+                print(f"Warning: Could not play click sound: {e}")
+
+            # Create and setup game view
             from scripts.views.game_view import NeododgeGame
             game_view = NeododgeGame()
-            game_view.setup()  # Make sure setup() is called to initialize self.player
+            game_view.setup()
+
+            # Show the game view
             self.window.show_view(game_view)
         except Exception as e:
-            print("🚨 Failed to start game:", e)
-            arcade.play_sound(arcade.load_sound(resource_path("assets/audio/damage.wav")))  # tiny feedback
+            print(f"❌ Error starting game: {e}")
+
+    def toggle_skin(self):
+        """Toggle between available skin sets."""
+        try:
+            self.window.skin_manager.toggle_skin()
+        except Exception as e:
+            print(f"❌ Error toggling skin: {e}")
