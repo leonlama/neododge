@@ -38,6 +38,11 @@ class SkinManager:
 
         self.textures = {}  # In-memory texture cache
 
+    def get_scale(self, category):
+        """Return the scale value for a given category like 'player', 'orb', 'artifact', 'heart'."""
+        current_skin = self.data["selected"]
+        return SKIN_SETS.get(current_skin, SKIN_SETS[DEFAULT_SKIN]).get(f"{category}_scale", 1.0)
+
     def get_artifact_scale(self):
         skin_name = self.data["selected"]
         return SKIN_SETS.get(skin_name, SKIN_SETS[DEFAULT_SKIN])["artifact_scale"]

@@ -1,10 +1,9 @@
 from .base import BaseArtifact
 from scripts.skins.skin_manager import skin_manager
-from scripts.utils.resource_helper import resource_path
 
 class BulletTimeArtifact(BaseArtifact):
     def __init__(self, x, y):
-        super().__init__(resource_path(skin_manager.get_texture_path("artifacts", "bullet_time")), scale=skin_manager.get_artifact_scale())
+        super().__init__("bullet_time")
         self.center_x = x
         self.center_y = y
         self.name = "Bullet Time"
@@ -16,7 +15,7 @@ class BulletTimeArtifact(BaseArtifact):
         self.texture = skin_manager.get_texture("artifacts", "bullet_time")
         self.scale = skin_manager.get_artifact_scale()
 
-    def apply_effect(self, enemies):
+    def apply_effect(self, player, enemies):
         for enemy in enemies:
             for bullet in enemy.bullets:
                 bullet.change_x *= 0.5

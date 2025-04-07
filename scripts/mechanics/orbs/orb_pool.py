@@ -1,6 +1,8 @@
 import random
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
+from scripts.skins.skin_manager import skin_manager
+from scripts.utils.orb_utils import get_texture_name_from_orb_type
 
 # Define all orb types you want to use
 BUFF_ORBS = [
@@ -33,7 +35,15 @@ def get_random_orb(x: float, y: float):
 
     if is_debuff:
         orb_type = random.choice(DEBUFF_ORBS)
-        return DebuffOrb(x, y, orb_type=orb_type)
+        orb = DebuffOrb(x, y, orb_type=orb_type)
+        texture_name = get_texture_name_from_orb_type(orb_type)
+        orb.texture = skin_manager.get_texture("orbs", texture_name)
+        orb.scale = skin_manager.get_orb_scale()
+        return orb
     else:
         orb_type = random.choice(BUFF_ORBS)
-        return BuffOrb(x, y, orb_type=orb_type)
+        orb = BuffOrb(x, y, orb_type=orb_type)
+        texture_name = get_texture_name_from_orb_type(orb_type)
+        orb.texture = skin_manager.get_texture("orbs", texture_name)
+        orb.scale = skin_manager.get_orb_scale()
+        return orb

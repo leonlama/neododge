@@ -1,10 +1,9 @@
 from .base import BaseArtifact
 from scripts.skins.skin_manager import skin_manager
-from scripts.utils.resource_helper import resource_path
 
 class SlowFieldArtifact(BaseArtifact):
     def __init__(self, x, y):
-        super().__init__(resource_path(skin_manager.get_texture_path("artifacts", "slow_field")), scale=skin_manager.get_artifact_scale())
+        super().__init__("slow_field")
         self.center_x = x
         self.center_y = y
         self.name = "Slow Field"

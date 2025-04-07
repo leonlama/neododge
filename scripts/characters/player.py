@@ -3,6 +3,7 @@ import math
 from scripts.utils.constants import MDMA_SKIN_PATH
 from scripts.views.game_over_view import GameOverView
 from scripts.utils.resource_helper import resource_path
+from scripts.skins.skin_manager import skin_manager
 
 damage_sound = arcade.load_sound(resource_path("assets/audio/damage.wav"))
 
@@ -11,8 +12,13 @@ DASH_DISTANCE = 150
 
 class Player(arcade.Sprite):
     def __init__(self, start_x, start_y):
-        super().__init__()
-        self.texture = arcade.make_soft_square_texture(32, arcade.color.CYAN, outer_alpha=255)
+        # Get texture and scale from skin manager
+        texture = skin_manager.get_texture("player", "default")
+        scale = skin_manager.get_scale("player")
+        
+        # Initialize with texture and scale
+        super().__init__(texture=texture, scale=scale)
+        
         self.center_x = start_x
         self.center_y = start_y
         self.target_x = start_x
@@ -52,11 +58,32 @@ class Player(arcade.Sprite):
         self.base_speed = 4
 
         # Load heart textures
+        self.update_texture()
+
+    def update_texture(self):
+        """Update the texture based on current skin settings"""
+        # Get player texture
+        self.texture = skin_manager.get_texture("player", "default")
+        if self.texture is None:
+            self.texture = arcade.make_soft_square_texture(32, arcade.color.CYAN, outer_alpha=255)
+        
+        # Update scale when texture changes
+        self.scale = skin_manager.get_scale("player")
+        
+        # Load heart textures
         self.heart_textures = {
-            "gray": arcade.load_texture(resource_path("assets/hud/hearts/grey_heart.png")),
-            "red": arcade.load_texture(resource_path("assets/hud/hearts/red_heart.png")),
-            "gold": arcade.load_texture(resource_path("assets/hud/hearts/gold_heart.png")),
+            "gray": skin_manager.get_texture("hearts", "gray"),
+            "red": skin_manager.get_texture("hearts", "health"),
+            "gold": skin_manager.get_texture("hearts", "gold"),
         }
+        
+        # Fallback for heart textures
+        if self.heart_textures["gray"] is None:
+            self.heart_textures["gray"] = arcade.load_texture(resource_path("assets/hud/hearts/grey_heart.png"))
+        if self.heart_textures["red"] is None:
+            self.heart_textures["red"] = arcade.load_texture(resource_path("assets/hud/hearts/red_heart.png"))
+        if self.heart_textures["gold"] is None:
+            self.heart_textures["gold"] = arcade.load_texture(resource_path("assets/hud/hearts/gold_heart.png"))
 
     def set_target(self, x, y):
         if self.inverse_move:
@@ -123,6 +150,9 @@ class Player(arcade.Sprite):
             if self.big_hitbox_timer <= 0:
                 self.width, self.height = self.original_size
                 self.set_hit_box(self.texture.hit_box_points)
+                
+        # Update texture to ensure current skin is used
+        self.update_texture()
 
     def try_dash(self):
         for artifact in self.artifacts:

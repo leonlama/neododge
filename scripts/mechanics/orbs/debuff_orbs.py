@@ -35,14 +35,20 @@ class DebuffOrb(arcade.Sprite):
 
     def update_texture(self):
         """Update the texture based on current skin settings"""
-        color = self.color_map.get(self.orb_type, arcade.color.WHITE)
-        self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
+        # Get the texture name for this orb type
+        texture_name = get_texture_name_from_orb_type(self.orb_type)
         
-        # Override texture if specific PNGs are available
-        if self.orb_type in ["slow", "vision", "hitbox", "cooldown_up", "mult_down_0_5", "mult_down_0_25"]:
-            texture_name = get_texture_name_from_orb_type(self.orb_type)
-            self.texture = skin_manager.get_texture("orbs", texture_name)
-            self.scale = skin_manager.get_orb_scale()
+        # Get the texture from skin manager
+        self.texture = skin_manager.get_texture("orbs", texture_name)
+        
+        # If texture is None, use the fallback
+        if self.texture is None:
+            # Create a fallback texture
+            color = self.color_map.get(self.orb_type, arcade.color.WHITE)
+            self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
+            
+        # Apply the appropriate scale
+        self.scale = skin_manager.get_orb_scale()
 
     def update(self, delta_time: float = 1 / 60):
         self.age += delta_time

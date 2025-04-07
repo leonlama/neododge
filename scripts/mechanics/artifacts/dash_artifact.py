@@ -1,10 +1,9 @@
 from .base import BaseArtifact
 from scripts.skins.skin_manager import skin_manager
-from scripts.utils.resource_helper import resource_path
 
 class DashArtifact(BaseArtifact):
     def __init__(self, x, y):
-        super().__init__(resource_path(skin_manager.get_texture_path("artifacts", "dash")), scale=skin_manager.get_artifact_scale())
+        super().__init__("dash")
         self.center_x = x
         self.center_y = y
         self.name = "Dash"
@@ -18,7 +17,8 @@ class DashArtifact(BaseArtifact):
 
     def update(self, delta_time: float = 0):
         # Update cooldown timer
-        self.cooldown_timer += delta_time
+        if self.cooldown_timer < self.cooldown:
+            self.cooldown_timer += delta_time
         
         # Update texture each frame to ensure current skin is used
         self.update_texture()

@@ -11,4 +11,6 @@ def get_texture_name_from_orb_type(orb_type: str) -> str:
         return "shield"
     if "vision" in orb_type:
         return "vision"
+    if "hitbox" in orb_type:
+        return "hitbox"
     return "multiplier"
