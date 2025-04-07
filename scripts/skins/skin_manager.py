@@ -38,8 +38,11 @@ class SkinManager:
 
         self.textures = {}  # In-memory texture cache
         
+        # Current skin tracking
+        self.current_skin = self.data["selected"]
+        
         # Add this line to track unlocked skins
-        self.unlocked_skins = ["default", "mdma"]  # Unlock all skins for testing
+        self.unlocked_skins = self.data["unlocked"]
 
     def get_scale(self, category):
         """Return the scale value for a given category like 'player', 'orb', 'artifact', 'heart'."""
@@ -76,10 +79,15 @@ class SkinManager:
             texture_path = os.path.join(self.get_path(), category, f"{name}.png")
             self.textures[key] = arcade.load_texture(resource_path(texture_path))
         return self.textures[key]
+    
+    def get_asset(self, category, name, force_reload=False):
+        """Alias for get_texture for compatibility."""
+        return self.get_texture(category, name, force_reload)
 
     def unlock(self, skin_name):
         if skin_name not in self.data["unlocked"]:
             self.data["unlocked"].append(skin_name)
+            self.unlocked_skins = self.data["unlocked"]
             self.save()
 
     def select(self, skin_name):
@@ -88,6 +96,7 @@ class SkinManager:
             # Check if skin is unlocked before selecting
             if skin_name in self.data["unlocked"]:
                 self.data["selected"] = skin_name
+                self.current_skin = skin_name
                 self.clear_cache()
                 self.save()  # Save to config file for persistence between game sessions
                 print(f"✅ Selected skin: {skin_name} (Cache cleared)")  # Debug log
@@ -97,6 +106,10 @@ class SkinManager:
                 return False
         print(f"❌ Failed to select skin: {skin_name} (not found in SKIN_SETS)")
         return False
+    
+    def load_skin(self, skin_name):
+        """Alias for select for compatibility."""
+        return self.select(skin_name)
     
     def clear_cache(self):
         """Clear the texture cache to force reloading textures."""
@@ -113,21 +126,37 @@ class SkinManager:
         """Save unlock data to disk."""
         with open(UNLOCKS_FILE, "w") as f:
             json.dump(self.data, f, indent=4)
+    
+    def save_unlocks(self):
+        """Alias for save for compatibility."""
+        self.save()
             
     def toggle_skin(self):
         """Toggle between available skins"""
         current_skin = self.data["selected"]
         next_skin = "mdma" if current_skin == "default" else "default"
 
-        # Select the next skin
-        self.select(next_skin)
-        print(f"🎨 Toggled skin to: {self.data['selected']}")
-        return self.data["selected"]
+        # Make sure the skin is unlocked
+        if next_skin not in self.data["unlocked"]:
+            self.data["unlocked"].append(next_skin)
+
+        # Update the selected skin
+        self.data["selected"] = next_skin
+        self.current_skin = next_skin
+        self.clear_cache()
+
+        # Save changes
+        if hasattr(self, 'save'):
+            self.save()
+
+        print(f"🎨 Toggled skin to: {next_skin}")
+        return next_skin
 
     def unlock_skin(self, skin_name):
         """Unlock a skin"""
         if skin_name not in self.data["unlocked"]:
             self.data["unlocked"].append(skin_name)
+            self.unlocked_skins = self.data["unlocked"]
             self.save()
             print(f"🔓 Unlocked skin: {skin_name}")
             return True

@@ -227,23 +227,17 @@ class NeododgeGame(arcade.View):
             
     def apply_skin_toggle(self):
         """Toggle between available skin sets"""
-        if skin_manager.get_selected() == "default":
-            new_skin = "mdma"
-        else:
-            new_skin = "default"
-            
-        # Apply the new skin if it's unlocked
-        if skin_manager.is_unlocked(new_skin):
-            skin_manager.select(new_skin)
+        try:
+            # Use the skin_manager's toggle_skin method
+            skin_manager.toggle_skin()
             
             # Update visual elements that depend on the skin
             self.update_visual_elements()
             
             # Play feedback sound
             arcade.play_sound(arcade.load_sound(resource_path("assets/audio/buff.wav")))
-            print(f"🎨 Switched to skin: {new_skin}")
-        else:
-            print(f"❌ Cannot select locked skin: {new_skin}")
+        except Exception as e:
+            print(f"❌ Error toggling skin: {e}")
 
     def update_visual_elements(self):
         """Update all visual elements after a skin change"""

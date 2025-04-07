@@ -66,16 +66,8 @@ class StartView(arcade.View):
     def toggle_skin(self):
         """Toggle between available skin sets"""
         try:
-            # Use the window's skin manager to toggle
-            if hasattr(self.window.skin_manager, 'toggle_skin'):
-                self.window.skin_manager.toggle_skin()
-            else:
-                # Determine the next skin
-                current_skin = self.window.skin_manager.current_skin if hasattr(self.window.skin_manager, 'current_skin') else self.window.skin_manager.data["selected"]
-                next_skin = "mdma" if current_skin == "default" else "default"
-                self.window.skin_manager.select(next_skin)
-
-            print(f"🎨 Toggled skin in start view")
+            # Use the skin_manager's toggle_skin method
+            skin_manager.toggle_skin()
             
             # Visual feedback
             self.skin_change_indicator = 1.0
