@@ -45,6 +45,9 @@ from scripts.utils.wave_text import fade_wave_message_alpha
 from scripts.utils.resource_helper import resource_path
 from scripts.skins.skin_manager import SkinManager
 
+# Initialize global skin manager
+skin_manager = SkinManager(MDMA_SKIN_PATH)
+
 def preload_all_skins():
     preload_list = arcade.SpriteList()
 

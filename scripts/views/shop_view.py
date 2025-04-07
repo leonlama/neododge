@@ -70,7 +70,7 @@ class ShopView(arcade.View):
         if self.message:
             arcade.draw_text(self.message, SCREEN_WIDTH // 2, 60, arcade.color.WHITE, 16, anchor_x="center")
         
-        arcade.draw_text("Press ESC to skip shop", SCREEN_WIDTH // 2, 100, arcade.color.GRAY, 16, anchor_x="center")
+        arcade.draw_text("Press ESC to exit shop", SCREEN_WIDTH // 2, 100, arcade.color.GRAY, 16, anchor_x="center")
 
     def on_key_press(self, symbol, modifiers):
         from arcade.key import KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9
@@ -117,5 +117,6 @@ class ShopView(arcade.View):
             self.text_color = arcade.color.RED
 
     def on_mouse_press(self, x, y, button, modifiers):
-        arcade.stop_sound(self.music_player)
-        self.window.show_view(self.return_view)
+        # Removed the code that exits the shop on mouse press
+        # Now the shop can only be exited by pressing ESC
+        pass
