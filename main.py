@@ -59,7 +59,7 @@ def preload_all_skins():
     artifact_types = ["dash", "magnet", "slow", "bullet_time", "clone"]
     for artifact_type in artifact_types:
         try:
-            path = resource_path(f"assets/artifacts/{artifact_type}.png")
+            path = resource_path(f"assets/skins/mdma/artifacts/{artifact_type}.png")
             if arcade.os.path.exists(path):
                 texture = arcade.load_texture(path)
                 sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999, scale=ARTIFACT_SCALE)

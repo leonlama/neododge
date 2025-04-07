@@ -65,4 +65,4 @@ class StartView(arcade.View):
             self.window.show_view(game_view)
         except Exception as e:
             print("🚨 Failed to start game:", e)
-            arcade.play_sound(arcade.sound.Sound(":resources:onscreen_controls/shaded_dark/shaded_dark_action1.png"))  # tiny feedback
+            arcade.play_sound(arcade.load_sound(resource_path("assets/audio/damage.wav")))  # tiny feedback

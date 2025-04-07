@@ -53,9 +53,9 @@ class Player(arcade.Sprite):
 
         # Load heart textures
         self.heart_textures = {
-            "gray": arcade.load_texture("assets/hud/hearts/grey_heart.png"),
-            "red": arcade.load_texture("assets/hud/hearts/red_heart.png"),
-            "gold": arcade.load_texture("assets/hud/hearts/gold_heart.png"),
+            "gray": arcade.load_texture(resource_path("assets/hud/hearts/grey_heart.png")),
+            "red": arcade.load_texture(resource_path("assets/hud/hearts/red_heart.png")),
+            "gold": arcade.load_texture(resource_path("assets/hud/hearts/gold_heart.png")),
         }
 
     def set_target(self, x, y):

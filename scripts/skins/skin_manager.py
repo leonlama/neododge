@@ -45,7 +45,7 @@ class SkinManager:
         key = f"{category}/{name}"
         if key not in self.textures:
             texture_path = os.path.join(self.skin_path, category, f"{name}.png")
-            self.textures[key] = arcade.load_texture(texture_path)
+            self.textures[key] = arcade.load_texture(resource_path(texture_path))
         return self.textures[key]
 
     def unlock(self, skin_name):

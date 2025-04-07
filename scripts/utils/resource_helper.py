@@ -1,14 +1,8 @@
 import sys
-from pathlib import Path
+import os
 
 def resource_path(relative_path):
-    """
-    Get the absolute path to a resource, whether we're running from source or from a PyInstaller bundle.
-    """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = Path(sys._MEIPASS)
-    except AttributeError:
-        base_path = Path().absolute()
-
-    return base_path / relative_path
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
