@@ -1,12 +1,13 @@
 import json
 import os
 import arcade
+import appdirs  # ✅ add this
 from scripts.utils.resource_helper import resource_path
 from scripts.utils.constants import DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
 
 # Path to user config folder (cross-platform safe)
 APP_NAME = "Neododge"
-USER_DATA_DIR = os.path.join(arcade.get_user_data_dir(APP_NAME), "data")
+USER_DATA_DIR = os.path.join(appdirs.user_data_dir(APP_NAME), "data")
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 
 UNLOCKS_FILE = os.path.join(USER_DATA_DIR, "unlocks.json")

@@ -1,6 +1,7 @@
 import arcade
 import pyglet
 from scripts.utils.resource_helper import resource_path
+from scripts.views.game_view import NeododgeGame
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -30,31 +31,29 @@ class StartView(arcade.View):
 
     def on_draw(self):
         self.clear()
-        arcade.draw_text("NEODODGE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 60,
-                         arcade.color.WHITE, font_size=48, anchor_x="center", font_name="Kenney Pixel")
-        arcade.draw_text("Press any key or click to play", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 40,
+        arcade.draw_text("NEODODGE", self.window.width // 2, self.window.height // 2 + 50,
+                         arcade.color.WHITE, font_size=36, anchor_x="center", font_name="Kenney Pixel")
+        arcade.draw_text("Click to Start", self.window.width // 2, self.window.height // 2 - 50,
                          arcade.color.LIGHT_GRAY, font_size=20, anchor_x="center")
 
-    def start_game(self):
-        from main import NeododgeGame
-        game_view = NeododgeGame()
-        game_view.setup()
+    def on_key_press(self, key, modifiers):
+        self.start_game()
 
+    def start_game(self):
         # Stop title music
         if self.media_player:
             self.media_player.pause()
 
         # Play click sound and voice line
         click_sound = arcade.load_sound(resource_path("assets/audio/start_click.wav"))
-        #voice_line = arcade.load_sound(resource_path("assets/audio/lets_go.wav"))
         arcade.play_sound(click_sound)
-        #arcade.play_sound(voice_line)
 
+        # Create game view and show it
+        game_view = NeododgeGame()
+        game_view.setup()
+        
         # Delay switching views using pyglet
         pyglet.clock.schedule_once(lambda dt: self.window.show_view(game_view), 1.2)
-
-    def on_key_press(self, key, modifiers):
-        self.start_game()
 
     def on_mouse_press(self, x, y, button, modifiers):
         self.start_game()
