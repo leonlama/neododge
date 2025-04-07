@@ -2,6 +2,7 @@ import arcade
 import pyglet
 from scripts.utils.resource_helper import resource_path
 from scripts.views.game_view import NeododgeGame
+from scripts.skins.skin_manager import skin_manager
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -35,9 +36,20 @@ class StartView(arcade.View):
                          arcade.color.WHITE, font_size=36, anchor_x="center", font_name="Kenney Pixel")
         arcade.draw_text("Click to Start", self.window.width // 2, self.window.height // 2 - 50,
                          arcade.color.LIGHT_GRAY, font_size=20, anchor_x="center")
+        arcade.draw_text("Press 'T' to toggle skin", self.window.width // 2, self.window.height // 2 - 80,
+                         arcade.color.LIGHT_GRAY, font_size=16, anchor_x="center")
+        arcade.draw_text(f"Current skin: {skin_manager.data['selected']}", self.window.width // 2, self.window.height // 2 - 110,
+                         arcade.color.LIGHT_GRAY, font_size=14, anchor_x="center")
 
     def on_key_press(self, key, modifiers):
-        self.start_game()
+        if key == arcade.key.T:
+            # Toggle skin
+            current = skin_manager.data["selected"]
+            new_skin = "default" if current == "mdma" else "mdma"
+            skin_manager.select(new_skin)
+            print(f"🎨 Switched to skin: {new_skin}")
+        else:
+            self.start_game()
 
     def start_game(self):
         # Stop title music

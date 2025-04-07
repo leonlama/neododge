@@ -1,51 +1,74 @@
 import json
 import os
 import arcade
-import appdirs  # ✅ add this
+import appdirs  # Cross-platform user data dir
 from scripts.utils.resource_helper import resource_path
 from scripts.utils.constants import DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
+from scripts.skins.skin_sets import SKIN_SETS, DEFAULT_SKIN
 
-# Path to user config folder (cross-platform safe)
+# Define app-specific user data dir
 APP_NAME = "Neododge"
 USER_DATA_DIR = os.path.join(appdirs.user_data_dir(APP_NAME), "data")
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 
+# Cross-platform safe JSON file location (not inside dist/)
 UNLOCKS_FILE = os.path.join(USER_DATA_DIR, "unlocks.json")
 
 class SkinManager:
-    def __init__(self, skin_path=DEFAULT_SKIN_PATH):
-        self.skin_path = skin_path
-        self.textures = {}  # Cache
+    def __init__(self):
+        # Default data
         self.data = {
-            "unlocked": ["default"],
-            "selected": "default"
+            "unlocked": ["default", "mdma"],
+            "selected": DEFAULT_SKIN
         }
+
+        # Load unlocks safely
         if os.path.exists(UNLOCKS_FILE):
             try:
                 with open(UNLOCKS_FILE, "r") as f:
                     self.data = json.load(f)
             except (json.JSONDecodeError, FileNotFoundError):
-                self.save()
+                self.save()  # Fallback to fresh file
         else:
             self.save()
 
-        self.skin_paths = {
-            "default": DEFAULT_SKIN_PATH,
-            "mdma": MDMA_SKIN_PATH
-        }
+        # Make sure selected skin exists, fallback to default if not
+        if self.data["selected"] not in SKIN_SETS:
+            self.data["selected"] = DEFAULT_SKIN
+
+        self.textures = {}  # In-memory texture cache
+
+    def get_artifact_scale(self):
+        skin_name = self.data["selected"]
+        return SKIN_SETS.get(skin_name, SKIN_SETS[DEFAULT_SKIN])["artifact_scale"]
+
+    def get_orb_scale(self):
+        skin_name = self.data["selected"]
+        return SKIN_SETS.get(skin_name, SKIN_SETS[DEFAULT_SKIN])["orb_scale"]
+
+    def get_heart_scale(self):
+        skin_name = self.data["selected"]
+        return SKIN_SETS.get(skin_name, SKIN_SETS[DEFAULT_SKIN])["heart_scale"]
 
     def get_path(self):
-        return self.skin_paths.get(self.data["selected"], DEFAULT_SKIN_PATH)
+        """Return the active skin path."""
+        skin_name = self.data["selected"]
+        return SKIN_SETS.get(skin_name, SKIN_SETS[DEFAULT_SKIN])["path"]
 
     def get_texture_path(self, category, name):
-        """Return full path to a skin texture like 'hearts/red.png' or 'orbs/shield.png'."""
-        return os.path.join(self.skin_path, category, f"{name}.png")
+        """Return relative path like assets/skins/mdma/hearts/red.png."""
+        return os.path.join(self.get_path(), category, f"{name}.png")
 
     def get_texture(self, category, name):
-        key = f"{category}/{name}"
+        """Load and cache texture via resource_path (PyInstaller-safe)."""
+        # Use the skin path for the key
+        key = f"{self.get_path()}/{category}/{name}"
+        
+        # Check if texture is cached and load if not
         if key not in self.textures:
-            texture_path = os.path.join(self.skin_path, category, f"{name}.png")
+            texture_path = self.get_texture_path(category, name)
             self.textures[key] = arcade.load_texture(resource_path(texture_path))
+        
         return self.textures[key]
 
     def unlock(self, skin_name):
@@ -54,16 +77,28 @@ class SkinManager:
             self.save()
 
     def select(self, skin_name):
-        if skin_name in self.data["unlocked"]:
+        if skin_name in self.data["unlocked"] and skin_name in SKIN_SETS:
             self.data["selected"] = skin_name
+            self.clear_cache()  # Clear cache when selecting a new skin
             self.save()
+            return True
+        return False
+    
+    def clear_cache(self):
+        """Clear the texture cache to force reloading textures."""
+        self.textures = {}
+        
+    def get_selected(self):
+        """Return the currently selected skin name."""
+        return self.data["selected"]
 
     def is_unlocked(self, skin_name):
         return skin_name in self.data["unlocked"]
 
     def save(self):
+        """Save unlock data to disk."""
         with open(UNLOCKS_FILE, "w") as f:
             json.dump(self.data, f, indent=4)
 
-# Create a global instance of SkinManager that can be imported by other modules
-skin_manager = SkinManager(MDMA_SKIN_PATH)  # You can later use get_path() to switch dynamically
+# Global instance (singleton)
+skin_manager = SkinManager()

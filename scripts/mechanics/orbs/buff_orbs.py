@@ -1,7 +1,8 @@
 import arcade
 
 from scripts.utils.constants import MDMA_SKIN_PATH
-from scripts.skins.skin_manager import SkinManager
+from scripts.skins.skin_manager import skin_manager
+from scripts.utils.orb_utils import get_texture_name_from_orb_type
 
 class BuffOrb(arcade.Sprite):
     def __init__(self, x, y, orb_type="gray"):
@@ -9,7 +10,7 @@ class BuffOrb(arcade.Sprite):
         self.orb_type = orb_type
         self.age = 0
 
-        color_map = {
+        self.color_map = {
             "gray": arcade.color.GRAY,
             "red": arcade.color.RED,
             "gold": arcade.color.GOLD,
@@ -22,21 +23,8 @@ class BuffOrb(arcade.Sprite):
             "shield": arcade.color.LIGHT_GREEN,
         }
 
-        color = color_map.get(orb_type, arcade.color.WHITE)
-        self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
-
-        # Override texture if specific PNGs are available
-        skin_manager = SkinManager(MDMA_SKIN_PATH)
-        if orb_type == "cooldown":
-            self.texture = skin_manager.get_texture("orbs", "cooldown")
-            self.scale = 0.05
-        elif orb_type == "shield":
-            self.texture = skin_manager.get_texture("orbs", "shield")
-            self.scale = 0.05
-        elif orb_type.startswith("speed_"):
-            self.texture = skin_manager.get_texture("orbs", "speed")
-            self.scale = 0.05
-
+        self.update_texture()
+        
         self.center_x = x
         self.center_y = y
 
@@ -53,8 +41,20 @@ class BuffOrb(arcade.Sprite):
             "shield": "🛡️ Shield acquired!",
         }.get(self.orb_type, "✨ Buff Orb")
 
+    def update_texture(self):
+        """Update the texture based on current skin settings"""
+        color = self.color_map.get(self.orb_type, arcade.color.WHITE)
+        self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
+
+        # Override texture if specific PNGs are available
+        texture_name = get_texture_name_from_orb_type(self.orb_type)
+        self.texture = skin_manager.get_texture("orbs", texture_name)
+        self.scale = skin_manager.get_orb_scale()
+
     def update(self, delta_time: float = 1 / 60):
         self.age += delta_time
+        # Update texture each frame to ensure current skin is used
+        self.update_texture()
 
     def apply_effect(self, player):
         if self.orb_type == "gray":

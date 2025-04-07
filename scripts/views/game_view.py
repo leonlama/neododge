@@ -21,6 +21,8 @@ from scripts.utils.hud import (
 )
 from scripts.utils.wave_text import fade_wave_message_alpha
 from scripts.utils.resource_helper import resource_path
+from scripts.skins.skin_manager import skin_manager
+from scripts.utils.orb_utils import get_texture_name_from_orb_type
 
 class NeododgeGame(arcade.View):
     def __init__(self):
@@ -223,6 +225,49 @@ class NeododgeGame(arcade.View):
         if self.right_mouse_down:
             self.player.move_towards_mouse(self, delta_time)
 
+    def apply_skin_toggle(self):
+        """Toggle between available skins and update all game elements"""
+        # Get available skins and toggle to next one
+        available_skins = skin_manager.data["unlocked"]
+        current_skin = skin_manager.get_selected()
+        
+        # Find next skin in rotation
+        current_index = available_skins.index(current_skin)
+        next_index = (current_index + 1) % len(available_skins)
+        next_skin = available_skins[next_index]
+        
+        # Apply the new skin
+        skin_manager.select(next_skin)
+        print(f"🎨 Switched to {next_skin} skin")
+        
+        # Update all game elements that depend on skin
+        # Update orbs
+        for orb in self.orbs:
+            if hasattr(orb, "orb_type"):
+                texture_name = get_texture_name_from_orb_type(orb.orb_type)
+                orb.texture = skin_manager.get_texture("orbs", texture_name)
+                orb.scale = skin_manager.get_orb_scale()
+        
+        # Update artifacts
+        for artifact in self.player.artifacts:
+            if hasattr(artifact, "artifact_type"):
+                artifact.texture = skin_manager.get_texture("artifacts", artifact.artifact_type)
+                artifact.scale = skin_manager.get_artifact_scale()
+        
+        # Update dash artifact if present
+        if self.dash_artifact:
+            self.dash_artifact.texture = skin_manager.get_texture("artifacts", "dash")
+            self.dash_artifact.scale = skin_manager.get_artifact_scale()
+        
+        # Update player elements
+        self.player.update_hearts()
+        self.player.update_orb_icons()
+        
+        # Update coins
+        for coin in self.coins:
+            if hasattr(coin, "update_texture"):
+                coin.update_texture()
+
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_RIGHT:
             self.right_mouse_down = True
@@ -241,6 +286,9 @@ class NeododgeGame(arcade.View):
             self.player.try_dash()
         elif symbol == arcade.key.S:
             self.player.set_target(self.player.center_x, self.player.center_y)
+        elif symbol == arcade.key.T:
+            self.apply_skin_toggle()
+            
         key_map = {
             arcade.key.Q: 0,
             arcade.key.W: 1,

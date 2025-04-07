@@ -2,7 +2,6 @@ import random
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 
-
 # Define all orb types you want to use
 BUFF_ORBS = [
     "gray",
@@ -23,8 +22,8 @@ DEBUFF_ORBS = [
     "mult_down_0_25",
     "cooldown_up",
     #"inverse_move",
-    "vision_blur",
-    "big_hitbox"
+    "vision",
+    "hitbox"
 ]
 
 

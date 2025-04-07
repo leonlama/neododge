@@ -1,4 +1,6 @@
 import arcade
+from scripts.skins.skin_manager import skin_manager
+from scripts.utils.orb_utils import get_texture_name_from_orb_type
 
 class DebuffOrb(arcade.Sprite):
     def __init__(self, x, y, orb_type="inverse"):
@@ -11,27 +13,41 @@ class DebuffOrb(arcade.Sprite):
             "mult_down_0_25": "💥 Score x0.25 for 30s",
             "cooldown_up": "🔁 Cooldown increased!",
             #"inverse_move": "🔄 Inverse Move",
-            "vision_blur": "👁️ Vision Blur",
-            "big_hitbox": "⬛ Big Hitbox"
+            "vision": "👁️ Vision Blur",
+            "hitbox": "⬛ Big Hitbox"
         }.get(orb_type, "⚠️ Debuff Orb")
 
-        color_map = {
+        self.color_map = {
             "slow": arcade.color.LIGHT_GRAY,
             "mult_down_0_5": arcade.color.DARK_GOLDENROD,
             "mult_down_0_25": arcade.color.BRONZE,
             "cooldown_up": arcade.color.DARK_MAGENTA,
             #"inverse_move": arcade.color.DARK_BROWN,
-            "vision_blur": arcade.color.DARK_SLATE_GRAY,
-            "big_hitbox": arcade.color.LIGHT_YELLOW,
+            "vision": arcade.color.DARK_SLATE_GRAY,
+            "hitbox": arcade.color.LIGHT_YELLOW,
             "inverse": arcade.color.LIGHT_PINK  # default color for inverse if not specified
         }
-        color = color_map.get(orb_type, arcade.color.WHITE)
-        self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
+        
+        self.update_texture()
+        
         self.center_x = x
         self.center_y = y
 
+    def update_texture(self):
+        """Update the texture based on current skin settings"""
+        color = self.color_map.get(self.orb_type, arcade.color.WHITE)
+        self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
+        
+        # Override texture if specific PNGs are available
+        if self.orb_type in ["slow", "vision", "hitbox", "cooldown_up", "mult_down_0_5", "mult_down_0_25"]:
+            texture_name = get_texture_name_from_orb_type(self.orb_type)
+            self.texture = skin_manager.get_texture("orbs", texture_name)
+            self.scale = skin_manager.get_orb_scale()
+
     def update(self, delta_time: float = 1 / 60):
         self.age += delta_time
+        # Update texture each frame to ensure current skin is used
+        self.update_texture()
 
     def apply_effect(self, player):
         if self.orb_type == "slow":
@@ -39,7 +55,7 @@ class DebuffOrb(arcade.Sprite):
             player.speed_bonus -= 0.2
             player.active_orbs.append(["🐢 Speed -20%", 30])
             print(self.message)
-        elif self.orb_type == "big_hitbox":
+        elif self.orb_type == "hitbox":
             self.message = "⬛ Big Hitbox applied"
             if not hasattr(player, "original_size"):
                 player.original_size = (player.width, player.height)
@@ -70,7 +86,7 @@ class DebuffOrb(arcade.Sprite):
             player.inverse_move = True
             player.active_orbs.append(["🔄 Inverse Move", 30])
             print(self.message)
-        elif self.orb_type == "vision_blur":
+        elif self.orb_type == "vision":
             self.message = "👁️ Vision Blur"
             player.vision_blur = True
             player.vision_timer = 30

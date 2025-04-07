@@ -6,19 +6,18 @@ import array
 from scripts.views.start_view import StartView
 
 # Utilities
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, DEFAULT_SKIN_PATH, MDMA_SKIN_PATH, ARTIFACT_SCALE
+from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
 from scripts.utils.resource_helper import resource_path
-from scripts.skins.skin_manager import SkinManager
-
-# Initialize global skin manager
-skin_manager = SkinManager(MDMA_SKIN_PATH)
+from scripts.skins.skin_manager import skin_manager
 
 def preload_all_skins():
     preload_list = arcade.SpriteList()
 
     # Preload all skins (default and mdma)
-    for skin_path in [MDMA_SKIN_PATH]: #DEFAULT_SKIN_PATH,
-        sm = SkinManager(skin_path)
+    for skin_name in ["default", "mdma"]:
+        # Temporarily switch skin for preloading
+        original_skin = skin_manager.data["selected"]
+        skin_manager.select(skin_name)
         
         # Preload all categories and common asset types
         categories = ["orbs", "hearts", "artifacts", "coins", "bullets", "enemies", "player"]
@@ -28,22 +27,35 @@ def preload_all_skins():
         for category in categories:
             for asset_type in asset_types:
                 try:
-                    texture = sm.get_texture(category, asset_type)
-                    sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999)
+                    texture = skin_manager.get_texture(category, asset_type)
+                    # Get appropriate scale based on category
+                    if category == "orbs":
+                        scale = skin_manager.get_orb_scale()
+                    elif category == "hearts":
+                        scale = skin_manager.get_heart_scale()
+                    elif category == "artifacts":
+                        scale = skin_manager.get_artifact_scale()
+                    else:
+                        scale = 1.0
+                    sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999, scale=scale)
                     preload_list.append(sprite)
                 except Exception:
                     # Skip if texture not found
                     continue
+        
+        # Restore original skin
+        skin_manager.select(original_skin)
     
     # Preload all orb types
-    orb_types = ["speed", "shield", "cooldown", "multiplier", "vision"]
+    orb_types = ["speed", "shield", "cooldown", "multiplier", "vision", "hitbox"]
     for orb_type in orb_types:
         try:
             # Load orb texture using skin manager
             path = resource_path(skin_manager.get_texture_path("orbs", orb_type))
             if arcade.os.path.exists(path):
                 texture = arcade.load_texture(path)
-                sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999)
+                scale = skin_manager.get_orb_scale()
+                sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999, scale=scale)
                 preload_list.append(sprite)
         except Exception:
             continue
@@ -52,10 +64,11 @@ def preload_all_skins():
     artifact_types = ["dash", "magnet", "slow", "bullet_time", "clone"]
     for artifact_type in artifact_types:
         try:
-            path = resource_path(f"assets/skins/mdma/artifacts/{artifact_type}.png")
+            path = resource_path(skin_manager.get_texture_path("artifacts", artifact_type))
             if arcade.os.path.exists(path):
                 texture = arcade.load_texture(path)
-                sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999, scale=ARTIFACT_SCALE)
+                scale = skin_manager.get_artifact_scale()
+                sprite = arcade.Sprite(texture=texture, center_x=-9999, center_y=-9999, scale=scale)
                 preload_list.append(sprite)
         except Exception:
             continue

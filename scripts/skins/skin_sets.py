@@ -1,14 +1,19 @@
+from scripts.utils.constants import DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
+
 DEFAULT_SKIN = "default"
 MDMA_SKIN = "mdma"
 
 SKIN_SETS = {
     DEFAULT_SKIN: {
-        "orb_cooldown": "assets/skins/default/orbs/cooldown.png",
-        "orb_shield": "assets/skins/default/orbs/shield.png",
+        "path": DEFAULT_SKIN_PATH,
+        "artifact_scale": 0.17,
+        "orb_scale": 0.17,
+        "heart_scale": 1,
     },
     MDMA_SKIN: {
-        "orb_speed": "assets/skins/mdma/orbs/speed.png",
-        "orb_cooldown": "assets/skins/mdma/orbs/cooldown.png",
-        "orb_shield": "assets/skins/mdma/orbs/shield.png",
+        "path": MDMA_SKIN_PATH,
+        "artifact_scale": 0.035,
+        "orb_scale": 0.035,
+        "heart_scale": 1,
     }
 }
