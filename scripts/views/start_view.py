@@ -86,11 +86,20 @@ class StartView(arcade.View):
         if symbol == arcade.key.T:
             self.toggle_skin()
         else:
+            # Print debug information
+            print(f"Key pressed: {symbol}")
             self._start_game()
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        """Handle mouse press events."""
+        print(f"Mouse pressed at ({x}, {y})")
+        self._start_game()
 
     def _start_game(self):
         """Start a new game."""
         try:
+            print("Starting game...")
+
             # Play click sound if available
             try:
                 from scripts.utils.resource_helper import resource_path
@@ -99,6 +108,10 @@ class StartView(arcade.View):
             except Exception as e:
                 print(f"Warning: Could not play click sound: {e}")
 
+            # Stop music
+            if self.media_player:
+                self.media_player.pause()
+
             # Create and setup game view
             from scripts.views.game_view import NeododgeGame
             game_view = NeododgeGame()
@@ -106,8 +119,11 @@ class StartView(arcade.View):
 
             # Show the game view
             self.window.show_view(game_view)
+            print("Game view shown")
         except Exception as e:
             print(f"❌ Error starting game: {e}")
+            import traceback
+            traceback.print_exc()
 
     def toggle_skin(self):
         """Toggle between available skin sets."""

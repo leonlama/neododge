@@ -17,8 +17,30 @@ class NeododgeGame(arcade.View):
 
     def setup(self):
         """Set up the game elements."""
-        # Setup code here
-        pass
+        try:
+            print("Setting up game...")
+
+            # Set up player
+            from scripts.characters.player import Player
+            self.player = Player()
+            self.player.center_x = self.window.width / 2
+            self.player.center_y = self.window.height / 2
+
+            # Set up other game elements
+            self._setup_game_elements()
+
+            # Play game start sound if available
+            try:
+                start_sound = arcade.load_sound(resource_path("assets/audio/game_start.wav"))
+                arcade.play_sound(start_sound)
+            except Exception as e:
+                print(f"Warning: Could not play game start sound: {e}")
+
+            print("Game setup complete")
+        except Exception as e:
+            print(f"❌ Error setting up game: {e}")
+            import traceback
+            traceback.print_exc()
 
     def apply_skin_toggle(self):
         """
