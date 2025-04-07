@@ -58,3 +58,6 @@ class SkinManager:
     def save(self):
         with open(UNLOCKS_FILE, "w") as f:
             json.dump(self.data, f, indent=4)
+
+# Create a global instance of SkinManager that can be imported by other modules
+skin_manager = SkinManager(MDMA_SKIN_PATH)  # You can later use get_path() to switch dynamically

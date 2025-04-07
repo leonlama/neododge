@@ -1,13 +1,20 @@
-import arcade
+from .base import BaseArtifact
+from scripts.skins.skin_manager import skin_manager
+from scripts.utils.constants import ARTIFACT_SCALE
 
-class DashArtifact:
+class DashArtifact(BaseArtifact):
     def __init__(self, x, y):
+        super().__init__(skin_manager.get_texture_path("artifacts", "dash"))
+        self.center_x = x
+        self.center_y = y
+        self.scale = ARTIFACT_SCALE 
         self.name = "Dash"
         self.cooldown = 10.0  # seconds
         self.cooldown_timer = self.cooldown  # Start fully ready!
-        self.sprite = arcade.Sprite("assets/skins/mdma/artifacts/BluePunisher.png", scale=0.1)
-        self.sprite.center_x = x
-        self.sprite.center_y = y
+
+    def update(self, delta_time: float = 0):
+        # Update cooldown timer
+        self.cooldown_timer += delta_time
 
     def apply_effect(self, player, *_):
         if self.cooldown_timer >= self.cooldown:

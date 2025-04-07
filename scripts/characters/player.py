@@ -40,7 +40,7 @@ class Player(arcade.Sprite):
         self.parent_view = None
         self.artifact_cooldowns = {}
         self.pickup_texts = []
-        self.coins = 0
+        self.coins = 100
 
         # New attributes to support upgrades
         self.orb_spawn_chance = 0

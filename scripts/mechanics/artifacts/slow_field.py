@@ -1,11 +1,9 @@
-import arcade
 from .base import BaseArtifact
-from scripts.skins.skin_manager import SkinManager
+from scripts.skins.skin_manager import skin_manager
 
-class SlowFieldArtifact(arcade.Sprite):
+class SlowFieldArtifact(BaseArtifact):
     def __init__(self, x, y):
-        skin_manager = SkinManager()
-        super().__init__(filename=skin_manager.get_path())
+        super().__init__(skin_manager.get_texture_path("artifacts", "slow_field"), scale=0.1)
         self.center_x = x
         self.center_y = y
         self.name = "Slow Field"

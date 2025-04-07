@@ -1,8 +1,9 @@
 from .base import BaseArtifact
+from scripts.skins.skin_manager import skin_manager
 
 class MagnetPulseArtifact(BaseArtifact):
     def __init__(self, x, y):
-        super().__init__()
+        super().__init__(skin_manager.get_texture_path("artifacts", "magnet_pulse"), scale=0.1)
         self.center_x = x
         self.center_y = y
         self.name = "Magnet Pulse"
