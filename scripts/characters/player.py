@@ -4,9 +4,9 @@ Player character implementation with movement, health, and artifact management.
 import arcade
 import math
 import random
-from scripts.utils.constants import PLAYER_BASE_SPEED, PLAYER_BASE_HEALTH, SCREEN_WIDTH, SCREEN_HEIGHT, DASH_COOLDOWN
+from src.core.constants import PLAYER_BASE_SPEED, PLAYER_BASE_HEALTH, SCREEN_WIDTH, SCREEN_HEIGHT, DASH_COOLDOWN
 from scripts.skins.skin_manager import skin_manager
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 from scripts.mechanics.game_state import game_state
 from scripts.mechanics.event_manager import event_manager
 

@@ -1,7 +1,7 @@
 import arcade
 import random
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
-from scripts.utils.resource_helper import resource_path
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.resource_manager import resource_path
 
 SHOP_MUSIC_PATH = "assets/audio/shop.mp3"
 
@@ -120,3 +120,4 @@ class ShopView(arcade.View):
         # Removed the code that exits the shop on mouse press
         # Now the shop can only be exited by pressing ESC
         pass
+

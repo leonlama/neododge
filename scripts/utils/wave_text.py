@@ -1,5 +1,5 @@
 import arcade
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 def draw_wave_message(message, alpha):
     if not message:

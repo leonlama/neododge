@@ -1,13 +1,13 @@
 import arcade
 import random
 import math
-from scripts.characters.player import Player
+from src.entities.player import Player
 from scripts.mechanics.artifacts.dash_artifact import DashArtifact
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 from scripts.mechanics.coins.coin_factory import create_coin, Coin
 from scripts.managers.wave_manager import WaveManager
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, ARTIFACT_SCALE
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, ARTIFACT_SCALE
 from scripts.utils.shaders import load_vision_shader, create_vision_geometry
 from scripts.utils.spawner import spawn_random_orb, spawn_dash_artifact
 from scripts.utils.pickup_text import update_pickup_texts
@@ -20,7 +20,7 @@ from scripts.utils.hud import (
     draw_coin_count,
 )
 from scripts.utils.wave_text import fade_wave_message_alpha
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 from scripts.utils.orb_utils import get_texture_name_from_orb_type
 from scripts.skins.skin_manager import skin_manager
 from scripts.mechanics.game_state import game_state
@@ -28,7 +28,7 @@ from scripts.enemies.base_enemy import BaseEnemy
 from scripts.enemies.chaser_enemy import ChaserEnemy
 from scripts.enemies.enemy_manager import EnemyManager
 from scripts.utils.ui.cooldown_bar import CooldownBar
-from scripts.utils.constants import DASH_COOLDOWN
+from src.core.constants import DASH_COOLDOWN
 
 class NeododgeGame(arcade.View):
     def __init__(self):

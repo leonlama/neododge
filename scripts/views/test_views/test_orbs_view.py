@@ -1,6 +1,6 @@
 import arcade
 import math
-from scripts.characters.player import Player
+from src.entities.player import Player
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 
@@ -188,3 +188,4 @@ class OrbTestView(arcade.View):
             self.player.center_y -= 10
         elif symbol == arcade.key.SPACE:
             self.player.try_dash()
+

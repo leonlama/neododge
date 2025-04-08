@@ -1,7 +1,7 @@
 import os
 import arcade
 from arcade import AnimationKeyframe
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 from scripts.skins.skin_manager import skin_manager
 
 class Coin(arcade.AnimatedTimeBasedSprite):

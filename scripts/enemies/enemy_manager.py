@@ -2,7 +2,7 @@ import random
 import arcade
 from scripts.enemies.chaser_enemy import ChaserEnemy
 from scripts.enemies.shooter_enemy import ShooterEnemy
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 class EnemyManager:
     """Manages enemy spawning and behavior."""

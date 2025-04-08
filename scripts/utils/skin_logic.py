@@ -1,7 +1,7 @@
 import arcade
 from scripts.skins.skin_manager import skin_manager
 from scripts.utils.orb_utils import get_texture_name_from_orb_type
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 
 def apply_skin_to_orb(orb):
     texture_name = get_texture_name_from_orb_type(orb.orb_type)
@@ -45,3 +45,4 @@ def handle_menu_skin_toggle(start_view):
         ), volume=0.7)
         return True
     return False
+

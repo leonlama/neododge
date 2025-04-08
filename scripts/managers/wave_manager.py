@@ -1,6 +1,6 @@
 import random
 import arcade
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 

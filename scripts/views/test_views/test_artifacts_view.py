@@ -1,6 +1,6 @@
 import arcade
 import random
-from scripts.characters.player import Player
+from src.entities.player import Player
 from scripts.characters.enemy import Enemy
 from scripts.mechanics.artifacts.artifacts import (
     DashArtifact, MagnetPulseArtifact, SlowFieldArtifact,
@@ -153,3 +153,4 @@ class TestArtifactsView(arcade.View):
             clone.timer = self.clone_life
             self.active_clones.append(clone)
             CloneDashArtifact().apply_effect(self.player, self.active_clones)
+

@@ -1,0 +1,14 @@
+{
+  "skins": {
+    "default": {
+      "name": "Default",
+      "description": "The default skin"
+    },
+    "mdma": {
+      "name": "MDMA",
+      "description": "Trippy skin"
+    }
+  },
+  "selected": "default",
+  "shared": {}
+}

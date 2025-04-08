@@ -5,8 +5,8 @@ import os
 import json
 import arcade
 import appdirs
-from scripts.utils.constants import SKINS_DIR, DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
-from scripts.utils.resource_helper import resource_path
+from src.core.constants import SKINS_DIR, DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
+from src.core.resource_manager import resource_path
 from scripts.mechanics.event_manager import event_manager
 
 # Define app-specific user data dir for skin unlocks

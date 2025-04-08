@@ -1,5 +1,5 @@
 import arcade
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 def draw_score(score):
     arcade.draw_text(f"Score: {int(score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)

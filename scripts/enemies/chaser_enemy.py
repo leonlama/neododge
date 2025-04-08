@@ -2,7 +2,7 @@ import arcade
 import math
 import random
 from scripts.enemies.base_enemy import BaseEnemy
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 
 class ChaserEnemy(BaseEnemy):
     """An enemy that chases the player."""

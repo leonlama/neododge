@@ -1,7 +1,7 @@
 import arcade
 import pyglet
 import math
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 from scripts.views.game_view import NeododgeGame
 from scripts.skins.skin_manager import skin_manager
 
@@ -107,3 +107,4 @@ class StartView(arcade.View):
         except Exception as e:
             print("🚨 Failed to start game:", e)
             arcade.play_sound(arcade.load_sound(resource_path("assets/audio/damage.wav")))  # tiny feedback
+

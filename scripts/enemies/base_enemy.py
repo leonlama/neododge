@@ -1,7 +1,7 @@
 import arcade
 import random
 import math
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 
 class BaseEnemy(arcade.Sprite):
     """Base class for all enemy types in the game."""

@@ -3,8 +3,8 @@ import math
 import random
 from scripts.enemies.base_enemy import BaseEnemy
 from scripts.bullets.enemy_bullet import EnemyBullet
-from scripts.utils.resource_helper import resource_path
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.resource_manager import resource_path
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 class ShooterEnemy(BaseEnemy):
     """An enemy that shoots at the player."""

@@ -4,7 +4,7 @@ Skin management system for loading and managing player skins.
 import os
 import arcade
 from .constants import SKINS_DIR, DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
-from scripts.utils.resource_helper import resource_path
+from src.core.resource_manager import resource_path
 
 class SkinManager:
     """

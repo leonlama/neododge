@@ -22,3 +22,4 @@ class Bullet(arcade.Sprite):
         self.age += delta_time
         self.center_x += self.velocity[0] * delta_time
         self.center_y += self.velocity[1] * delta_time
+

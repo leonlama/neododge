@@ -1,4 +1,4 @@
-from scripts.utils.constants import DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
+from src.core.constants import DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
 
 DEFAULT_SKIN = "default"
 MDMA_SKIN = "mdma"

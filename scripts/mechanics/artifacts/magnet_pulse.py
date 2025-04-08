@@ -32,3 +32,4 @@ class MagnetPulseArtifact(BaseArtifact):
         
         # Update texture each frame to ensure current skin is used
         self.update_texture()
+

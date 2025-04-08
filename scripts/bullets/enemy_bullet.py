@@ -1,6 +1,6 @@
 import arcade
-from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT
-from scripts.utils.resource_helper import resource_path
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.resource_manager import resource_path
 
 class EnemyBullet(arcade.Sprite):
     """Bullet fired by enemies."""

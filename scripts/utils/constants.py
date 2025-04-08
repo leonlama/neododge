@@ -45,3 +45,4 @@ ARTIFACT_COOLDOWNS = {
 
 # Artifact settings
 DASH_COOLDOWN = 15
+
