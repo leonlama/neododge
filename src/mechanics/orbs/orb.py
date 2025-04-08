@@ -1,6 +1,6 @@
 import arcade
 import random
-from scripts.skins.skin_manager import skin_manager
+from src.skins.skin_manager import skin_manager
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 class Orb(arcade.Sprite):
@@ -82,7 +82,9 @@ class Orb(arcade.Sprite):
 
         # Fade out when nearing end of lifetime
         if self.lifetime < self.fade_time:
-            self.alpha = int(255 * (self.lifetime / self.fade_time))
+            # Calculate alpha, ensuring it stays within valid range
+            alpha_value = max(0, min(255, int(255 * (self.lifetime / self.fade_time))))
+            self.alpha = alpha_value
 
         # Remove when lifetime is over
         if self.lifetime <= 0:

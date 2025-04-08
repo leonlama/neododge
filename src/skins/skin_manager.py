@@ -14,11 +14,11 @@ class SkinManager:
         self.skins_path = "assets/skins"
         self.textures = {}
         self.scales = {
-            "player": 1.0,
+            "player": 0.035,
             "enemy": 1.0,
             "bullet": 1.0,
-            "orb": 1.0,
-            "artifact": 1.0,
+            "orb": 0.035,
+            "artifact": 0.035,
             "coin": 1.0
         }
 
@@ -226,13 +226,15 @@ class SkinManager:
 
         print("✅ All assets preloaded successfully")
 
-    def get_texture(self, category, name=None, preload=False):
+    def get_texture(self, category, name=None, default_path=None, preload=False, force_reload=False):
         """Get a texture by category and name.
 
         Args:
             category: Category of the texture (player, orbs, etc.).
             name: Name of the texture. If None, uses 'default'.
+            default_path: Optional fallback path to load texture from.
             preload: Whether this is being called during preloading.
+            force_reload: Whether to force reload the texture.
 
         Returns:
             arcade.Texture: The requested texture.
@@ -241,27 +243,12 @@ class SkinManager:
         if name is None:
             name = 'default'
 
-        # Check if texture is already loaded
+        # Create texture key
         texture_key = f"{category}/{name}"
-        if texture_key in self.textures:
-            return self.textures[texture_key]
 
-        # Special case for UI elements that are in the main assets folder
-        if category == "ui":
-            if name in ["heart_red", "heart_gold", "heart_gray"]:
-                try:
-                    # Fix: Load directly from assets/ui folder with proper path
-                    texture_path = f"assets/ui/{name}.png"
-                    if os.path.exists(texture_path):
-                        texture = arcade.load_texture(texture_path)
-                        self.textures[texture_key] = texture
-                        return texture
-                    else:
-                        return self.get_default_texture(category, name)
-                except Exception as e:
-                    if not preload:
-                        print(f"⚠️ Error loading UI texture '{name}': {e}")
-                    return self.get_default_texture(category, name)
+        # Check if texture is already loaded and not forcing reload
+        if texture_key in self.textures and not force_reload:
+            return self.textures[texture_key]
 
         # Try to load from current skin
         try:
@@ -276,13 +263,23 @@ class SkinManager:
             # Try to load from default skin if not already using default
             if self.current_skin != "default":
                 try:
-                    default_path = os.path.join(self.skins_path, "default", category, f"{name}.png")
-                    texture = arcade.load_texture(default_path)
+                    default_skin_path = os.path.join(self.skins_path, "default", category, f"{name}.png")
+                    texture = arcade.load_texture(default_skin_path)
                     self.textures[texture_key] = texture
                     return texture
                 except Exception as e2:
                     if not preload:
-                        print(f"⚠️ Error loading default texture '{name}' from '{default_path}': {e2}")
+                        print(f"⚠️ Error loading default texture '{name}' from '{default_skin_path}': {e2}")
+
+            # Try to load from provided default path
+            if default_path:
+                try:
+                    texture = arcade.load_texture(default_path)
+                    self.textures[texture_key] = texture
+                    return texture
+                except Exception as e3:
+                    if not preload:
+                        print(f"⚠️ Error loading texture '{name}' from '{default_path}': {e3}")
 
             # Use default texture from our predefined set
             return self.get_default_texture(category, name)
@@ -344,7 +341,7 @@ class SkinManager:
         Returns:
             float: The scale value.
         """
-        return self.scales.get("player", 1.0)
+        return self.scales.get("player", 0.035)
 
     def get_enemy_scale(self):
         """Get the scale for enemy sprites.
@@ -368,7 +365,7 @@ class SkinManager:
         Returns:
             float: The scale value.
         """
-        return self.scales.get("orb", 1.0)
+        return self.scales.get("orb", 0.035)
 
     def get_artifact_scale(self):
         """Get the scale for artifact sprites.
@@ -376,7 +373,7 @@ class SkinManager:
         Returns:
             float: The scale value.
         """
-        return self.scales.get("artifact", 1.0)
+        return self.scales.get("artifact", 0.035)
 
     def get_coin_scale(self):
         """Get the scale for coin sprites.

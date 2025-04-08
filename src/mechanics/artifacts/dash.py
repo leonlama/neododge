@@ -1,7 +1,7 @@
 import arcade
 import math
 from src.mechanics.artifacts.base import Artifact
-from scripts.skins.skin_manager import skin_manager
+from src.skins.skin_manager import skin_manager
 
 class DashArtifact(arcade.Sprite):
     """Artifact that allows the player to dash."""

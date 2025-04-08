@@ -28,6 +28,9 @@ class Player(arcade.Sprite):
         self.speed_multiplier = 1.0
         self.speed_buff_timer = 0.0
         self.inverse_move = False
+        
+        # Movement attributes
+        self.speed_bonus = 1.0  # Default speed multiplier (1.0 = normal speed)
 
         # Player dash
         self.can_dash = True
@@ -46,6 +49,18 @@ class Player(arcade.Sprite):
         self.shield_active = False
         self.shield_timer = 0.0
 
+        # Heart-related attributes
+        self.heart_textures = None  # Will be set by game_view
+        self.max_slots = 9  # Default value
+        self.current_hearts = 3  # Default value
+
+        # Heart positioning
+        self.heart_start_x = 50
+        self.heart_y = 30
+        self.heart_spacing = 40
+        self.heart_width = 30
+        self.heart_height = 30
+
         # Player invincibility
         self.invincible = False
         self.invincible_timer = 0
@@ -60,6 +75,7 @@ class Player(arcade.Sprite):
         # Player artifacts
         self.artifacts = []
         self.artifact_slots = []
+        self.max_slots = self.max_health  # Number of artifact slots tied to max health
         self.artifact_cooldowns = {}
         self.active_artifacts = {}
 
@@ -78,13 +94,6 @@ class Player(arcade.Sprite):
         # Parent view reference
         self.parent_view = None
         self.window = None
-
-        # Load heart textures
-        self.heart_textures = {
-            "red": skin_manager.get_texture("heart_red", "assets/ui/heart_red.png"),
-            "gray": skin_manager.get_texture("heart_gray", "assets/ui/heart_gray.png"),
-            "gold": skin_manager.get_texture("heart_gold", "assets/ui/heart_gold.png")
-        }
 
         # Dash effect
         self.dash_particles = []
@@ -239,7 +248,7 @@ class Player(arcade.Sprite):
 
     def take_damage(self, amount=1.0):
         """Handle player taking damage."""
-        if self.invincible or self.shield_active:  # Changed from self.shield to self.shield_active
+        if self.invincible or self.shield_active:
             # If player has a shield, remove it instead of taking damage
             if self.shield_active:
                 self.shield_active = False
@@ -249,6 +258,7 @@ class Player(arcade.Sprite):
 
         # Reduce health
         self.health -= 1
+        self.current_hearts = self.health  # Keep current_hearts in sync
 
         # Make player invincible briefly
         self.invincible = True
@@ -281,6 +291,50 @@ class Player(arcade.Sprite):
             self.parent_view.add_pickup_text("Coin collected!", self.center_x, self.center_y)
 
         return True  # Return True to indicate successful collection
+
+    def apply_speed_bonus(self, multiplier, duration=None):
+        """Apply a speed bonus to the player.
+
+        Args:
+            multiplier: The speed multiplier to apply
+            duration: Optional duration in seconds. If None, bonus is permanent.
+        """
+        self.speed_bonus = multiplier
+
+        if duration:
+            # Schedule removal of the bonus after duration
+            arcade.schedule(lambda dt: self.reset_speed_bonus(), duration)
+
+    def reset_speed_bonus(self):
+        """Reset speed bonus to default value."""
+        self.speed_bonus = 1.0
+
+    def apply_buff(self, buff_type, value, duration=None):
+        """Apply a buff to the player.
+
+        Args:
+            buff_type: Type of buff (e.g., 'speed', 'health', etc.)
+            value: Value of the buff
+            duration: Optional duration in seconds
+        """
+        if buff_type == 'speed':
+            self.apply_speed_bonus(value, duration)
+        elif buff_type == 'health':
+            self.health += value
+            self.current_hearts = self.health
+        elif buff_type == 'shield':
+            self.shield_active = True
+            if duration:
+                self.shield_timer = duration
+        elif buff_type == 'invincibility':
+            self.invincible = True
+            if duration:
+                self.invincible_timer = duration
+        elif buff_type == 'score_multiplier':
+            self.score_multiplier = value
+            if duration:
+                # Reset after duration
+                arcade.schedule(lambda dt: setattr(self, 'score_multiplier', 1.0), duration)
 
     def add_orb_effect(self, orb_type, duration):
         """Add an orb effect to the player"""
@@ -341,45 +395,28 @@ class Player(arcade.Sprite):
 
     def draw_hearts(self):
         """Draw the player's health as hearts."""
-        # Calculate heart positions
-        heart_scale = 0.035
-        heart_width = self.heart_textures['red'].width * heart_scale
-        heart_height = self.heart_textures['red'].height * heart_scale
-        heart_padding = 5
-        start_x = 20
-        start_y = arcade.get_window().height - 30
+        if not self.heart_textures:
+            return  # Skip if textures aren't set
 
-        # Draw hearts based on health
+        heart_scale = 0.035  # Adjust as needed
+
         for i in range(self.max_slots):
-            x = start_x + i * (heart_width + heart_padding)
-            y = start_y
-
             # Determine which heart texture to use
-            if i < self.current_hearts:
-                # Full heart
-                texture = self.heart_textures['red']
-            else:
-                # Empty heart
-                texture = self.heart_textures['gray']
+            if i < self.health:  # Use health directly
+                if i >= self.max_health:  # Extra hearts (from powerups)
+                    texture = self.heart_textures.get("gold")
+                else:  # Regular hearts
+                    texture = self.heart_textures.get("red")
+            else:  # Empty heart slots
+                texture = self.heart_textures.get("gray")
 
-            # Draw the heart
-            arcade.draw_texture_rectangle(
-                x, y, 
-                heart_width, heart_height,
-                texture
-            )
-
-        # Draw gold hearts if player has any
-        if self.gold_hearts > 0:
-            for i in range(self.gold_hearts):
-                x = start_x + (self.max_slots + i) * (heart_width + heart_padding)
-                y = start_y
-
-                arcade.draw_texture_rectangle(
-                    x, y, 
-                    heart_width, heart_height,
-                    self.heart_textures['gold']
-                )
+            if texture:
+                # Draw the heart
+                heart_width = texture.width * heart_scale
+                heart_height = texture.height * heart_scale
+                x = self.heart_start_x + i * self.heart_spacing
+                y = self.heart_y
+                arcade.draw_texture_rectangle(x, y, heart_width, heart_height, texture)
 
     def draw(self):
         """Draw the player and effects"""

@@ -1,6 +1,5 @@
 from .base import BaseArtifact
-from scripts.skins.skin_manager import skin_manager
-from scripts.utils.skin_logic import apply_skin_to_artifact
+from src.skins.skin_manager import skin_manager
 
 class BulletTimeArtifact(BaseArtifact):
     def __init__(self, x, y):
