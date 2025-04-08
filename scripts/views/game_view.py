@@ -5,7 +5,7 @@ from scripts.characters.player import Player
 from scripts.mechanics.artifacts.dash_artifact import DashArtifact
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
-from scripts.mechanics.coins.coin import Coin
+from scripts.mechanics.coins.coin_factory import create_coin, Coin
 from scripts.mechanics.wave_manager import WaveManager
 from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, ARTIFACT_SCALE
 from scripts.utils.shaders import load_vision_shader, create_vision_geometry

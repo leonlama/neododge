@@ -7,7 +7,7 @@ from scripts.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact
 from scripts.mechanics.artifacts.slow_field import SlowFieldArtifact
 from scripts.mechanics.artifacts.bullet_time import BulletTimeArtifact
 from scripts.mechanics.artifacts.clone_dash import CloneDashArtifact
-from scripts.mechanics.coins.coin import Coin
+from scripts.mechanics.coins.coin_factory import Coin
 
 class WaveManager:
     def __init__(self, player):
