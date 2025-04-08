@@ -105,4 +105,7 @@ class WaveGenerator:
             "formation": formation,
             "orbs": difficulty_params["orb_count"],
             "orb_types": difficulty_params["orb_types"],
-            "artifact": difficulty_params
+            "artifact": difficulty_params["spawn_artifact"],
+            "coins": random.randint(3, 8),
+            "message": f"Wave {wave_number}"
+        }
