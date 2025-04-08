@@ -57,19 +57,15 @@ class DebuffOrb(arcade.Sprite):
 
     def apply_effect(self, player):
         """Apply the debuff effect to the player"""
-        if "speed" in self.orb_type:
-            # Speed debuff (0.7x speed for 5 seconds)
-            player.apply_orb_effect("speed", 5.0, 0.7)
-            self.message = "Speed Reduced!"
-        elif "cool" in self.orb_type:
-            # Cooldown increase (1.5x cooldown for 5 seconds)
+        if self.orb_type == "slow":
+            player.apply_orb_effect("speed", 5.0, 0.8)
+        elif self.orb_type == "mult_down_0_5":
+            player.apply_orb_effect("multiplier", 30.0, 0.5)
+        elif self.orb_type == "mult_down_0_25":
+            player.apply_orb_effect("multiplier", 30.0, 0.25)
+        elif self.orb_type == "cooldown_up":
             player.apply_orb_effect("cooldown", 5.0, 1.5)
-            self.message = "Cooldown Increased!"
-        elif "vision" in self.orb_type:
-            # Vision blur (for 5 seconds)
+        elif self.orb_type == "vision":
             player.apply_orb_effect("vision", 5.0, True)
-            self.message = "Vision Blurred!"
-        elif "hitbox" in self.orb_type:
-            # Hitbox increase (1.3x hitbox for 5 seconds)
+        elif self.orb_type == "hitbox":
             player.apply_orb_effect("hitbox", 5.0, 1.3)
-            self.message = "Hitbox Increased!"

@@ -25,9 +25,15 @@ class DashArtifact(BaseArtifact):
         self.update_texture()
 
     def apply_effect(self, player, *_):
+        """Apply the dash effect to the player"""
+        # Check if cooldown allows
         if self.cooldown_timer >= self.cooldown:
+            # Perform the dash
             player.perform_dash()
+
+            # Reset artifact cooldown
             self.cooldown_timer = 0
-            print("⚡ Dash used!")
+
+            print("⚡ Dash artifact used!")
         else:
-            print("❌ Dash on cooldown.")
+            print(f"❌ Dash artifact on cooldown. ({self.cooldown_timer:.1f}/{self.cooldown}s)")

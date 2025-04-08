@@ -222,9 +222,9 @@ class NeododgeGame(arcade.View):
                 arcade.play_sound(self.coin_sound)
                 self.coins.remove(coin)
 
+        # Handle mouse movement
         if self.right_mouse_down:
             self.player.move_towards_mouse(self, delta_time)
-            
     def apply_skin_toggle(self):
         """Toggle between available skin sets"""
         try:
@@ -275,7 +275,9 @@ class NeododgeGame(arcade.View):
         self.mouse_y = y
 
     def on_key_press(self, symbol, modifiers):
+        """Handle key press events"""
         if symbol == arcade.key.SPACE:
+            # Try to dash
             self.player.try_dash()
         elif symbol == arcade.key.S:
             self.player.set_target(self.player.center_x, self.player.center_y)

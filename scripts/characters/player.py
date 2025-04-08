@@ -10,6 +10,8 @@ from scripts.utils.resource_helper import resource_path
 from scripts.mechanics.game_state import game_state
 from scripts.mechanics.event_manager import event_manager
 
+from scripts.utils.constants import PLAYER_BASE_SPEED
+
 # Load sound effects
 damage_sound = arcade.load_sound(resource_path("assets/audio/damage.wav"))
 
@@ -40,36 +42,52 @@ class Player(arcade.Sprite):
         self.health = game_state.player_stats["max_health"]
         self.base_speed = PLAYER_BASE_SPEED
         self.speed = self.base_speed * game_state.player_stats["speed"]
-        self.cooldown = 1.0  # Base cooldown multiplier
 
-        # Movement
+        # Health-related attributes
+        self.max_slots = 3        # Maximum number of heart slots
+        self.current_hearts = 3   # Current number of hearts
+        self.gold_hearts = 0      # Number of gold hearts (extra lives)
+
+        # Movement-related attributes
         self.change_x = 0
         self.change_y = 0
+        self.speed_bonus = 1.0    # Speed multiplier from orbs
+        self.inverse_move = False # Whether movement is inverted
         self.last_move_direction = (0, 1)  # Default facing up
 
-        # Artifact management
-        self.artifacts = {}  # Dictionary for cooldowns
+        # Dash-related attributes
+        self.cooldown = 15.0      # Base cooldown in seconds
+        self.cooldown_factor = 1.0  # Cooldown multiplier (lower is better)
+        self.dash_timer = self.cooldown  # Start with dash available
+
+        # Effect-related attributes
+        self.shield = False       # Shield status
+        self.invincible = False   # Invincibility status
+        self.invincibility_timer = 0  # Time since becoming invincible
+        self.blink_timer = 0      # Timer for blinking effect
+        self.blink_state = True   # Current blink state
+        self.multiplier = 1.0     # Score multiplier
+        self.vision_blur = False  # Vision blur effect
+        self.vision_timer = 0     # Vision effect timer
+
+        # Hitbox-related attributes
+        self.original_size = (self.width, self.height)  # Store original size
+        self.hitbox_factor = 1.0  # Hitbox size multiplier
+        self.big_hitbox_timer = 0  # Hitbox effect timer
+
+        # Target-related attributes
+        self.target_x = None      # Target X position
+        self.target_y = None      # Target Y position
+
+        # Artifact-related attributes
+        self.artifacts = {}       # Dictionary for cooldowns
         self.artifact_objects = []  # List for actual artifact objects
         self.active_artifacts = []
+        self.active_orbs = []     # List of active orb effects [name, duration]
 
-        # Invincibility after taking damage
-        self.invincible = False
-        self.invincible_timer = 0
-
-        # Vision effects
-        self.vision_blur = False  # Add this missing attribute
-
-        # Additional attributes from original Player class
-        self.current_hearts = 3  # Default heart count
-        self.max_slots = 3       # Maximum heart slots
-        self.gold_hearts = 0     # Gold hearts count
-        self.shield = False      # Shield status
-        self.dash_timer = 0      # Dash cooldown timer
-        self.blink_state = True  # For blinking when invincible
+        # Window references
         self.window = None       # Reference to game window
         self.parent_view = None  # Reference to parent view
-        self.target_x = None     # Target X for dash
-        self.target_y = None     # Target Y for dash
 
         # Orb status attributes
         self.orb_effects = {
@@ -86,12 +104,13 @@ class Player(arcade.Sprite):
             "vision": 0,
             "hitbox": 0
         }
-        
-        self.active_orbs = []  # List of active orb effects [name, duration]
 
         # Register for events
         event_manager.subscribe("artifact_collected", self._on_artifact_collected)
         event_manager.subscribe("coin_collected", self._on_coin_collected)
+
+        # Apply rendering optimizations
+        self.optimize_rendering()
 
     @property
     def coins(self):
@@ -153,6 +172,15 @@ class Player(arcade.Sprite):
                            arcade.color.GOLD
                     self.heart_textures[heart_type] = arcade.make_soft_circle_texture(18, color)
 
+    def optimize_rendering(self):
+        """Apply rendering optimizations"""
+        # Set texture filtering to nearest for pixel art
+        if hasattr(self, 'texture') and self.texture:
+            self.texture.gl_filter = arcade.gl.NEAREST, arcade.gl.NEAREST
+
+        # Preload and cache textures
+        self._load_textures()
+
     def update(self, delta_time):
         """
         Update player state
@@ -160,84 +188,141 @@ class Player(arcade.Sprite):
         Args:
             delta_time: Time since last update in seconds
         """
-        # Update position
-        self.center_x += self.change_x * self.speed * delta_time
-        self.center_y += self.change_y * self.speed * delta_time
-
-        # Update invincibility
-        if self.invincible:
-            self.invincible_timer += delta_time
-            # Blink effect
-            if int(self.invincible_timer * 10) % 2 == 0:
-                self.blink_state = True
-            else:
-                self.blink_state = False
-
-            # End invincibility after 1.5 seconds
-            if self.invincible_timer >= 1.5:
-                self.invincible = False
-                self.blink_state = True
-
-        # Update dash timer
-        if self.dash_timer < 5:  # 5 second cooldown
+        # Update dash cooldown (increment timer)
+        if hasattr(self, 'dash_timer') and self.dash_timer < self.cooldown * self.cooldown_factor:
             self.dash_timer += delta_time
 
+        # Update orb effects
+        for orb in self.active_orbs:
+            orb[1] -= delta_time
+        self.active_orbs = [orb for orb in self.active_orbs if orb[1] > 0]
+
+        # Update vision blur
+        if hasattr(self, 'vision_blur') and self.vision_blur:
+            if hasattr(self, 'vision_timer'):
+                self.vision_timer -= delta_time
+                if self.vision_timer <= 0:
+                    self.vision_blur = False
+
         # Update artifact cooldowns
-        for artifact_name, cooldown in list(self.artifacts.items()):
-            if cooldown > 0:
+        for artifact_name in list(self.artifacts.keys()):
+            if self.artifacts[artifact_name] > 0:
                 self.artifacts[artifact_name] -= delta_time
-                if self.artifacts[artifact_name] <= 0:
-                    self.artifacts[artifact_name] = 0
 
-        # Update orb timers
-        for orb_type, timer in list(self.orb_timers.items()):
-            if timer > 0:
-                self.orb_timers[orb_type] -= delta_time
-                if self.orb_timers[orb_type] <= 0:
-                    self.orb_timers[orb_type] = 0
-                    # Reset effect when timer expires
-                    if orb_type == "speed":
-                        self.orb_effects["speed"] = 1.0
-                        self.speed = self.base_speed * game_state.player_stats["speed"]
-                    elif orb_type == "cooldown":
-                        self.orb_effects["cooldown"] = 1.0
-                    elif orb_type == "multiplier":
-                        self.orb_effects["multiplier"] = 1.0
-                    elif orb_type == "vision":
-                        self.orb_effects["vision"] = False
-                        self.vision_blur = False
-                    elif orb_type == "hitbox":
-                        self.orb_effects["hitbox"] = 1.0
-                        self.scale = 1.0
+        # Update hitbox
+        if hasattr(self, 'big_hitbox_timer') and self.big_hitbox_timer > 0:
+            self.big_hitbox_timer -= delta_time
 
-        # Store last move direction if moving
-        if self.change_x != 0 or self.change_y != 0:
-            magnitude = math.sqrt(self.change_x**2 + self.change_y**2)
-            if magnitude > 0:
-                self.last_move_direction = (
-                    self.change_x / magnitude,
-                    self.change_y / magnitude
-                )
+            # Apply hitbox effect
+            if hasattr(self, 'hitbox_factor') and hasattr(self, 'original_size') and self.original_size:
+                # Calculate new size
+                new_width = self.original_size[0] * self.hitbox_factor
+                new_height = self.original_size[1] * self.hitbox_factor
+
+                # Apply new size
+                self.width = new_width
+                self.height = new_height
+
+                # Reset hitbox when timer expires
+                if self.big_hitbox_timer <= 0:
+                    self.width = self.original_size[0]
+                    self.height = self.original_size[1]
+                    self.hitbox_factor = 1.0
+
+        # Update invincibility
+        if hasattr(self, 'invincible') and self.invincible:
+            if hasattr(self, 'invincibility_timer'):
+                self.invincibility_timer += delta_time
+                if hasattr(self, 'blink_timer'):
+                    self.blink_timer += delta_time
+                    if self.blink_timer >= 0.1:
+                        if hasattr(self, 'blink_state'):
+                            self.blink_state = not self.blink_state
+                        self.blink_timer = 0
+                if self.invincibility_timer >= 1.0:
+                    self.invincible = False
+                    if hasattr(self, 'blink_state'):
+                        self.blink_state = True
+
+        # Handle target-based movement (from right-click)
+        if hasattr(self, 'target_x') and self.target_x is not None and hasattr(self, 'target_y') and self.target_y is not None:
+            dx = self.target_x - self.center_x
+            dy = self.target_y - self.center_y
+            dist = math.sqrt(dx**2 + dy**2)
+
+            if dist < 5:  # Close enough to target
+                self.change_x = 0
+                self.change_y = 0
+                self.target_x = None
+                self.target_y = None
+            else:
+                # Normalize direction
+                direction_x = dx / dist
+                direction_y = dy / dist
+
+                # Apply inverse movement if active
+                if hasattr(self, 'inverse_move') and self.inverse_move:
+                    direction_x = -direction_x
+                    direction_y = -direction_y
+
+                # Calculate speed
+                base_speed = 1.6  # Reduced base speed for target movement
+                if hasattr(self, 'speed_bonus'):
+                    base_speed *= self.speed_bonus
+
+                # Apply delta time to make movement frame-rate independent
+                speed = base_speed * 60 * delta_time  # 60 is target FPS
+
+                # Set movement velocity
+                self.change_x = direction_x * speed
+                self.change_y = direction_y * speed
+
+                # Update position
+                self.center_x += self.change_x
+                self.center_y += self.change_y
+
+        # Call parent update method
+        super().update()
+
+    def update_orb_status(self, delta_time):
+        """Update active orb effects"""
+        # Update orb durations
+        for orb in self.active_orbs:
+            orb[1] -= delta_time
+
+        # Remove expired orbs
+        self.active_orbs = [orb for orb in self.active_orbs if orb[1] > 0]
 
     def update_appearance(self):
         """Update player appearance after skin change"""
         self._load_textures()
 
     def try_dash(self):
-        """Try to perform a dash if available"""
-        if hasattr(self, 'can_dash') and self.can_dash and self.dash_timer >= 5:
-            self.perform_dash()
-            self.dash_timer = 0
-            return True
-        return False
+        """Attempt to perform a dash if cooldown allows"""
+        # Calculate effective cooldown
+        effective_cooldown = self.cooldown * self.cooldown_factor
 
+        # Check if dash is available
+        if self.dash_timer >= effective_cooldown:
+            self.perform_dash()
+            self.dash_timer = 0  # Reset cooldown timer
+
+            # Update artifacts dictionary if it exists
+            if hasattr(self, 'artifacts') and 'Dash' in self.artifacts:
+                self.artifacts['Dash'] = effective_cooldown  # Set to full cooldown
+
+            return True
+        else:
+            remaining = effective_cooldown - self.dash_timer
+            print(f"⏱️ Dash on cooldown! ({remaining:.1f}s remaining)")
+            return False
     def set_target(self, x, y):
         """
-        Set the target position for the player to move towards
+        Set a target position for the player to move towards
 
         Args:
-            x: Target X coordinate
-            y: Target Y coordinate
+            x: Target X position
+            y: Target Y position
         """
         self.target_x = x
         self.target_y = y
@@ -245,10 +330,10 @@ class Player(arcade.Sprite):
         # Calculate direction to target
         dx = x - self.center_x
         dy = y - self.center_y
-
-        # Normalize the direction
         distance = math.sqrt(dx**2 + dy**2)
+
         if distance > 0:
+            # Normalize direction
             self.last_move_direction = (dx / distance, dy / distance)
 
     def move_towards_mouse(self, view, delta_time):
@@ -273,97 +358,85 @@ class Player(arcade.Sprite):
         # Calculate distance to mouse
         distance = math.sqrt(dx**2 + dy**2)
 
-        # Determine movement mode and speed
-        if hasattr(self, 'target_x') and self.target_x is not None and hasattr(self, 'target_y') and self.target_y is not None:
-            # Target mode (from click) - 100% speed
-            target_dx = self.target_x - self.center_x
-            target_dy = self.target_y - self.center_y
-            target_distance = math.sqrt(target_dx**2 + target_dy**2)
+        # Only move if we're far enough from the mouse
+        if distance > 5:
+            # Normalize the direction
+            direction_x = dx / distance
+            direction_y = dy / distance
 
-            if target_distance < 5:  # Close enough to target
-                self.target_x = None
-                self.target_y = None
-                self.change_x = 0
-                self.change_y = 0
-            else:
-                # Move towards target at full speed
-                direction_x = target_dx / target_distance
-                direction_y = target_dy / target_distance
+            # Apply inverse movement if active
+            if hasattr(self, 'inverse_move') and self.inverse_move:
+                direction_x = -direction_x
+                direction_y = -direction_y
 
-                # Apply inverse movement if active
-                if hasattr(self, 'inverse_move') and self.inverse_move:
-                    direction_x = -direction_x
-                    direction_y = -direction_y
+            # Calculate speed based on movement mode
+            base_speed = 2.0  # Reduced base speed for mouse movement
 
-                # Set movement speed (100%)
-                self.change_x = direction_x * self.speed
-                self.change_y = direction_y * self.speed
+            # Apply speed bonus from orbs
+            if hasattr(self, 'speed_bonus'):
+                base_speed *= self.speed_bonus
 
-                # Update last move direction
-                self.last_move_direction = (direction_x, direction_y)
+            # Apply delta time to make movement frame-rate independent
+            speed = base_speed * 60 * delta_time  # 60 is target FPS
 
-        elif hasattr(self, 'mouse_pressed') and self.mouse_pressed:
-            # Mouse pressed mode - 85% speed (compared to click)
-            if distance > 10:  # Minimum distance to start moving
-                # Normalize the direction
-                direction_x = dx / distance
-                direction_y = dy / distance
+            # Set movement velocity
+            self.change_x = direction_x * speed
+            self.change_y = direction_y * speed
 
-                # Apply inverse movement if active
-                if hasattr(self, 'inverse_move') and self.inverse_move:
-                    direction_x = -direction_x
-                    direction_y = -direction_y
+            # Update position
+            self.center_x += self.change_x
+            self.center_y += self.change_y
 
-                # Set movement speed (75% of click speed)
-                self.change_x = direction_x * self.speed * 0.85
-                self.change_y = direction_y * self.speed * 0.85
-
-                # Update last move direction
-                self.last_move_direction = (direction_x, direction_y)
-
+            # Store last move direction
+            self.last_move_direction = (direction_x, direction_y)
         else:
-            # Mouse follow mode - 50% speed (compared to click)
-            if distance > 10:  # Minimum distance to start moving
-                # Normalize the direction
-                direction_x = dx / distance
-                direction_y = dy / distance
-
-                # Apply inverse movement if active
-                if hasattr(self, 'inverse_move') and self.inverse_move:
-                    direction_x = -direction_x
-                    direction_y = -direction_y
-
-                # Set movement speed (50% of click speed)
-                self.change_x = direction_x * self.speed * 0.5
-                self.change_y = direction_y * self.speed * 0.5
-
-                # Update last move direction
-                self.last_move_direction = (direction_x, direction_y)
-            else:
-                # Stop moving if close to mouse
-                self.change_x = 0
-                self.change_y = 0
+            # Stop moving if close to target
+            self.change_x = 0
+            self.change_y = 0
 
     def perform_dash(self):
-        """Perform a dash move in the direction of the target"""
-        # Fallback if target is None
-        if self.target_x is None or self.target_y is None:
-            self.target_x = self.center_x + 1  # minimal dash
-            self.target_y = self.center_y
+        """Perform a dash in the current movement direction"""
+        # Get dash direction
+        if hasattr(self, 'last_move_direction') and self.last_move_direction:
+            direction_x, direction_y = self.last_move_direction
+        else:
+            # Default to up if no direction
+            direction_x, direction_y = 0, 1
 
-        dx = self.target_x - self.center_x
-        dy = self.target_y - self.center_y
-        distance = math.hypot(dx, dy)
+        # Calculate dash distance
+        dash_distance = 100  # DASH_DISTANCE
 
-        if distance == 0:
-            return
+        # Apply dash movement
+        self.center_x += direction_x * dash_distance
+        self.center_y += direction_y * dash_distance
 
-        dash_distance = 100  # Dash distance in pixels
-        self.center_x += (dx / distance) * dash_distance
-        self.center_y += (dy / distance) * dash_distance
+        # Create dash effect
+        self.create_dash_effect(direction_x, direction_y)
+
+        # Set invincibility
         self.invincible = True
         self.invincibility_timer = 0
         self.dash_timer = 0
+
+        print("⚡ Dash used!")
+        
+    def create_dash_effect(self, direction_x, direction_y):
+        """
+        Create a visual effect for the dash
+
+        Args:
+            direction_x: X direction of dash
+            direction_y: Y direction of dash
+        """
+        # This is a simple implementation - you can enhance it later
+        # For now, we'll just print a message
+        print(f"Dash effect in direction ({direction_x:.2f}, {direction_y:.2f})")
+
+        # In a full implementation, you might create particle effects here
+        # For example:
+        # for i in range(5):
+        #     particle = DashParticle(self.center_x, self.center_y, direction_x, direction_y)
+        #     self.game_view.particle_list.append(particle)
 
     def take_damage(self, amount: float = 0.5):
         """
@@ -433,120 +506,134 @@ class Player(arcade.Sprite):
             arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["gold"])
 
     def draw_artifacts(self):
-        """
-        Draw the player's artifacts on screen
-        """
-        # Check if the player has artifacts
-        if not hasattr(self, 'artifacts') or not self.artifacts:
-            return
+        """Draw artifact slots and cooldowns"""
+        start_x = 30
+        y = 50
+        font = "Kenney Pixel"
+        font_size = 13
+        bar_width = 50
+        bar_height = 6
+        bar_offset = -10
 
-        # Define the starting position for artifacts display
-        start_x = 10
-        start_y = self.window.height - 50 if self.window else 520  # Fallback if window not set
-        spacing = 40  # Space between artifacts
+        for idx, artifact_name in enumerate(self.artifacts):
+            x = start_x + 70 * idx
+            text = artifact_name
 
-        # Draw each artifact
-        for i, (artifact_name, cooldown) in enumerate(self.artifacts.items()):
-            # Calculate position
-            x = start_x + i * spacing
-            y = start_y
+            # Get cooldown value and max cooldown
+            cooldown_value = self.artifacts[artifact_name]
 
-            # Draw the artifact icon (placeholder circle for now)
-            arcade.draw_circle_filled(x, y, 15, arcade.color.PURPLE)
+            # For dash, use the effective cooldown
+            if artifact_name == 'Dash':
+                max_cooldown = self.cooldown * self.cooldown_factor
+                # Invert the ratio for dash (0 = just used, max = ready)
+                cooldown_ratio = max(0, min(1.0, self.dash_timer / max_cooldown))
+            else:
+                max_cooldown = 15.0  # Default max cooldown
+                # For other artifacts, higher value = more cooldown
+                cooldown_ratio = max(0, min(1.0, 1.0 - (cooldown_value / max_cooldown)))
 
-            # Draw cooldown indicator if applicable
-            if cooldown > 0:
-                # Calculate cooldown percentage based on typical cooldown times
-                # This is an estimate since we don't store max cooldown
-                max_cooldown = 10.0  # Assume 10 seconds is typical max cooldown
-                cooldown_pct = min(1.0, cooldown / max_cooldown)
+            # Determine if artifact is ready
+            ready = cooldown_ratio >= 1.0
+            text_color = arcade.color.YELLOW if ready else arcade.color.DARK_GRAY
 
-                # Draw cooldown indicator (semi-transparent overlay)
-                arcade.draw_arc_filled(
-                    x, y, 
-                    30, 30,  # Width and height
-                    arcade.color.GRAY + (150,),  # Color with alpha
-                    0, 360 * cooldown_pct,  # Start and end angles
-                    0  # Tilt angle
-                )
+            # Draw artifact name
+            arcade.draw_text(
+                text,
+                x,
+                y,
+                text_color,
+                font_size=font_size,
+                font_name=font,
+                anchor_x="left"
+            )
 
-                # Draw text showing seconds remaining
-                seconds_left = int(cooldown)
-                if seconds_left > 0:
-                    arcade.draw_text(
-                        str(seconds_left),
-                        x, y - 5,
-                        arcade.color.WHITE,
-                        font_size=10,
-                        anchor_x="center"
-                    )
+            # Draw cooldown bar
+            fill_width = bar_width * cooldown_ratio
 
-    def draw_orb_status(self, x_start=700, y_start=570):
-        """
-        Draw the player's active orb effects
+            # Background bar
+            arcade.draw_rectangle_filled(
+                x + bar_width / 2,
+                y + bar_offset,
+                bar_width,
+                bar_height,
+                arcade.color.DARK_GRAY
+            )
 
-        Args:
-            x_start: Starting X position for orb status
-            y_start: Starting Y position for orb status
-        """
-        x = x_start
-        y = y_start
+            # Yellow fill indicating time until ready
+            arcade.draw_rectangle_filled(
+                x + fill_width / 2,
+                y + bar_offset,
+                fill_width,
+                bar_height,
+                arcade.color.YELLOW
+            )
+            
+    def draw_orb_status(self, screen_width=800, screen_height=600):
+        """Draw active orb effects"""
+        x = screen_width - 220
+        y = screen_height - 30
+        line_height = 20
+        i = 0
 
-        # Draw active orb effects
-        for orb_type, timer in self.orb_timers.items():
-            if timer > 0:
-                # Draw orb icon
-                if orb_type in self.orb_textures:
-                    arcade.draw_texture_rectangle(x, y, 24, 24, self.orb_textures[orb_type])
+        if hasattr(self, 'shield') and self.shield:
+            arcade.draw_text("🛡️ Shield Active", x, y - i * line_height, arcade.color.LIGHT_GREEN, 14)
+            i += 1
 
-                # Draw timer text
-                arcade.draw_text(
-                    f"{timer:.1f}s",
-                    x + 15,
-                    y - 8,
-                    arcade.color.WHITE,
-                    font_size=10,
-                    anchor_x="center"
-                )
+        if hasattr(self, 'speed_bonus') and self.speed_bonus > 1.0:
+            percent = int((self.speed_bonus - 1) * 100)
+            arcade.draw_text(f"⚡ Speed +{percent}%", x, y - i * line_height, arcade.color.LIGHT_BLUE, 14)
+            i += 1
 
-                # Move to next position
-                y -= 30
+        if hasattr(self, 'cooldown_factor') and self.cooldown_factor < 1.0:
+            arcade.draw_text(f"⏱️ Cooldown x{self.cooldown_factor}", x, y - i * line_height, arcade.color.ORCHID, 14)
+            i += 1
 
-    def apply_orb_effect(self, orb_type, duration, value=None):
+        for orb in self.active_orbs:
+            label, time_left = orb
+            arcade.draw_text(f"{label} ({int(time_left)}s)", x, y - i * line_height, arcade.color.LIGHT_YELLOW, 14)
+            i += 1
+
+    def apply_orb_effect(self, effect_type, duration, value):
         """
         Apply an orb effect to the player
 
         Args:
-            orb_type: Type of orb effect
-            duration: Duration of the effect in seconds
-            value: Optional value for the effect
+            effect_type: Type of effect (speed, cooldown, multiplier, etc.)
+            duration: Duration of effect in seconds
+            value: Effect value (multiplier or boolean)
         """
-        # Set the timer
-        self.orb_timers[orb_type] = duration
+        # Add to active orbs list
+        effect_name = ""
 
-        # Apply the effect
-        if orb_type == "speed":
-            # Speed orb (positive or negative)
-            if value is not None:
-                self.orb_effects["speed"] = value
-                self.speed = self.base_speed * game_state.player_stats["speed"] * value
-        elif orb_type == "cooldown":
-            # Cooldown reduction orb
-            if value is not None:
-                self.orb_effects["cooldown"] = value
-        elif orb_type == "multiplier":
-            # Score multiplier orb
-            if value is not None:
-                self.orb_effects["multiplier"] = value
-        elif orb_type == "vision":
-            # Vision blur orb
-            self.orb_effects["vision"] = True
-            self.vision_blur = True
-        elif orb_type == "hitbox":
-            # Hitbox size orb
-            if value is not None:
-                self.orb_effects["hitbox"] = value
-                self.scale = value
+        if effect_type == "speed":
+            self.speed_bonus = value
+            effect_name = f"Speed x{value}"
+        elif effect_type == "cooldown":
+            self.cooldown_factor = value
+            effect_name = f"Cooldown x{value}"
+        elif effect_type == "multiplier":
+            self.multiplier = value
+            effect_name = f"Score x{value}"
+        elif effect_type == "vision":
+            self.vision_blur = value
+            self.vision_timer = duration
+            effect_name = "Vision Blur" if value else "Vision Enhanced"
+        elif effect_type == "hitbox":
+            # Store original size if not already stored
+            if not hasattr(self, "original_size") or self.original_size is None:
+                self.original_size = (self.width, self.height)
+
+            # Don't modify hitbox directly, just store the timer and factor
+            self.hitbox_factor = value
+            self.big_hitbox_timer = duration
+
+            effect_name = f"Hitbox x{value}"
+
+        # Add to active orbs with duration
+        if effect_name:
+            # Remove any existing effect of the same type
+            self.active_orbs = [orb for orb in self.active_orbs if effect_type not in orb[0].lower()]
+            self.active_orbs.append([effect_name, duration])
 
     def use_artifact(self, artifact_name):
         """
