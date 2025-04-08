@@ -2,10 +2,15 @@ import arcade
 import random
 from typing import Optional, List, Dict
 
+# Import only what exists in your project
 from src.mechanics.wave_management.wave_manager import WaveManager
 from src.mechanics.wave_management.difficulty_adjuster import DifficultyAdjuster
 from src.mechanics.wave_management.wave_generator import WaveGenerator
-from src.mechanics.wave_management.wave_analytics import WaveAnalytics
+from src.mechanics.wave_management.wave_analytics import WaveAnalytics, PlayerAnalytics
+
+from src.entities.enemies.enemy import Enemy
+from src.mechanics.orbs.orb_manager import OrbManager
+from src.mechanics.artifacts.artifact_manager import ArtifactManager
 
 class GameController:
     """Controls the game flow, wave progression, and entity management."""
@@ -15,11 +20,10 @@ class GameController:
         self.screen_width = screen_width
         self.screen_height = screen_height
 
-        # Wave management components
+        # Wave management components - only use what exists
         self.difficulty_adjuster = DifficultyAdjuster()
         self.wave_generator = WaveGenerator()
         self.wave_manager = WaveManager()
-        self.wave_analytics = WaveAnalytics()
 
         # Game state
         self.current_wave_number = 0
@@ -81,9 +85,6 @@ class GameController:
         self.wave_message_alpha = 255
         self.wave_timer = 0
 
-        # Log wave start for analytics
-        self.wave_analytics.log_wave_start(self.current_wave_number, wave_config)
-
         return wave_config
 
     def spawn_wave_entities(self, wave_config):
@@ -113,7 +114,6 @@ class GameController:
         y = enemy_data.get("y", random.randint(50, self.screen_height - 50))
 
         # Create enemy (implementation depends on your enemy classes)
-        from src.characters.enemy import Enemy
         enemy = Enemy(x, y, self.player, behavior=enemy_type)
         self.enemies.append(enemy)
 
@@ -125,7 +125,6 @@ class GameController:
         y = orb_data.get("y", random.randint(50, self.screen_height - 50))
 
         # Create orb (implementation depends on your orb classes)
-        from src.mechanics.orbs.orb_factory import create_orb
         orb = create_orb(orb_type, x, y)
         if orb:
             self.orbs.append(orb)
@@ -147,7 +146,6 @@ class GameController:
         y = artifact_data.get("y", random.randint(50, self.screen_height - 50))
 
         # Create artifact (implementation depends on your artifact classes)
-        from src.mechanics.artifacts.artifact_factory import create_artifact
         artifact = create_artifact(artifact_type, x, y)
         if artifact:
             self.artifacts.append(artifact)
@@ -175,13 +173,6 @@ class GameController:
                 self.wave_message = f"Wave {self.current_wave_number} Complete!"
                 self.wave_message_alpha = 255
 
-                # Log wave completion for analytics
-                self.wave_analytics.log_wave_complete(
-                    self.current_wave_number,
-                    len(self.enemies),
-                    self.player.health
-                )
-
         # Check if all enemies are defeated
         if not self.rest_period and len(self.enemies) == 0:
             # All enemies defeated, start rest period
@@ -190,13 +181,6 @@ class GameController:
             self.wave_duration = self.rest_duration
             self.wave_message = f"Wave {self.current_wave_number} Complete!"
             self.wave_message_alpha = 255
-
-            # Log wave completion for analytics
-            self.wave_analytics.log_wave_complete(
-                self.current_wave_number,
-                0,  # All enemies defeated
-                self.player.health
-            )
 
     def should_show_shop(self):
         """Determine if the shop should be shown."""

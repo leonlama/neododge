@@ -1,5 +1,40 @@
+import arcade
 import numpy as np
 from collections import deque
+
+class WaveAnalytics:
+    """Tracks and analyzes wave statistics."""
+
+    def __init__(self):
+        self.wave_stats = {}
+        self.current_wave = 0
+
+    def log_wave_start(self, wave_number, wave_config):
+        """Log the start of a wave."""
+        self.current_wave = wave_number
+        self.wave_stats[wave_number] = {
+            "start_time": arcade.get_time(),
+            "config": wave_config,
+            "enemies_spawned": len(wave_config.get("enemies", [])),
+            "completed": False
+        }
+
+    def log_wave_complete(self, wave_number, enemies_remaining, player_health):
+        """Log the completion of a wave."""
+        if wave_number in self.wave_stats:
+            self.wave_stats[wave_number].update({
+                "end_time": arcade.get_time(),
+                "duration": arcade.get_time() - self.wave_stats[wave_number]["start_time"],
+                "enemies_remaining": enemies_remaining,
+                "player_health": player_health,
+                "completed": True
+            })
+
+    def get_wave_stats(self, wave_number=None):
+        """Get statistics for a specific wave or all waves."""
+        if wave_number is not None:
+            return self.wave_stats.get(wave_number, {})
+        return self.wave_stats
 
 class PlayerAnalytics:
     def __init__(self, player):

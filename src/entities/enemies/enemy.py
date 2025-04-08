@@ -3,7 +3,7 @@ import math
 import random
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
-class BaseEnemy(arcade.Sprite):
+class Enemy(arcade.Sprite):
     """Base class for all enemies in the game"""
 
     def __init__(self, x=None, y=None):
