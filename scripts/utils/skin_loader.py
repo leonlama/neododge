@@ -1,9 +1,10 @@
 """
 Skin management system for loading and managing player skins.
 """
-import arcade
 import os
+import arcade
 from .constants import SKINS_DIR, DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
+from scripts.utils.resource_helper import resource_path
 
 class SkinManager:
     """
@@ -39,21 +40,35 @@ class SkinManager:
             skin_path: File path to the skin assets
         """
         try:
-            # Original skin loading code
-            # ...
+            # Create a dictionary to store this skin's textures
+            skin_textures = {}
 
-            # Add better error handling and logging
-            self.skins[skin_name] = {
-                # Skin textures
-            }
+            # Load player textures
+            player_path = resource_path(os.path.join(skin_path, "player.png"))
+            if os.path.exists(player_path):
+                skin_textures["player"] = arcade.load_texture(player_path)
+
+            # Load other textures as needed
+            # Example:
+            # bullet_path = resource_path(os.path.join(skin_path, "bullet.png"))
+            # if os.path.exists(bullet_path):
+            #     skin_textures["bullet"] = arcade.load_texture(bullet_path)
+
+            # Store the skin if we loaded at least one texture
+            if skin_textures:
+                self.skins[skin_name] = skin_textures
         except Exception as e:
             print(f"Error loading skin {skin_name}: {e}")
 
     def _discover_additional_skins(self):
         """Discover and load any additional skins in the skins directory"""
         try:
-            # New functionality to discover skins
-            pass  # Placeholder until actual implementation
+            skins_dir = resource_path(SKINS_DIR)
+            if os.path.exists(skins_dir) and os.path.isdir(skins_dir):
+                for item in os.listdir(skins_dir):
+                    item_path = os.path.join(skins_dir, item)
+                    if os.path.isdir(item_path) and item not in ["default", "mdma"]:
+                        self._load_skin(item, os.path.join(SKINS_DIR, item))
         except Exception as e:
             print(f"Error discovering additional skins: {e}")
 
@@ -70,7 +85,7 @@ class SkinManager:
         if skin_name is None:
             skin_name = self.current_skin
 
-        return self.skins.get(skin_name, self.skins.get("default"))
+        return self.skins.get(skin_name, self.skins.get("default", {}))
 
     def set_current_skin(self, skin_name):
         """
@@ -86,3 +101,15 @@ class SkinManager:
             self.current_skin = skin_name
             return True
         return False
+
+    def get_selected(self):
+        """
+        Get the name of the currently selected skin
+
+        Returns:
+            str: Name of the current skin
+        """
+        return self.current_skin
+
+# Create a singleton instance
+#skin_manager = SkinManager()

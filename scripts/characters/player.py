@@ -1,169 +1,211 @@
+"""
+Player character implementation with movement, health, and artifact management.
+"""
 import arcade
 import math
-from scripts.utils.skin_loader import SkinManager
-from scripts.views.game_over_view import GameOverView
-from scripts.utils.resource_helper import resource_path
+import random
+from scripts.utils.constants import PLAYER_BASE_SPEED, PLAYER_BASE_HEALTH
 from scripts.skins.skin_manager import skin_manager
+from scripts.utils.resource_helper import resource_path
+from scripts.mechanics.game_state import game_state
+from scripts.mechanics.event_manager import event_manager
 
+# Load sound effects
 damage_sound = arcade.load_sound(resource_path("assets/audio/damage.wav"))
 
-PLAYER_SPEED = 300
-DASH_DISTANCE = 150
-
 class Player(arcade.Sprite):
-    def __init__(self, start_x, start_y):
-        # Get texture and scale from skin manager
-        texture = skin_manager.get_texture("player", "default")
-        scale = skin_manager.get_scale("player")
-        
-        # Initialize with texture and scale
-        super().__init__(texture=texture, scale=scale)
-        
-        self.center_x = start_x
-        self.center_y = start_y
-        self.target_x = start_x
-        self.target_y = start_y
-        self.can_dash = False
-        self.dash_timer = 0
+    """
+    Player character with movement, health management, and artifact usage.
+    Responds to user input and manages player state.
+    """
+
+    def __init__(self, x, y):
+        """
+        Initialize the player character
+
+        Args:
+            x: Initial x position
+            y: Initial y position
+        """
+        super().__init__()
+
+        # Core properties
+        self.center_x = x
+        self.center_y = y
+
+        # Load textures based on selected skin
+        self._load_textures()
+
+        # Stats
+        self.health = game_state.player_stats["max_health"]
+        self.base_speed = PLAYER_BASE_SPEED
+        self.speed = self.base_speed * game_state.player_stats["speed"]
+
+        # Movement
+        self.change_x = 0
+        self.change_y = 0
+        self.last_move_direction = (0, 1)  # Default facing up
+
+        # Artifact management
+        self.artifacts = {}
+        self.active_artifacts = []
+
+        # Invincibility after taking damage
         self.invincible = False
-        self.invincibility_timer = 0
-        self.blink_state = True
-        self.max_slots = 3
-        self.current_hearts = 3.0
-        self.gold_hearts = 0
-        self.speed_bonus = 1.0
-        self.multiplier = 1.0
-        self.shield = False
-        self.mult_timer = 0
-        self.cooldown_factor = 1.0
-        self.cooldown = 1.0
-        self.artifacts = []
-        self.active_orbs = []
-        self.vision_blur = False
-        self.vision_timer = 0.0
-        self.inverse_move = False
-        self.window = None
-        self.parent_view = None
-        self.artifact_cooldowns = {}
-        self.pickup_texts = []
-        self.coins = 100
+        self.invincible_timer = 0
 
-        # New attributes to support upgrades
-        self.orb_spawn_chance = 0
-        self.coin_spawn_chance = 0
-        self.damage_negate_chance = 0
-        self.has_shield = False
-        self.second_chance = False
-        self.score_multiplier = 1
-        self.base_speed = 4
+        # Vision effects
+        self.vision_blur = False  # Add this missing attribute
 
-        # Load heart textures
-        self.update_texture()
+        # Additional attributes from original Player class
+        self.current_hearts = 3  # Default heart count
+        self.max_slots = 3       # Maximum heart slots
+        self.gold_hearts = 0     # Gold hearts count
+        self.shield = False      # Shield status
+        self.dash_timer = 0      # Dash cooldown timer
+        self.blink_state = True  # For blinking when invincible
+        self.window = None       # Reference to game window
+        self.parent_view = None  # Reference to parent view
+        self.target_x = None     # Target X for dash
+        self.target_y = None     # Target Y for dash
 
-    def update_texture(self):
-        """Update the texture based on current skin settings"""
-        # Get player texture
-        self.texture = skin_manager.get_texture("player", "default")
-        if self.texture is None:
-            self.texture = arcade.make_soft_square_texture(32, arcade.color.CYAN, outer_alpha=255)
-        
-        # Update scale when texture changes
-        self.scale = skin_manager.get_scale("player")
-        
-        # Load heart textures
-        self.heart_textures = {
-            "gray": skin_manager.get_texture("hearts", "gray"),
-            "red": skin_manager.get_texture("hearts", "health"),
-            "gold": skin_manager.get_texture("hearts", "gold"),
+        # Orb status attributes
+        self.orb_effects = {
+            "speed": 1.0,
+            "cooldown": 1.0,
+            "multiplier": 1.0,
+            "vision": False,
+            "hitbox": 1.0
         }
-        
-        # Fallback for heart textures
-        if self.heart_textures["gray"] is None:
-            self.heart_textures["gray"] = arcade.load_texture(resource_path("assets/hud/hearts/grey_heart.png"))
-        if self.heart_textures["red"] is None:
-            self.heart_textures["red"] = arcade.load_texture(resource_path("assets/hud/hearts/red_heart.png"))
-        if self.heart_textures["gold"] is None:
-            self.heart_textures["gold"] = arcade.load_texture(resource_path("assets/hud/hearts/gold_heart.png"))
+        self.orb_timers = {
+            "speed": 0,
+            "cooldown": 0,
+            "multiplier": 0,
+            "vision": 0,
+            "hitbox": 0
+        }
 
-    def set_target(self, x, y):
-        if self.inverse_move:
-            dx = x - self.center_x
-            dy = y - self.center_y
-            self.target_x = self.center_x - dx
-            self.target_y = self.center_y - dy
+        # Register for events
+        event_manager.subscribe("artifact_collected", self._on_artifact_collected)
+        event_manager.subscribe("coin_collected", self._on_coin_collected)
+
+    def _load_textures(self):
+        """Load player textures based on selected skin"""
+        # Load player texture
+        player_texture = skin_manager.get_texture("player", "default")
+        if player_texture:
+            self.texture = player_texture
+            self.scale = skin_manager.get_player_scale()
         else:
-            self.target_x = x
-            self.target_y = y
+            # Fallback texture if skin doesn't have player texture
+            self.texture = arcade.make_soft_square_texture(
+                30, arcade.color.WHITE, outer_alpha=255
+            )
 
-    def update(self, delta_time: float = 1 / 60):
-        self.dash_timer += delta_time * self.cooldown_factor
-
-        if self.mult_timer > 0:
-            self.mult_timer -= delta_time
-            if self.mult_timer <= 0:
-                self.multiplier = 1.0
-
-        for orb in self.active_orbs:
-            orb[1] -= delta_time
-        self.active_orbs = [orb for orb in self.active_orbs if orb[1] > 0]
-
-        if self.vision_blur:
-            self.vision_timer -= delta_time
-            if self.vision_timer <= 0:
-                self.vision_blur = False
-
-        for artifact in self.artifacts:
-            if hasattr(artifact, "cooldown_timer") and artifact.cooldown_timer < artifact.cooldown:
-                artifact.cooldown_timer += delta_time
-
-        if self.target_x and self.target_y:
-            dx = self.target_x - self.center_x
-            dy = self.target_y - self.center_y
-            dist = math.hypot(dx, dy)
-            if dist < 5:
-                self.change_x = 0
-                self.change_y = 0
-                self.target_x = None
-                self.target_y = None
+        # Load orb textures using skin manager
+        self.orb_textures = {}
+        orb_types = ["speed", "cooldown", "multiplier", "vision", "hitbox"]
+        for orb_type in orb_types:
+            texture = skin_manager.get_texture("orbs", orb_type)
+            if texture:
+                self.orb_textures[orb_type] = texture
             else:
-                direction_x = dx / dist
-                direction_y = dy / dist
-                speed = PLAYER_SPEED * self.speed_bonus * delta_time
-                self.change_x = direction_x * speed
-                self.change_y = direction_y * speed
-                self.center_x += self.change_x
-                self.center_y += self.change_y
+                # Fallback textures
+                color = arcade.color.BLUE if orb_type == "speed" else \
+                       arcade.color.PURPLE if orb_type == "cooldown" else \
+                       arcade.color.GOLD if orb_type == "multiplier" else \
+                       arcade.color.GRAY if orb_type == "vision" else \
+                       arcade.color.RED
+                self.orb_textures[orb_type] = arcade.make_soft_circle_texture(18, color)
 
+        # Load heart textures using skin manager
+        self.heart_textures = {}
+        heart_types = ["red", "gray", "gold"]
+        for heart_type in heart_types:
+            texture = skin_manager.get_texture("hearts", heart_type)
+            if texture:
+                self.heart_textures[heart_type] = texture
+            else:
+                # Fallback to direct loading
+                try:
+                    self.heart_textures[heart_type] = arcade.load_texture(
+                        resource_path(f"assets/ui/heart_{heart_type}.png")
+                    )
+                except:
+                    # Ultimate fallback
+                    color = arcade.color.RED if heart_type == "red" else \
+                           arcade.color.GRAY if heart_type == "gray" else \
+                           arcade.color.GOLD
+                    self.heart_textures[heart_type] = arcade.make_soft_circle_texture(18, color)
+
+    def update(self, delta_time):
+        """
+        Update player state
+
+        Args:
+            delta_time: Time since last update in seconds
+        """
+        # Update position
+        self.center_x += self.change_x * self.speed * delta_time
+        self.center_y += self.change_y * self.speed * delta_time
+
+        # Update invincibility
         if self.invincible:
-            self.invincibility_timer += delta_time
-            if int(self.invincibility_timer * 10) % 2 == 0:
-                self.blink_state = False
+            self.invincible_timer += delta_time
+            # Blink effect
+            if int(self.invincible_timer * 10) % 2 == 0:
+                self.blink_state = True
             else:
-                self.blink_state = True
-            if self.invincibility_timer >= 1.0:
+                self.blink_state = False
+
+            # End invincibility after 1.5 seconds
+            if self.invincible_timer >= 1.5:
                 self.invincible = False
-                self.invincibility_timer = 0
                 self.blink_state = True
 
-        if hasattr(self, "big_hitbox_timer") and self.big_hitbox_timer > 0:
-            self.big_hitbox_timer -= delta_time
-            if self.big_hitbox_timer <= 0:
-                self.width, self.height = self.original_size
-                self.set_hit_box(self.texture.hit_box_points)
-                
-        # Update texture to ensure current skin is used
-        self.update_texture()
+        # Update dash timer
+        if self.dash_timer < 5:  # 5 second cooldown
+            self.dash_timer += delta_time
 
-    def try_dash(self):
-        for artifact in self.artifacts:
-            if artifact.name == "Dash":
-                if artifact.cooldown_timer >= artifact.cooldown:
-                    self.perform_dash()
-                    artifact.cooldown_timer = 0
-                else:
-                    print("❌ Dash on cooldown.")
+        # Update artifact cooldowns
+        for artifact_name, cooldown in list(self.artifacts.items()):
+            if cooldown > 0:
+                self.artifacts[artifact_name] -= delta_time
+                if self.artifacts[artifact_name] <= 0:
+                    self.artifacts[artifact_name] = 0
+
+        # Update orb timers
+        for orb_type, timer in list(self.orb_timers.items()):
+            if timer > 0:
+                self.orb_timers[orb_type] -= delta_time
+                if self.orb_timers[orb_type] <= 0:
+                    self.orb_timers[orb_type] = 0
+                    # Reset effect when timer expires
+                    if orb_type == "speed":
+                        self.orb_effects["speed"] = 1.0
+                        self.speed = self.base_speed * game_state.player_stats["speed"]
+                    elif orb_type == "cooldown":
+                        self.orb_effects["cooldown"] = 1.0
+                    elif orb_type == "multiplier":
+                        self.orb_effects["multiplier"] = 1.0
+                    elif orb_type == "vision":
+                        self.orb_effects["vision"] = False
+                        self.vision_blur = False
+                    elif orb_type == "hitbox":
+                        self.orb_effects["hitbox"] = 1.0
+                        self.scale = 1.0
+
+        # Store last move direction if moving
+        if self.change_x != 0 or self.change_y != 0:
+            magnitude = math.sqrt(self.change_x**2 + self.change_y**2)
+            if magnitude > 0:
+                self.last_move_direction = (
+                    self.change_x / magnitude,
+                    self.change_y / magnitude
+                )
 
     def perform_dash(self):
+        """Perform a dash move in the direction of the target"""
         # Fallback if target is None
         if self.target_x is None or self.target_y is None:
             self.target_x = self.center_x + 1  # minimal dash
@@ -176,23 +218,37 @@ class Player(arcade.Sprite):
         if distance == 0:
             return
 
-        dash_distance = DASH_DISTANCE
+        dash_distance = 100  # Dash distance in pixels
         self.center_x += (dx / distance) * dash_distance
         self.center_y += (dy / distance) * dash_distance
         self.invincible = True
         self.invincibility_timer = 0
         self.dash_timer = 0
 
-    def take_damage(self, amount: float):
+    def take_damage(self, amount: float = 0.5):
+        """
+        Handle player taking damage
+
+        Args:
+            amount: Amount of damage to take
+        """
+        # Skip if already invincible
         if self.invincible:
-            return
+            return False
+
+        # Check for shield
         if self.shield:
             self.shield = False
-            return
+            return False
 
+        # Play damage sound
         arcade.play_sound(damage_sound)
+
+        # Set invincibility
         self.invincible = True
         self.invincibility_timer = 0
+
+        # Apply damage to hearts
         while amount > 0:
             if self.gold_hearts > 0:
                 self.gold_hearts -= 1
@@ -202,15 +258,28 @@ class Player(arcade.Sprite):
                 amount -= 0.5
             else:
                 break
+
+        # Check for game over
         if self.current_hearts + self.gold_hearts <= 0:
-            if self.window and self.parent_view:
+            if self.window and hasattr(self, 'parent_view') and self.parent_view:
+                from scripts.views.game_over_view import GameOverView
                 self.window.show_view(GameOverView(self.parent_view.score))
 
+        return True
+
     def draw(self):
+        """Draw the player sprite with invincibility effect"""
         if not self.invincible or self.blink_state:
             super().draw()
 
     def draw_hearts(self, x_start=30, y=570):
+        """
+        Draw the player's health hearts
+
+        Args:
+            x_start: Starting X position for hearts
+            y: Y position for hearts
+        """
         for i in range(self.max_slots):
             x = x_start + i * 40
             if i < int(self.current_hearts):
@@ -223,88 +292,105 @@ class Player(arcade.Sprite):
             x = x_start + (self.max_slots + i) * 40
             arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["gold"])
 
-    def draw_orb_status(self, screen_width=800, screen_height=600):
-        x = screen_width - 220
-        y = screen_height - 30
-        line_height = 20
-        i = 0
-        if self.shield:
-            arcade.draw_text("🛡️ Shield Active", x, y - i * line_height, arcade.color.LIGHT_GREEN, 14)
-            i += 1
-        if self.speed_bonus > 1.0:
-            percent = int((self.speed_bonus - 1) * 100)
-            arcade.draw_text(f"⚡ Speed +{percent}%", x, y - i * line_height, arcade.color.LIGHT_BLUE, 14)
-            i += 1
-        if self.cooldown_factor < 1.0:
-            arcade.draw_text(f"⏱️ Cooldown x{self.cooldown_factor}", x, y - i * line_height, arcade.color.ORCHID, 14)
-            i += 1
-        for orb in self.active_orbs:
-            label, time_left = orb
-            arcade.draw_text(f"{label} ({int(time_left)}s)", x, y - i * line_height, arcade.color.LIGHT_YELLOW, 14)
-            i += 1
+    def draw_orb_status(self, x_start=700, y_start=570):
+        """
+        Draw the player's active orb effects
 
-    def draw_artifacts(self):
-        start_x = 30
-        y = 50
-        font = "Kenney Pixel"
-        font_size = 13
-        bar_width = 50
-        bar_height = 6
-        bar_offset = -10
+        Args:
+            x_start: Starting X position for orb status
+            y_start: Starting Y position for orb status
+        """
+        x = x_start
+        y = y_start
 
-        for idx, artifact in enumerate(self.artifacts):
-            x = start_x + 70 * idx
-            text = artifact.name
+        # Draw active orb effects
+        for orb_type, timer in self.orb_timers.items():
+            if timer > 0:
+                # Draw orb icon
+                if orb_type in self.orb_textures:
+                    arcade.draw_texture_rectangle(x, y, 24, 24, self.orb_textures[orb_type])
 
-            # Determine if artifact is ready or on cooldown
-            ready = hasattr(artifact, "cooldown_timer") and artifact.cooldown_timer >= artifact.cooldown
-            text_color = arcade.color.YELLOW if ready else arcade.color.DARK_GRAY
-
-            # Draw artifact name
-            arcade.draw_text(
-                text,
-                x,
-                y,
-                text_color,
-                font_size=font_size,
-                font_name=font,
-                anchor_x="left"
-            )
-
-            # Draw cooldown bar
-            if hasattr(artifact, "cooldown") and hasattr(artifact, "cooldown_timer"):
-                # Ratio goes from 0 (just used) to 1 (ready)
-                cooldown_ratio = min(artifact.cooldown_timer / artifact.cooldown, 1.0)
-                fill_width = bar_width * cooldown_ratio
-
-                # Background bar
-                arcade.draw_rectangle_filled(
-                    x + bar_width / 2,
-                    y + bar_offset,
-                    bar_width,
-                    bar_height,
-                    arcade.color.DARK_GRAY
+                # Draw timer text
+                arcade.draw_text(
+                    f"{timer:.1f}s",
+                    x + 15,
+                    y - 8,
+                    arcade.color.WHITE,
+                    font_size=10,
+                    anchor_x="center"
                 )
 
-                # Yellow fill indicating time until ready
-                arcade.draw_rectangle_filled(
-                    x + fill_width / 2,
-                    y + bar_offset,
-                    fill_width,
-                    bar_height,
-                    arcade.color.YELLOW
-                )
+                # Move to next position
+                y -= 30
 
-    def move_towards_mouse(self, game, delta_time):
-        mouse_x, mouse_y = game.mouse_x, game.mouse_y
-        dx = mouse_x - self.center_x
-        dy = mouse_y - self.center_y
-        distance = (dx ** 2 + dy ** 2) ** 0.5
+    def apply_orb_effect(self, orb_type, duration, value=None):
+        """
+        Apply an orb effect to the player
 
-        if distance > 5:
-            # Normalize
-            dx /= distance
-            dy /= distance
-            # Multiply by speed and delta_time for consistent movement
-            self.center_x += dx * self.base_speed * delta_time * 60
-            self.center_y += dy * self.base_speed * delta_time * 60
+        Args:
+            orb_type: Type of orb effect
+            duration: Duration of the effect in seconds
+            value: Optional value for the effect
+        """
+        # Set the timer
+        self.orb_timers[orb_type] = duration
+
+        # Apply the effect
+        if orb_type == "speed":
+            # Speed orb (positive or negative)
+            if value is not None:
+                self.orb_effects["speed"] = value
+                self.speed = self.base_speed * game_state.player_stats["speed"] * value
+        elif orb_type == "cooldown":
+            # Cooldown reduction orb
+            if value is not None:
+                self.orb_effects["cooldown"] = value
+        elif orb_type == "multiplier":
+            # Score multiplier orb
+            if value is not None:
+                self.orb_effects["multiplier"] = value
+        elif orb_type == "vision":
+            # Vision blur orb
+            self.orb_effects["vision"] = True
+            self.vision_blur = True
+        elif orb_type == "hitbox":
+            # Hitbox size orb
+            if value is not None:
+                self.orb_effects["hitbox"] = value
+                self.scale = value
+
+    def use_artifact(self, artifact_name):
+        """
+        Use an artifact if available
+
+        Args:
+            artifact_name: Name of the artifact to use
+
+        Returns:
+            bool: True if artifact was used, False otherwise
+        """
+        if artifact_name in self.artifacts and self.artifacts[artifact_name] <= 0:
+            # Artifact is available, use it
+            event_manager.publish("artifact_used", artifact_name)
+            return True
+        return False
+
+    def add_artifact(self, artifact_name, cooldown):
+        """
+        Add or reset cooldown for an artifact
+
+        Args:
+            artifact_name: Name of the artifact
+            cooldown: Cooldown time in seconds
+        """
+        self.artifacts[artifact_name] = cooldown
+        event_manager.publish("artifact_added", artifact_name)
+
+    def _on_artifact_collected(self, artifact_data):
+        """Handle artifact collection event"""
+        if isinstance(artifact_data, dict) and "name" in artifact_data and "cooldown" in artifact_data:
+            self.add_artifact(artifact_data["name"], artifact_data["cooldown"])
+
+    def _on_coin_collected(self, amount):
+        """Handle coin collection event"""
+        game_state.add_coins(amount)

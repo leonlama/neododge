@@ -59,23 +59,20 @@ class StartView(arcade.View):
 
     def on_key_press(self, symbol, modifiers):
         if symbol == arcade.key.T:
-            self.toggle_skin()
+            try:
+                # Toggle skin using the new method
+                new_skin = skin_manager.toggle_skin()
+                print(f"🎨 Switched to skin: {new_skin}")
+                
+                # Visual feedback
+                self.skin_change_indicator = 1.0
+                arcade.play_sound(arcade.load_sound(
+                    resource_path("assets/audio/buff.wav")
+                ))
+            except Exception as e:
+                print(f"❌ Error toggling skin: {e}")
         elif symbol == arcade.key.SPACE:
             self.start_game()
-
-    def toggle_skin(self):
-        """Toggle between available skin sets"""
-        try:
-            # Use the skin_manager's toggle_skin method
-            skin_manager.toggle_skin()
-            
-            # Visual feedback
-            self.skin_change_indicator = 1.0
-            arcade.play_sound(arcade.load_sound(
-                resource_path("assets/audio/buff.wav")
-            ))
-        except Exception as e:
-            print(f"❌ Error toggling skin: {e}")
 
     def update_visual_elements(self):
         """Update visual elements in the start view after skin change"""
