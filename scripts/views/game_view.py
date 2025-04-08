@@ -108,27 +108,21 @@ class NeododgeGame(arcade.View):
         draw_wave_number(self.wave_manager.wave)
 
     def on_update(self, delta_time):
-        # Update player
-        self.player.update(delta_time)
+        # Update timers
+        self._update_timers(delta_time)
         
-        # Update dash cooldown in artifacts dict for HUD display
-        if "Dash" in self.player.artifacts:
-            # We don't need to update the value in the artifacts dict
-            # since we're using dash_timer directly in draw_artifacts
-            pass
-            
-        self.orbs.update()
-        self.coins.update()
-        self.enemies.update()
-        self.score += delta_time * 10
-        self.orb_spawn_timer -= delta_time
-        self.artifact_spawn_timer -= delta_time
-        self.pickup_texts = update_pickup_texts(self.pickup_texts, delta_time)
-
-        for artifact in self.player.artifacts:
-            if hasattr(artifact, 'update'):
-                artifact.update(delta_time)
-
+        # Update entities
+        self._update_entities(delta_time)
+        
+        # Handle collisions
+        self._handle_collisions(delta_time)
+        
+        # Check game state
+        self._check_game_state(delta_time)
+        
+    def _update_timers(self, delta_time):
+        """Update game timers."""
+        # Wave timer
         if self.in_wave:
             self.level_timer += delta_time
             if self.level_timer >= self.wave_duration:
@@ -141,41 +135,72 @@ class NeododgeGame(arcade.View):
             self.wave_pause_timer -= delta_time
             self.wave_message_alpha = fade_wave_message_alpha(self.wave_pause_timer)
             if self.wave_pause_timer <= 0:
-                self.wave_manager.next_wave()
-                info = self.wave_manager.spawn_enemies(self.enemies, SCREEN_WIDTH, SCREEN_HEIGHT)
-                self.wave_manager.spawn_orbs(self.orbs, info["orbs"], SCREEN_WIDTH, SCREEN_HEIGHT)
-
-                # Set up the coin plan
-                self.coins_to_spawn = random.randint(1, 5)
-                self.coin_spawn_timer = random.uniform(3, 7)
-                print(f"🪙 Will spawn {self.coins_to_spawn} coins over time")
-
-                if info["artifact"]:
-                    artifact = self.wave_manager.maybe_spawn_artifact(
-                        self.player.artifacts,
-                        self.dash_artifact,
-                        SCREEN_WIDTH,
-                        SCREEN_HEIGHT
-                    )
-                    if artifact:
-                        self.dash_artifact = artifact
-                self.wave_duration = 20 + (self.wave_manager.wave - 1) * 5
-                self.level_timer = 0
-                self.in_wave = True
-                print(f"🚀 Starting Wave {self.wave_manager.wave}")
-
-                # Check if it's time to go to the shop
-                if self.wave_manager.wave % 5 == 0:
-                    from scripts.views.shop_view import ShopView
-                    shop_view = ShopView(self.player, self)
-                    self.window.show_view(shop_view)
-
+                self._start_next_wave()
+        
+        # Spawn timers
+        self.orb_spawn_timer -= delta_time
+        self.artifact_spawn_timer -= delta_time
+        
+        # Coin spawn timer
+        if self.coins_to_spawn > 0:
+            self.coin_spawn_timer -= delta_time
+            
+        # Update pickup texts
+        self.pickup_texts = update_pickup_texts(self.pickup_texts, delta_time)
+    
+    def _update_entities(self, delta_time):
+        """Update all game entities."""
+        # Update player
+        self.player.update(delta_time)
+        
+        # Update artifacts
+        for artifact in self.player.artifacts:
+            if hasattr(artifact, 'update'):
+                artifact.update(delta_time)
+        
+        # Update orbs
+        self.orbs.update()
+        
+        # Update coins
+        self.coins.update()
+        
+        # Update enemies
+        self.enemies.update()
+        
+        # Update score
+        self.score += delta_time * 10
+        
+        # Handle random spawns
+        self._handle_spawns(delta_time)
+        
+        # Handle mouse movement
+        if self.right_mouse_down:
+            self.player.move_towards_mouse(self, delta_time)
+    
+    def _handle_spawns(self, delta_time):
+        """Handle random spawning of game objects."""
+        # Spawn orbs
         if self.orb_spawn_timer <= 0:
             self.orbs.append(spawn_random_orb(SCREEN_WIDTH, SCREEN_HEIGHT))
             self.orb_spawn_timer = random.uniform(4, 8)
+            
+        # Spawn artifacts
         if self.artifact_spawn_timer <= 0 and not self.dash_artifact:
             self.dash_artifact = spawn_dash_artifact(SCREEN_WIDTH, SCREEN_HEIGHT)
             self.artifact_spawn_timer = random.uniform(20, 30)
+            
+        # Spawn coins
+        if self.coins_to_spawn > 0 and self.coin_spawn_timer <= 0:
+            x = random.randint(50, SCREEN_WIDTH - 50)
+            y = random.randint(50, SCREEN_HEIGHT - 50)
+            self.coins.append(Coin(x, y))
+            self.coins_to_spawn -= 1
+            self.coin_spawn_timer = random.uniform(3, 7)
+            print(f"🪙 Spawned a coin! Remaining: {self.coins_to_spawn}")
+    
+    def _handle_collisions(self, delta_time):
+        """Handle all collision detection in the game."""
+        # Dash artifact collision
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             # Only add if not already collected
             if not any(isinstance(a, DashArtifact) for a in self.player.artifacts):
@@ -187,18 +212,8 @@ class NeododgeGame(arcade.View):
                 print("⚠️ Dash already unlocked.")
             self.player.can_dash = True
             self.dash_artifact = None
-
-        # Staggered coin spawning
-        if self.coins_to_spawn > 0:
-            self.coin_spawn_timer -= delta_time
-            if self.coin_spawn_timer <= 0:
-                x = random.randint(50, SCREEN_WIDTH - 50)
-                y = random.randint(50, SCREEN_HEIGHT - 50)
-                self.coins.append(Coin(x, y))
-                self.coins_to_spawn -= 1
-                self.coin_spawn_timer = random.uniform(3, 7)
-                print(f"🪙 Spawned a coin! Remaining: {self.coins_to_spawn}")
-
+        
+        # Enemy and bullet collisions
         for enemy in self.enemies:
             for bullet in enemy.bullets:
                 bullet.update(delta_time)
@@ -211,6 +226,8 @@ class NeododgeGame(arcade.View):
                     enemy.bullets.remove(bullet)
             if not self.player.invincible and arcade.check_for_collision(enemy, self.player):
                 self.player.take_damage(1.0)
+        
+        # Orb collisions
         for orb in self.orbs:
             orb.update(delta_time)
             if orb.age > 0.5 and arcade.check_for_collision(orb, self.player):
@@ -224,17 +241,50 @@ class NeododgeGame(arcade.View):
                     arcade.play_sound(arcade.load_sound(resource_path("assets/audio/debuff.wav")), volume=0.1)
 
                 self.orbs.remove(orb)
-
+        
+        # Coin collisions
         for coin in self.coins:
             coin.update_animation(delta_time)
             if arcade.check_for_collision(self.player, coin):
                 game_state.coins += coin.coin_value
                 arcade.play_sound(self.coin_sound)
                 self.coins.remove(coin)
+    
+    def _check_game_state(self, delta_time):
+        """Check for game state transitions."""
+        # Currently just a placeholder for future game state checks
+        pass
+    
+    def _start_next_wave(self):
+        """Start the next wave of enemies."""
+        self.wave_manager.next_wave()
+        info = self.wave_manager.spawn_enemies(self.enemies, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.wave_manager.spawn_orbs(self.orbs, info["orbs"], SCREEN_WIDTH, SCREEN_HEIGHT)
 
-        # Handle mouse movement
-        if self.right_mouse_down:
-            self.player.move_towards_mouse(self, delta_time)
+        # Set up the coin plan
+        self.coins_to_spawn = random.randint(1, 5)
+        self.coin_spawn_timer = random.uniform(3, 7)
+        print(f"🪙 Will spawn {self.coins_to_spawn} coins over time")
+
+        if info["artifact"]:
+            artifact = self.wave_manager.maybe_spawn_artifact(
+                self.player.artifacts,
+                self.dash_artifact,
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT
+            )
+            if artifact:
+                self.dash_artifact = artifact
+        self.wave_duration = 20 + (self.wave_manager.wave - 1) * 5
+        self.level_timer = 0
+        self.in_wave = True
+        print(f"🚀 Starting Wave {self.wave_manager.wave}")
+
+        # Check if it's time to go to the shop
+        if self.wave_manager.wave % 5 == 0:
+            from scripts.views.shop_view import ShopView
+            shop_view = ShopView(self.player, self)
+            self.window.show_view(shop_view)
             
     def apply_skin_toggle(self):
         """Toggle between available skin sets"""
