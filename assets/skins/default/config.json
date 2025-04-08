@@ -1,0 +1,12 @@
+{
+    "name": "Default",
+    "description": "Default game skin",
+    "scales": {
+        "player": 0.035,
+        "enemy": 1.0,
+        "bullet": 1.0,
+        "orb": 1.0,
+        "artifact": 1.0,
+        "coin": 1.0
+    }
+}

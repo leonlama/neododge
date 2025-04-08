@@ -5,7 +5,7 @@ from src.entities.player import Player
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
 
-from src.mechanics.artifacts.dash import DashArtifact
+from src.mechanics.artifacts.dash_artifact import DashArtifact
 from src.mechanics.coins.coin import Coin
 from src.mechanics.orbs.buff_orbs import BuffOrb
 from src.mechanics.orbs.debuff_orbs import DebuffOrb

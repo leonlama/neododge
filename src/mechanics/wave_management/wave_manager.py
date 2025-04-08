@@ -189,7 +189,7 @@ class WaveManager:
         y = random.randint(100, screen_height - 100)
 
         if artifact_type == "dash":
-            from src.mechanics.artifacts.dash import DashArtifact
+            from src.mechanics.artifacts.dash_artifact import DashArtifact
             return DashArtifact(x, y)
         elif artifact_type == "magnet_pulse":
             from src.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact

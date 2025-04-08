@@ -237,10 +237,10 @@ class GameController:
                 # Create the artifact
                 try:
                     try:
-                        from src.entities.artifacts import DashArtifact
+                        from src.mechanics.artifacts import DashArtifact
                         dash_artifact = DashArtifact(x, y)  # Only pass x and y
                     except ImportError:
-                        from entities.artifacts import DashArtifact
+                        from src.mechanics.artifacts import DashArtifact
                         dash_artifact = DashArtifact(x, y)  # Only pass x and y
 
                     self.game_view.dash_artifact = dash_artifact

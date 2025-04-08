@@ -18,22 +18,9 @@ class Orb(arcade.Sprite):
         self.is_buff = is_buff
         self.alpha = 255
 
-        # Set up texture using skin manager
-        try:
-            # Use skin manager to get the texture
-            category = "orbs"
-            self.texture = skin_manager.get_texture(category, orb_type)
-            self.scale = skin_manager.get_orb_scale()
-        except Exception as e:
-            print(f"⚠️ Error loading orb texture '{orb_type}': {e}")
-            # Fallback to a simple shape
-            if is_buff:
-                color = arcade.color.GREEN
-            else:
-                color = arcade.color.RED
-            self.texture = arcade.make_soft_circle_texture(30, color)
-            self.scale = 1.0
-
+        # Set up texture
+        self.set_texture()
+        
         # Movement properties
         self.velocity = (random.uniform(-1, 1), random.uniform(-1, 1))
         self.speed = random.uniform(20, 40)
@@ -48,6 +35,26 @@ class Orb(arcade.Sprite):
         self.pulse_min = 0.9
         self.pulse_max = 1.1
         self.pulse_speed = 1.0
+
+    def set_texture(self):
+        """Set the texture based on orb type"""
+        # Get texture name based on orb type
+        texture_name = self.get_texture_name()
+
+        try:
+            # Try to get the texture from the skin manager
+            self.texture = skin_manager.get_texture("orbs", texture_name)
+            self.scale = skin_manager.get_orb_scale()
+        except Exception as e:
+            print(f"⚠️ Error loading orb texture '{texture_name}': {e}")
+            # If no texture found, create a default one
+            color = arcade.color.GREEN if self.is_buff else arcade.color.RED
+            self.texture = arcade.make_soft_circle_texture(30, color)
+            self.scale = 1.0
+
+    def get_texture_name(self):
+        """Get the texture name based on orb type"""
+        return self.orb_type
 
     def update(self, delta_time=1/60):
         """Update the orb's position and lifetime"""

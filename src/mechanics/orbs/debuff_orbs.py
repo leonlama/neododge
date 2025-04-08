@@ -33,7 +33,7 @@ class DebuffOrb(Orb):
     def get_texture_name(self):
         """Get the texture name based on orb type"""
         if "slow" in self.orb_type:
-            return "speed"  # Use same texture but will be red
+            return "speed"  # Use speed texture for slow orbs
         elif "mult_down" in self.orb_type:
             return "multiplier"
         elif "cooldown_up" in self.orb_type:
