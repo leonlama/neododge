@@ -1,3 +1,4 @@
+import os
 import arcade
 from arcade import AnimationKeyframe
 from scripts.utils.resource_helper import resource_path
@@ -9,17 +10,10 @@ class Coin(arcade.AnimatedTimeBasedSprite):
     """
     def __init__(self, x, y):
         super().__init__()
+        # Load the gold coin spritesheet
+        spritesheet_path = resource_path("assets/items/coin/gold_coin.png")
 
         try:
-            # Try to load the spritesheet
-            spritesheet_path = resource_path("assets/items/coin2_20x20.png")
-
-            if not os.path.exists(spritesheet_path):
-                # Try alternative path
-                alt_path = resource_path("assets/items/coin/coin_spritesheet.png")
-                if os.path.exists(alt_path):
-                    spritesheet_path = alt_path
-
             texture_list = arcade.load_spritesheet(
                 spritesheet_path,
                 sprite_width=20,

@@ -40,6 +40,7 @@ class Player(arcade.Sprite):
         self.health = game_state.player_stats["max_health"]
         self.base_speed = PLAYER_BASE_SPEED
         self.speed = self.base_speed * game_state.player_stats["speed"]
+        self.cooldown = 1.0  # Base cooldown multiplier
 
         # Movement
         self.change_x = 0
@@ -47,7 +48,8 @@ class Player(arcade.Sprite):
         self.last_move_direction = (0, 1)  # Default facing up
 
         # Artifact management
-        self.artifacts = {}
+        self.artifacts = {}  # Dictionary for cooldowns
+        self.artifact_objects = []  # List for actual artifact objects
         self.active_artifacts = []
 
         # Invincibility after taking damage
@@ -84,10 +86,23 @@ class Player(arcade.Sprite):
             "vision": 0,
             "hitbox": 0
         }
+        
+        self.active_orbs = []  # List of active orb effects [name, duration]
 
         # Register for events
         event_manager.subscribe("artifact_collected", self._on_artifact_collected)
         event_manager.subscribe("coin_collected", self._on_coin_collected)
+
+    @property
+    def coins(self):
+        """
+        Get the player's coin count from game state
+
+        Returns:
+            int: Number of coins
+        """
+        from scripts.mechanics.game_state import game_state
+        return game_state.coins
 
     def _load_textures(self):
         """Load player textures based on selected skin"""
@@ -204,6 +219,131 @@ class Player(arcade.Sprite):
                     self.change_y / magnitude
                 )
 
+    def update_appearance(self):
+        """Update player appearance after skin change"""
+        self._load_textures()
+
+    def try_dash(self):
+        """Try to perform a dash if available"""
+        if hasattr(self, 'can_dash') and self.can_dash and self.dash_timer >= 5:
+            self.perform_dash()
+            self.dash_timer = 0
+            return True
+        return False
+
+    def set_target(self, x, y):
+        """
+        Set the target position for the player to move towards
+
+        Args:
+            x: Target X coordinate
+            y: Target Y coordinate
+        """
+        self.target_x = x
+        self.target_y = y
+
+        # Calculate direction to target
+        dx = x - self.center_x
+        dy = y - self.center_y
+
+        # Normalize the direction
+        distance = math.sqrt(dx**2 + dy**2)
+        if distance > 0:
+            self.last_move_direction = (dx / distance, dy / distance)
+
+    def move_towards_mouse(self, view, delta_time):
+        """
+        Move the player towards the mouse position
+
+        Args:
+            view: The game view
+            delta_time: Time since last update in seconds
+        """
+        if not hasattr(view, 'mouse_x') or not hasattr(view, 'mouse_y'):
+            return
+
+        # Get mouse position
+        mouse_x = view.mouse_x
+        mouse_y = view.mouse_y
+
+        # Calculate direction to mouse
+        dx = mouse_x - self.center_x
+        dy = mouse_y - self.center_y
+
+        # Calculate distance to mouse
+        distance = math.sqrt(dx**2 + dy**2)
+
+        # Determine movement mode and speed
+        if hasattr(self, 'target_x') and self.target_x is not None and hasattr(self, 'target_y') and self.target_y is not None:
+            # Target mode (from click) - 100% speed
+            target_dx = self.target_x - self.center_x
+            target_dy = self.target_y - self.center_y
+            target_distance = math.sqrt(target_dx**2 + target_dy**2)
+
+            if target_distance < 5:  # Close enough to target
+                self.target_x = None
+                self.target_y = None
+                self.change_x = 0
+                self.change_y = 0
+            else:
+                # Move towards target at full speed
+                direction_x = target_dx / target_distance
+                direction_y = target_dy / target_distance
+
+                # Apply inverse movement if active
+                if hasattr(self, 'inverse_move') and self.inverse_move:
+                    direction_x = -direction_x
+                    direction_y = -direction_y
+
+                # Set movement speed (100%)
+                self.change_x = direction_x * self.speed
+                self.change_y = direction_y * self.speed
+
+                # Update last move direction
+                self.last_move_direction = (direction_x, direction_y)
+
+        elif hasattr(self, 'mouse_pressed') and self.mouse_pressed:
+            # Mouse pressed mode - 85% speed (compared to click)
+            if distance > 10:  # Minimum distance to start moving
+                # Normalize the direction
+                direction_x = dx / distance
+                direction_y = dy / distance
+
+                # Apply inverse movement if active
+                if hasattr(self, 'inverse_move') and self.inverse_move:
+                    direction_x = -direction_x
+                    direction_y = -direction_y
+
+                # Set movement speed (75% of click speed)
+                self.change_x = direction_x * self.speed * 0.85
+                self.change_y = direction_y * self.speed * 0.85
+
+                # Update last move direction
+                self.last_move_direction = (direction_x, direction_y)
+
+        else:
+            # Mouse follow mode - 50% speed (compared to click)
+            if distance > 10:  # Minimum distance to start moving
+                # Normalize the direction
+                direction_x = dx / distance
+                direction_y = dy / distance
+
+                # Apply inverse movement if active
+                if hasattr(self, 'inverse_move') and self.inverse_move:
+                    direction_x = -direction_x
+                    direction_y = -direction_y
+
+                # Set movement speed (50% of click speed)
+                self.change_x = direction_x * self.speed * 0.5
+                self.change_y = direction_y * self.speed * 0.5
+
+                # Update last move direction
+                self.last_move_direction = (direction_x, direction_y)
+            else:
+                # Stop moving if close to mouse
+                self.change_x = 0
+                self.change_y = 0
+
     def perform_dash(self):
         """Perform a dash move in the direction of the target"""
         # Fallback if target is None
@@ -292,6 +432,55 @@ class Player(arcade.Sprite):
             x = x_start + (self.max_slots + i) * 40
             arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["gold"])
 
+    def draw_artifacts(self):
+        """
+        Draw the player's artifacts on screen
+        """
+        # Check if the player has artifacts
+        if not hasattr(self, 'artifacts') or not self.artifacts:
+            return
+
+        # Define the starting position for artifacts display
+        start_x = 10
+        start_y = self.window.height - 50 if self.window else 520  # Fallback if window not set
+        spacing = 40  # Space between artifacts
+
+        # Draw each artifact
+        for i, (artifact_name, cooldown) in enumerate(self.artifacts.items()):
+            # Calculate position
+            x = start_x + i * spacing
+            y = start_y
+
+            # Draw the artifact icon (placeholder circle for now)
+            arcade.draw_circle_filled(x, y, 15, arcade.color.PURPLE)
+
+            # Draw cooldown indicator if applicable
+            if cooldown > 0:
+                # Calculate cooldown percentage based on typical cooldown times
+                # This is an estimate since we don't store max cooldown
+                max_cooldown = 10.0  # Assume 10 seconds is typical max cooldown
+                cooldown_pct = min(1.0, cooldown / max_cooldown)
+
+                # Draw cooldown indicator (semi-transparent overlay)
+                arcade.draw_arc_filled(
+                    x, y, 
+                    30, 30,  # Width and height
+                    arcade.color.GRAY + (150,),  # Color with alpha
+                    0, 360 * cooldown_pct,  # Start and end angles
+                    0  # Tilt angle
+                )
+
+                # Draw text showing seconds remaining
+                seconds_left = int(cooldown)
+                if seconds_left > 0:
+                    arcade.draw_text(
+                        str(seconds_left),
+                        x, y - 5,
+                        arcade.color.WHITE,
+                        font_size=10,
+                        anchor_x="center"
+                    )
+
     def draw_orb_status(self, x_start=700, y_start=570):
         """
         Draw the player's active orb effects
@@ -375,15 +564,18 @@ class Player(arcade.Sprite):
             return True
         return False
 
-    def add_artifact(self, artifact_name, cooldown):
+    def add_artifact(self, artifact_name, cooldown, artifact_object=None):
         """
         Add or reset cooldown for an artifact
 
         Args:
             artifact_name: Name of the artifact
             cooldown: Cooldown time in seconds
+            artifact_object: Optional artifact object to store
         """
         self.artifacts[artifact_name] = cooldown
+        if artifact_object and artifact_object not in self.artifact_objects:
+            self.artifact_objects.append(artifact_object)
         event_manager.publish("artifact_added", artifact_name)
 
     def _on_artifact_collected(self, artifact_data):

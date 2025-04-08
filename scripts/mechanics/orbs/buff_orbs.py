@@ -64,6 +64,7 @@ class BuffOrb(arcade.Sprite):
         self.update_texture()
 
     def apply_effect(self, player):
+        """Apply the orb effect to the player"""
         if self.orb_type == "gray":
             player.max_slots += 1
             print(self.message)
@@ -76,32 +77,29 @@ class BuffOrb(arcade.Sprite):
         elif self.orb_type == "gold":
             player.gold_hearts += 1
             print(self.message)
-        elif self.orb_type == "speed_10":
-            player.speed_bonus += 0.10
-            player.active_orbs.append(["⚡ Speed +10%", 45])
+        elif "speed" in self.orb_type:
+            if self.orb_type == "speed_10":
+                player.apply_orb_effect("speed", 45.0, 1.1)
+                player.active_orbs.append(["⚡ Speed +10%", 45])
+            elif self.orb_type == "speed_20":
+                player.apply_orb_effect("speed", 40.0, 1.2)
+                player.active_orbs.append(["⚡ Speed +20%", 40])
+            elif self.orb_type == "speed_35":
+                player.apply_orb_effect("speed", 30.0, 1.35)
+                player.active_orbs.append(["⚡ Speed +35%", 30])
             print(self.message)
-        elif self.orb_type == "speed_20":
-            player.speed_bonus += 0.20
-            player.active_orbs.append(["⚡ Speed +20%", 40])
+        elif "mult" in self.orb_type:
+            if self.orb_type == "mult_1_5":
+                player.apply_orb_effect("multiplier", 30.0, 1.5)
+                player.active_orbs.append(["Score x1.5", 30])
+            elif self.orb_type == "mult_2":
+                player.apply_orb_effect("multiplier", 30.0, 2.0)
+                player.active_orbs.append(["Score x2", 30])
             print(self.message)
-        elif self.orb_type == "speed_35":
-            player.speed_bonus += 0.35
-            player.active_orbs.append(["⚡ Speed +35%", 30])
-            print(self.message)
-        elif self.orb_type == "mult_1_5":
-            player.multiplier = 1.5
-            player.mult_timer = 30
-            player.active_orbs.append(["Score x1.5", 30])
-            print(self.message)
-        elif self.orb_type == "mult_2":
-            player.multiplier = 2.0
-            player.mult_timer = 30
-            player.active_orbs.append(["Score x2", 30])
-            print(self.message)
-        elif self.orb_type == "cooldown":
+        elif "cooldown" in self.orb_type:
             self.message = "🔁 Cooldown reduced! (20%)"
-            player.cooldown *= 0.8
+            player.apply_orb_effect("cooldown", 30.0, 0.8)
             print(self.message)
-        elif self.orb_type == "shield":
+        elif "shield" in self.orb_type:
             player.shield = True
             print(self.message)

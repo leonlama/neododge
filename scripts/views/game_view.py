@@ -23,6 +23,7 @@ from scripts.utils.wave_text import fade_wave_message_alpha
 from scripts.utils.resource_helper import resource_path
 from scripts.utils.orb_utils import get_texture_name_from_orb_type
 from scripts.skins.skin_manager import skin_manager
+from scripts.mechanics.game_state import game_state
 
 class NeododgeGame(arcade.View):
     def __init__(self):
@@ -95,7 +96,7 @@ class NeododgeGame(arcade.View):
         self.player.draw_artifacts()
         arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
         draw_pickup_texts(self.pickup_texts)
-        draw_coin_count(self.player.coins)
+        draw_coin_count(game_state.coins)
 
         # Wave timer and message
         if not self.wave_pause:
@@ -170,8 +171,7 @@ class NeododgeGame(arcade.View):
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             # Only add if not already collected
             if not any(isinstance(a, DashArtifact) for a in self.player.artifacts):
-                dash_artifact = DashArtifact(self.player.center_x, self.player.center_y)
-                self.player.artifacts.append(dash_artifact)
+                self.player.add_artifact("dash", 15)  # Add dash artifact with 5 second cooldown
                 print("✨ Dash unlocked!")
             else:
                 print("⚠️ Dash already unlocked.")
@@ -218,7 +218,7 @@ class NeododgeGame(arcade.View):
         for coin in self.coins:
             coin.update_animation(delta_time)
             if arcade.check_for_collision(self.player, coin):
-                self.player.coins += coin.coin_value
+                game_state.coins += coin.coin_value
                 arcade.play_sound(self.coin_sound)
                 self.coins.remove(coin)
 
@@ -262,6 +262,15 @@ class NeododgeGame(arcade.View):
             self.right_mouse_down = False
 
     def on_mouse_motion(self, x, y, dx, dy):
+        """
+        Track mouse movement
+
+        Args:
+            x: Mouse X position
+            y: Mouse Y position
+            dx: Change in X
+            dy: Change in Y
+        """
         self.mouse_x = x
         self.mouse_y = y
 

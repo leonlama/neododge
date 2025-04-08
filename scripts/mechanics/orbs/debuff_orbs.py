@@ -56,45 +56,20 @@ class DebuffOrb(arcade.Sprite):
         self.update_texture()
 
     def apply_effect(self, player):
-        if self.orb_type == "slow":
-            self.message = "🐢 Speed -20%"
-            player.speed_bonus -= 0.2
-            player.active_orbs.append(["🐢 Speed -20%", 30])
-            print(self.message)
-        elif self.orb_type == "hitbox":
-            self.message = "⬛ Big Hitbox applied"
-            if not hasattr(player, "original_size"):
-                player.original_size = (player.width, player.height)
-            player.width = player.original_size[0] * 1.5
-            player.height = player.original_size[1] * 1.5
-            player.set_hit_box(player.texture.hit_box_points)
-            player.active_orbs.append(["⬛ Big Hitbox", 30])
-            print(self.message)
-        elif self.orb_type == "mult_down_0_5":
-            self.message = "💥 Score x0.5 for 30s"
-            player.multiplier = 0.5
-            player.mult_timer = 30
-            player.active_orbs.append(["Score x0.5", 30])
-            print(self.message)
-        elif self.orb_type == "mult_down_0_25":
-            self.message = "💥 Score x0.25 for 30s"
-            player.multiplier = 0.25
-            player.mult_timer = 30
-            player.active_orbs.append(["Score x0.25", 30])
-            print(self.message)
-        elif self.orb_type == "cooldown_up":
-            self.message = "🔁 Cooldown increased!"
-            player.cooldown_factor = 2.0
-            player.active_orbs.append(["⏱️ Cooldown ↑", 15])
-            print(self.message)
-        elif self.orb_type == "inverse_move":
-            self.message = "🔄 Inverse Move"
-            player.inverse_move = True
-            player.active_orbs.append(["🔄 Inverse Move", 30])
-            print(self.message)
-        elif self.orb_type == "vision":
-            self.message = "👁️ Vision Blur"
-            player.vision_blur = True
-            player.vision_timer = 30
-            player.active_orbs.append(["👁️ Vision Blur", 30])
-            print(self.message)
+        """Apply the debuff effect to the player"""
+        if "speed" in self.orb_type:
+            # Speed debuff (0.7x speed for 5 seconds)
+            player.apply_orb_effect("speed", 5.0, 0.7)
+            self.message = "Speed Reduced!"
+        elif "cool" in self.orb_type:
+            # Cooldown increase (1.5x cooldown for 5 seconds)
+            player.apply_orb_effect("cooldown", 5.0, 1.5)
+            self.message = "Cooldown Increased!"
+        elif "vision" in self.orb_type:
+            # Vision blur (for 5 seconds)
+            player.apply_orb_effect("vision", 5.0, True)
+            self.message = "Vision Blurred!"
+        elif "hitbox" in self.orb_type:
+            # Hitbox increase (1.3x hitbox for 5 seconds)
+            player.apply_orb_effect("hitbox", 5.0, 1.3)
+            self.message = "Hitbox Increased!"
