@@ -97,22 +97,17 @@ class Player(arcade.Sprite):
                     self.target_y = None
                 else:
                     # Normalize direction vector and scale by speed
-                    dx = dx / distance * self.speed
-                    dy = dy / distance * self.speed
+                    speed = PLAYER_SPEED * self.speed_bonus
+                    dx = dx / distance * speed
+                    dy = dy / distance * speed
 
-                    self.change_x = dx
-                    self.change_y = dy
+                    # Apply inverse movement if active
+                    if self.inverse_move:
+                        dx = -dx
+                        dy = -dy
 
-            # Normal movement
-            speed = PLAYER_SPEED * self.speed_bonus
-
-            # Apply inverse movement if active
-            if self.inverse_move:
-                self.center_x -= self.change_x * speed * delta_time * 60
-                self.center_y -= self.change_y * speed * delta_time * 60
-            else:
-                self.center_x += self.change_x * speed * delta_time * 60
-                self.center_y += self.change_y * speed * delta_time * 60
+                    self.center_x += dx * delta_time
+                    self.center_y += dy * delta_time
 
         # Keep player on screen
         self.center_x = max(0, min(self.center_x, arcade.get_window().width))

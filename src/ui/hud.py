@@ -23,7 +23,7 @@ def draw_score(score):
     """Draw the player's score"""
     arcade.draw_text(
         f"Score: {int(score)}",
-        30, SCREEN_HEIGHT - 70,
+        30, SCREEN_HEIGHT - 90,  # Moved down from -70 to -90
         arcade.color.WHITE,
         16,
         font_name="Kenney Pixel"
@@ -82,15 +82,15 @@ def draw_coin_count(coins):
     )
 
 def draw_player_health(player):
-    """Draw the player's health hearts"""
+    """Draw player health hearts in the top left corner with overlapping effect"""
     if not player:
         return
         
     # Position for the first heart
     start_x = 30
     y = SCREEN_HEIGHT - 40
-    spacing = 35  # Space between hearts
     scale = 0.035   # Scale for heart sprites
+    spacing = 25    # Spacing between hearts (increased from 10 to reduce overlap)
 
     # Draw heart containers (gray hearts)
     for i in range(player.max_slots):
@@ -117,17 +117,20 @@ def draw_player_health(player):
         fraction = player.current_hearts % 1
         x = start_x + full_hearts * spacing
 
-        # Draw a partial heart (simplified approach)
+        # Draw a partial heart
         arcade.draw_scaled_texture_rectangle(
-            x - (1 - fraction) * spacing / 2, y, 
+            x, y, 
             player.heart_textures["red"],
             scale * fraction, scale
         )
         
-    # Draw gold hearts if any
-    if player.gold_hearts > 0:
+    # Draw gold hearts if player has any
+    if hasattr(player, 'gold_hearts') and player.gold_hearts > 0:
+        # Position gold hearts after regular hearts
+        gold_start_x = start_x + (player.max_slots + 0.5) * spacing
+
         for i in range(player.gold_hearts):
-            x = start_x + (player.max_slots + i) * spacing
+            x = gold_start_x + i * spacing
             arcade.draw_scaled_texture_rectangle(
                 x, y, 
                 player.heart_textures["gold"],

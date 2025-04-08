@@ -47,6 +47,7 @@ class NeododgeGame(arcade.View):
         # Mouse tracking
         self.mouse_x = 0
         self.mouse_y = 0
+        self.mouse_pressed = False
 
         # Set up the camera
         self.camera = arcade.Camera(self.width, self.height)
@@ -102,6 +103,12 @@ class NeododgeGame(arcade.View):
 
         # Update player
         self.player.update(delta_time)
+        
+        # Update player movement based on mouse if mouse is pressed
+        if self.mouse_pressed and self.player.target_x is not None and self.player.target_y is not None:
+            # Update target to current mouse position
+            self.player.target_x = self.mouse_x
+            self.player.target_y = self.mouse_y
 
         # Update enemies
         for enemy in self.enemies:
@@ -241,4 +248,16 @@ class NeododgeGame(arcade.View):
 
     def on_mouse_press(self, x, y, button, modifiers):
         """Handle mouse press events"""
-        #
+        if button == arcade.MOUSE_BUTTON_LEFT:
+            # Set target position for player to move toward
+            self.mouse_x = x
+            self.mouse_y = y
+            self.mouse_pressed = True
+            
+            # Update player target
+            self.player.target_x = x
+            self.player.target_y = y
+            
+            # Reset keyboard movement
+            self.player.change_x = 0
+            self.player.change_y = 0
