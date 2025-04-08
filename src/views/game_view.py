@@ -53,6 +53,12 @@ class NeododgeGame(arcade.View):
 
         # Reset score
         self.score = 0
+        
+        # Load sounds
+        try:
+            self.coin_sound = arcade.load_sound("X:/neododge/assets/audio/coin.flac")
+        except:
+            self.coin_sound = None
 
     def on_show(self):
         """Called when this view becomes active"""
@@ -93,8 +99,7 @@ class NeododgeGame(arcade.View):
                 arcade.color.WHITE,
                 24,
                 anchor_x="center",
-                anchor_y="center",
-                alpha=wave_info["message_alpha"]
+                anchor_y="center"
             )
 
         # Draw wave timer
@@ -115,8 +120,21 @@ class NeododgeGame(arcade.View):
             18
         )
 
+        # Draw pickup texts
+        if hasattr(self, 'pickup_texts'):
+            for text, x, y, _ in self.pickup_texts:
+                arcade.draw_text(text, x, y, arcade.color.WHITE, 14, anchor_x="center")
+
+    def add_pickup_text(self, text, x, y):
+        """Add floating text for item pickups."""
+        if not hasattr(self, 'pickup_texts'):
+            self.pickup_texts = []
+
+        # Add text with position and lifetime
+        self.pickup_texts.append([text, x, y, 1.0])  # 1.0 second lifetime
+
     def on_update(self, delta_time):
-        """Update game logic."""
+        """Update game state."""
         # Update player
         self.player.update(delta_time)
 
@@ -124,19 +142,42 @@ class NeododgeGame(arcade.View):
         if self.right_mouse_down and self.player:
             self.player.set_target(self.mouse_x, self.mouse_y)
 
-        # Update enemies
-        self.enemies.update()
-        for enemy in self.enemies:
-            if hasattr(enemy, 'bullets'):
-                enemy.bullets.update(delta_time)
+        # Update game controller
+        if hasattr(self, 'game_controller'):
+            self.game_controller.update(delta_time)
 
-        # Update other game elements
+        # Update enemies
+        for enemy in self.enemies:
+            enemy.update(delta_time)
+
+            # Update enemy bullets without passing delta_time
+            if hasattr(enemy, 'bullets'):
+                enemy.bullets.update()  # Remove delta_time parameter
+
+                # If bullets need delta_time, update each bullet individually
+                for bullet in enemy.bullets:
+                    if hasattr(bullet, 'update_with_time'):
+                        bullet.update_with_time(delta_time)
+
+        # Update orbs
         self.orbs.update()
+
+        # Update coins
         self.coins.update()
+
+        # Update artifacts
         self.artifacts.update()
 
-        # Update game controller
-        self.game_controller.update(delta_time)
+        # Update pickup texts
+        if hasattr(self, 'pickup_texts'):
+            for i in range(len(self.pickup_texts) - 1, -1, -1):
+                text, x, y, lifetime = self.pickup_texts[i]
+                lifetime -= delta_time
+                if lifetime <= 0:
+                    self.pickup_texts.pop(i)
+                else:
+                    # Move text upward
+                    self.pickup_texts[i] = [text, x, y + 1, lifetime]
 
         # Check if it's time to show the shop
         if self.game_controller.should_show_shop():
@@ -149,29 +190,70 @@ class NeododgeGame(arcade.View):
         self.score += delta_time * 10
 
     def check_collisions(self):
-        """Check for collisions between game elements."""
-        # Player-enemy collisions
-        for enemy in self.enemies:
-            if arcade.check_for_collision(self.player, enemy):
+        """Check for collisions between game objects."""
+        # Player-Enemy collisions
+        enemy_hit_list = arcade.check_for_collision_with_list(self.player, self.enemies)
+        for enemy in enemy_hit_list:
+            # Handle player taking damage
+            if hasattr(self.player, 'take_damage'):
                 self.player.take_damage(1)
 
-        # Player-orb collisions
-        for orb in self.orbs:
-            if arcade.check_for_collision(self.player, orb):
-                orb.apply_effect(self.player)
-                self.orbs.remove(orb)
+            # Remove enemy if it's a one-hit enemy
+            if hasattr(enemy, 'is_one_hit') and enemy.is_one_hit:
+                enemy.remove_from_sprite_lists()
 
-        # Player-coin collisions
-        for coin in self.coins:
-            if arcade.check_for_collision(self.player, coin):
+        # Player-Coin collisions
+        coin_hit_list = arcade.check_for_collision_with_list(self.player, self.coins)
+        for coin in coin_hit_list:
+            # Remove the coin
+            coin.remove_from_sprite_lists()
+
+            # Handle coin collection
+            if hasattr(self.player, 'collect_coin'):
                 self.player.collect_coin()
-                self.coins.remove(coin)
+            else:
+                # Fallback if player doesn't have collect_coin method
+                self.score += 10
+                try:
+                    arcade.play_sound(self.coin_sound)
+                except:
+                    pass
 
-        # Player-artifact collisions
-        for artifact in self.artifacts:
-            if arcade.check_for_collision(self.player, artifact):
+        # Player-Orb collisions
+        orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
+        for orb in orb_hit_list:
+            # Remove the orb
+            orb.remove_from_sprite_lists()
+
+            # Handle orb collection
+            if hasattr(orb, 'apply_effect'):
+                orb.apply_effect(self.player)
+            elif hasattr(self.player, 'collect_orb'):
+                self.player.collect_orb(orb)
+
+        # Player-Artifact collisions
+        artifact_hit_list = arcade.check_for_collision_with_list(self.player, self.artifacts)
+        for artifact in artifact_hit_list:
+            # Remove the artifact
+            artifact.remove_from_sprite_lists()
+
+            # Handle artifact collection
+            if hasattr(artifact, 'apply_effect'):
+                artifact.apply_effect(self.player)
+            elif hasattr(self.player, 'collect_artifact'):
                 self.player.collect_artifact(artifact)
-                self.artifacts.remove(artifact)
+
+        # Enemy bullet collisions with player
+        for enemy in self.enemies:
+            if hasattr(enemy, 'bullets'):
+                bullet_hit_list = arcade.check_for_collision_with_list(self.player, enemy.bullets)
+                for bullet in bullet_hit_list:
+                    # Remove the bullet
+                    bullet.remove_from_sprite_lists()
+
+                    # Handle player taking damage
+                    if hasattr(self.player, 'take_damage'):
+                        self.player.take_damage(1)
 
     def show_shop(self):
         """Show the shop view."""
@@ -191,7 +273,7 @@ class NeododgeGame(arcade.View):
                              arcade.color.WHITE, 18)
 
         # Draw score
-        score_text = f"Score: {int(self.score)}"
+        score_text = f"Score: {self.score}"
         arcade.draw_text(score_text, 20, arcade.get_window().height - 60, 
                          arcade.color.WHITE, 18)
 
@@ -211,8 +293,7 @@ class NeododgeGame(arcade.View):
                     arcade.color.WHITE,
                     24,
                     anchor_x="center",
-                    anchor_y="center",
-                    alpha=wave_info['message_alpha']
+                    anchor_y="center"
                 )
 
         # Draw player orb status

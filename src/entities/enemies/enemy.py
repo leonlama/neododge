@@ -51,7 +51,13 @@ class Enemy(arcade.Sprite):
 
         # Update bullets if any
         if hasattr(self, 'bullets'):
+            # Update bullet list (without delta_time)
             self.bullets.update()
+            
+            # Update each bullet individually with delta_time
+            for bullet in self.bullets:
+                if hasattr(bullet, 'update_with_time'):
+                    bullet.update_with_time(delta_time)
 
     def _chase_behavior(self, delta_time):
         """Chase the target."""
@@ -131,10 +137,22 @@ class Bullet(arcade.Sprite):
         self.change_y = dy / distance * speed
 
     def update(self):
-        """Update bullet position."""
-        # Move according to velocity
+        """Update bullet position using default delta time."""
+        # Move according to velocity using a default delta time
         self.center_x += self.change_x * 1/60
         self.center_y += self.change_y * 1/60
+
+        # Remove if off-screen
+        screen_width, screen_height = 800, 600  # Default values
+        if (self.right < 0 or self.left > screen_width or 
+            self.bottom > screen_height or self.top < 0):
+            self.remove_from_sprite_lists()
+
+    def update_with_time(self, delta_time):
+        """Update bullet position with specific delta time."""
+        # Move according to velocity
+        self.center_x += self.change_x * delta_time
+        self.center_y += self.change_y * delta_time
 
         # Remove if off-screen
         screen_width, screen_height = 800, 600  # Default values

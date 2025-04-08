@@ -217,6 +217,26 @@ class Player(arcade.Sprite):
         # TODO: Implement death handling
         pass
 
+    def collect_coin(self):
+        """Handle coin collection."""
+        # Increase score or currency
+        if hasattr(self, 'coins'):
+            self.coins += 1
+        else:
+            self.coins = 1
+
+        # Play sound effect if available
+        try:
+            arcade.play_sound(self.coin_sound)
+        except:
+            pass
+
+        # Add visual feedback
+        if hasattr(self, 'parent_view') and hasattr(self.parent_view, 'add_pickup_text'):
+            self.parent_view.add_pickup_text("Coin collected!", self.center_x, self.center_y)
+
+        return True  # Return True to indicate successful collection
+
     def add_orb_effect(self, orb_type, duration):
         """Add an orb effect to the player"""
         # Check if this effect already exists
