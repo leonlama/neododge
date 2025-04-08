@@ -186,6 +186,10 @@ class Player(arcade.Sprite):
                 self.invincible = True
                 self.invincible_timer = self.dash_timer
 
+    def try_dash(self):
+        """Try to perform a dash if conditions are met"""
+        self.perform_dash()
+
     def take_damage(self, amount=1.0):
         """Take damage and handle player health"""
         if self.invincible or self.shield:

@@ -216,39 +216,13 @@ class NeododgeGame(arcade.View):
             # Toggle skin
             self.apply_skin_toggle()
 
-        # WASD movement
-        elif key == arcade.key.W:
-            self.player.change_y = self.player.speed
-            self.player.target_x = None  # Clear target when using keyboard
-            self.player.target_y = None
-        elif key == arcade.key.S:
-            self.player.change_y = -self.player.speed
-            self.player.target_x = None
-            self.player.target_y = None
-        elif key == arcade.key.A:
-            self.player.change_x = -self.player.speed
-            self.player.target_x = None
-            self.player.target_y = None
-        elif key == arcade.key.D:
-            self.player.change_x = self.player.speed
-            self.player.target_x = None
-            self.player.target_y = None
-
     def on_key_release(self, key, modifiers):
         """Handle key release events"""
-        # WASD movement
-        if key == arcade.key.W and self.player.change_y > 0:
-            self.player.change_y = 0
-        elif key == arcade.key.S and self.player.change_y < 0:
-            self.player.change_y = 0
-        elif key == arcade.key.A and self.player.change_x < 0:
-            self.player.change_x = 0
-        elif key == arcade.key.D and self.player.change_x > 0:
-            self.player.change_x = 0
+        pass
 
     def on_mouse_press(self, x, y, button, modifiers):
         """Handle mouse press events"""
-        if button == arcade.MOUSE_BUTTON_LEFT:
+        if button == arcade.MOUSE_BUTTON_LEFT or button == arcade.MOUSE_BUTTON_RIGHT:
             # Set target position for player to move toward
             self.mouse_x = x
             self.mouse_y = y
@@ -257,7 +231,3 @@ class NeododgeGame(arcade.View):
             # Update player target
             self.player.target_x = x
             self.player.target_y = y
-            
-            # Reset keyboard movement
-            self.player.change_x = 0
-            self.player.change_y = 0
