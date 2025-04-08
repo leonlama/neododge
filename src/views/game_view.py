@@ -1,316 +1,244 @@
 ﻿import arcade
 import random
 import math
-from arcade.gui import UIManager
-
-from src.core.constants import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, PLAYER_SPEED, 
-    PLAYER_DASH_DISTANCE, PLAYER_DASH_COOLDOWN
-)
-from src.entities.player import Player
+import time
 from src.skins.skin_manager import skin_manager
+from src.entities.player import Player
+# Import individual functions instead of draw_hud
 from src.ui.hud import (
-    draw_score, draw_pickup_texts, draw_wave_timer, 
-    draw_wave_number, draw_coin_count, draw_player_health,
-    draw_active_orbs, draw_wave_message
+    draw_player_health, draw_score, draw_wave_info, 
+    draw_active_effects, draw_coin_count, draw_wave_message
 )
-
-class WaveManager:
-    """Manages game waves and difficulty progression"""
-
-    def __init__(self, game_view):
-        self.game_view = game_view
-        self.wave = 1
-        self.level_timer = 0
-        self.wave_duration = 30  # seconds per wave
-        self.wave_message = "Wave 1"
-        self.wave_message_animation = {"phase": "fade_in", "alpha": 0, "letter_positions": [], "letter_alphas": []}
-
-    def update(self, delta_time):
-        """Update wave state"""
-        self.level_timer += delta_time
-
-        # Check if wave is complete
-        if self.level_timer >= self.wave_duration:
-            self.next_wave()
-
-    def next_wave(self):
-        """Advance to the next wave"""
-        self.wave += 1
-        self.level_timer = 0
-        self.wave_message = f"Wave {self.wave}"
-        self.wave_message_animation = {"phase": "fade_in", "alpha": 255, "letter_positions": [], "letter_alphas": []}
-
-        # Increase difficulty
-        self.wave_duration = min(60, 30 + self.wave * 2)  # Longer waves as game progresses
-
-class EnemySpawner:
-    """Manages enemy spawning based on wave difficulty"""
-
-    def __init__(self, game_view):
-        self.game_view = game_view
-        self.spawn_timer = 0
-        self.spawn_interval = 2.0  # seconds between spawns
-
-    def update(self, delta_time):
-        """Update enemy spawning"""
-        self.spawn_timer += delta_time
-
-        # Spawn enemies at regular intervals
-        if self.spawn_timer >= self.spawn_interval:
-            self.spawn_timer = 0
-            self.spawn_enemy()
-
-    def spawn_enemy(self):
-        """Spawn a new enemy"""
-        # Debug message for now
-        print(f"Would spawn enemy (wave {self.game_view.wave_manager.wave})")
-
-class OrbSpawner:
-    """Manages orb spawning"""
-
-    def __init__(self, game_view):
-        self.game_view = game_view
-        self.spawn_timer = 0
-        self.spawn_interval = 5.0  # seconds between spawns
-
-    def update(self, delta_time):
-        """Update orb spawning"""
-        self.spawn_timer += delta_time
-
-        # Spawn orbs at regular intervals
-        if self.spawn_timer >= self.spawn_interval:
-            self.spawn_timer = 0
-            self.spawn_orb()
-
-    def spawn_orb(self):
-        """Spawn a new orb"""
-        # Debug message for now
-        orb_types = ["speed", "shield", "cooldown", "multiplier"]
-        orb_type = random.choice(orb_types)
-        x = random.randint(50, SCREEN_WIDTH - 50)
-        y = random.randint(50, SCREEN_HEIGHT - 50)
-        print(f"Would spawn buff orb: {orb_type} at ({x}, {y})")
 
 class NeododgeGame(arcade.View):
-    """Main game view for Neododge"""
-
     def __init__(self):
         super().__init__()
 
         # Set up the game window
-        self.window.set_mouse_visible(True)
+        self.width = 800
+        self.height = 600
 
-        # Initialize game state
+        # Game state
         self.score = 0
-        self.pickup_texts = []
-        self.enemies = arcade.SpriteList()
-        self.bullets = arcade.SpriteList()
-        self.orbs = arcade.SpriteList()
-        self.artifacts = arcade.SpriteList()
+        self.game_over = False
+        self.paused = False
+        self.coins = 0
 
-        # Create player
+        # Wave management
+        self.current_wave = 1
+        self.wave_timer = 0
+        self.wave_duration = 30
+        self.wave_message = None
+        self.wave_message_timer = 0
+
+        # Player setup
         self.player = Player()
-        self.player.center_x = SCREEN_WIDTH // 2
-        self.player.center_y = SCREEN_HEIGHT // 2
+        self.player.center_x = self.width / 2
+        self.player.center_y = self.height / 2
 
-        # Create managers
-        self.wave_manager = WaveManager(self)
-        self.enemy_spawner = EnemySpawner(self)
-        self.orb_spawner = OrbSpawner(self)
+        # Lists to track game objects
+        self.enemies = []
+        self.orbs = []
+        self.coins_list = []
 
-        # Set up UI
-        self.ui_manager = UIManager()
-        self.ui_manager.enable()
+        # Active effects for the HUD
+        self.active_effects = []
 
-        # Set up background
-        self.background_color = arcade.color.BLACK
+        # Mouse tracking
+        self.mouse_x = 0
+        self.mouse_y = 0
 
-        # Debug mode
-        self.debug_mode = False
+        # Set up the camera
+        self.camera = arcade.Camera(self.width, self.height)
 
-    def on_show_view(self):
-        """Called when switching to this view"""
-        arcade.set_background_color(self.background_color)
+        # Set up the GUI camera
+        self.gui_camera = arcade.Camera(self.width, self.height)
+
+    def on_show(self):
+        """Called when this view becomes active"""
+        arcade.set_background_color(arcade.color.BLACK)
+
+    def on_draw(self):
+        """Render the screen"""
+        # Clear the screen
+        self.clear()
+
+        # Activate the game camera
+        self.camera.use()
+
+        # Draw the player
+        self.player.draw()
+
+        # Draw all game objects
+        for enemy in self.enemies:
+            enemy.draw()
+
+        for orb in self.orbs:
+            orb.draw()
+
+        for coin in self.coins_list:
+            coin.draw()
+
+        # Activate the GUI camera for HUD elements
+        self.gui_camera.use()
+
+        # Draw the HUD components individually
+        draw_player_health(self.player)
+        draw_score(self.score)
+        draw_wave_info(self.current_wave, self.wave_timer, self.wave_duration)
+        draw_active_effects(self.active_effects)
+        draw_coin_count(self.coins)
+
+        # Draw wave message if active
+        if self.wave_message and self.wave_message_timer > 0:
+            # Calculate alpha based on remaining time (fade out)
+            alpha = min(255, int(self.wave_message_timer * 255))
+            draw_wave_message(self.wave_message, alpha)
 
     def on_update(self, delta_time):
-        """Update game state"""
+        """Update the game state"""
+        if self.game_over or self.paused:
+            return
+
         # Update player
         self.player.update(delta_time)
 
-        # Update managers
-        self.wave_manager.update(delta_time)
-        self.enemy_spawner.update(delta_time)
-        self.orb_spawner.update(delta_time)
+        # Update enemies
+        for enemy in self.enemies:
+            enemy.update(delta_time)
 
-        # Update game objects
-        self.enemies.update()
-        self.bullets.update()
-        self.orbs.update()
+        # Update wave timer
+        self.wave_timer += delta_time
+        if self.wave_timer >= self.wave_duration:
+            self.start_new_wave()
 
-        # Check for collisions
-        self._check_collisions()
-
-        # Update pickup texts
-        self._update_pickup_texts(delta_time)
+        # Update wave message timer
+        if self.wave_message_timer > 0:
+            self.wave_message_timer -= delta_time
 
         # Update score
-        self.score += delta_time * 10 * self.player.multiplier
+        self.score += delta_time * self.get_score_multiplier()
 
-    def on_draw(self):
-        """Render the game"""
-        arcade.start_render()
+        # Update active effects and remove expired ones
+        self.update_active_effects(delta_time)
 
-        # Draw game objects
-        self.orbs.draw()
-        self.enemies.draw()
-        self.bullets.draw()
-        self.player.draw()
+    def start_new_wave(self):
+        """Start a new wave"""
+        self.current_wave += 1
+        self.wave_timer = 0
 
-        # Draw HUD
-        self.draw_hud()
+        # Display wave message
+        self.wave_message = f"Wave {self.current_wave}"
+        self.wave_message_timer = 3.0  # Show for 3 seconds
 
-        # Draw debug info
-        if self.debug_mode:
-            self._draw_debug_info()
+        # Spawn enemies for the new wave
+        self.spawn_wave_enemies()
 
-    def draw_hud(self):
-        """Draw the heads-up display"""
-        # Draw score
-        draw_score(self.score)
+    def spawn_wave_enemies(self):
+        """Spawn enemies for the current wave"""
+        # Simple example - spawn more enemies for higher waves
+        num_enemies = min(5, 1 + self.current_wave // 2)
 
-        # Draw wave info
-        draw_wave_timer(self.wave_manager.level_timer, self.wave_manager.wave_duration)
-        draw_wave_number(self.wave_manager.wave)
+        for _ in range(num_enemies):
+            # This is just a placeholder - you'd have actual enemy spawning logic
+            print(f"Would spawn enemy (wave {self.current_wave})")
 
-        # Draw player info
-        draw_player_health(self.player)
-        draw_active_orbs(self.player)
-        draw_coin_count(self.player.coins)
+    def get_score_multiplier(self):
+        """Calculate the current score multiplier from active effects"""
+        multiplier = 1.0
 
-        # Draw pickup texts
-        draw_pickup_texts(self.pickup_texts)
+        # Add multipliers from active effects
+        for effect in self.active_effects:
+            if effect.get("type") == "multiplier":
+                multiplier *= effect.get("value", 1.0)
 
-        # Draw wave message if active
-        draw_wave_message(self.wave_manager.wave_message, self.wave_manager.wave_message_animation)
+        return multiplier
+
+    def update_active_effects(self, delta_time):
+        """Update active effects and remove expired ones"""
+        for effect in self.active_effects[:]:  # Create a copy to safely modify during iteration
+            effect["duration"] -= delta_time
+            if effect["duration"] <= 0:
+                self.active_effects.remove(effect)
+
+    def add_effect(self, effect_type, value, duration, color=arcade.color.WHITE, icon=""):
+        """Add an effect to the active effects list"""
+        self.active_effects.append({
+            "type": effect_type,
+            "value": value,
+            "duration": duration,
+            "color": color,
+            "icon": icon
+        })
+
+    def apply_skin_toggle(self):
+        """Toggle between available skins"""
+        # Get available skins
+        available_skins = list(skin_manager.skin_data.keys())
+        current_skin = skin_manager.current_skin
+
+        # Find next skin
+        if current_skin in available_skins:
+            current_index = available_skins.index(current_skin)
+            next_index = (current_index + 1) % len(available_skins)
+            next_skin = available_skins[next_index]
+
+            # Apply new skin
+            if skin_manager.set_skin(next_skin):
+                print(f"🎨 Skin set to: {next_skin}")
+                print(f"Skin changed to: {next_skin}")
+
+                # Update player texture
+                if self.player:
+                    self.player.texture = skin_manager.get_texture("player")
+            else:
+                print(f"⚠️ Failed to switch skin")
+        else:
+            print(f"⚠️ Current skin '{current_skin}' not found in available skins")
 
     def on_key_press(self, key, modifiers):
         """Handle key press events"""
         if key == arcade.key.ESCAPE:
-            # Pause game
+            # Pause the game or return to menu
             pass
-        elif key == arcade.key.F3:
-            # Toggle debug mode
-            self.debug_mode = not self.debug_mode
-        elif key == arcade.key.W or key == arcade.key.UP:
-            self.player.change_y = PLAYER_SPEED
-        elif key == arcade.key.S or key == arcade.key.DOWN:
-            self.player.change_y = -PLAYER_SPEED
-        elif key == arcade.key.A or key == arcade.key.LEFT:
-            self.player.change_x = -PLAYER_SPEED
-        elif key == arcade.key.D or key == arcade.key.RIGHT:
-            self.player.change_x = PLAYER_SPEED
         elif key == arcade.key.SPACE:
-            # Dash
-            if self.player.dash_cooldown <= 0:
-                self._perform_dash()
+            # Player dash
+            if self.player:
+                self.player.try_dash()
         elif key == arcade.key.T:
             # Toggle skin
             self.apply_skin_toggle()
-        elif key == arcade.key.Q:
-            # Use artifact 1
-            if len(self.player.artifacts) > 0:
-                self.player.artifacts[0].apply_effect(self.player)
-        elif key == arcade.key.E:
-            # Use artifact 2
-            if len(self.player.artifacts) > 1:
-                self.player.artifacts[1].apply_effect(self.player)
+
+        # WASD movement
+        elif key == arcade.key.W:
+            self.player.change_y = self.player.speed
+            self.player.target_x = None  # Clear target when using keyboard
+            self.player.target_y = None
+        elif key == arcade.key.S:
+            self.player.change_y = -self.player.speed
+            self.player.target_x = None
+            self.player.target_y = None
+        elif key == arcade.key.A:
+            self.player.change_x = -self.player.speed
+            self.player.target_x = None
+            self.player.target_y = None
+        elif key == arcade.key.D:
+            self.player.change_x = self.player.speed
+            self.player.target_x = None
+            self.player.target_y = None
 
     def on_key_release(self, key, modifiers):
         """Handle key release events"""
-        if key == arcade.key.W or key == arcade.key.UP:
+        # WASD movement
+        if key == arcade.key.W and self.player.change_y > 0:
             self.player.change_y = 0
-        elif key == arcade.key.S or key == arcade.key.DOWN:
+        elif key == arcade.key.S and self.player.change_y < 0:
             self.player.change_y = 0
-        elif key == arcade.key.A or key == arcade.key.LEFT:
+        elif key == arcade.key.A and self.player.change_x < 0:
             self.player.change_x = 0
-        elif key == arcade.key.D or key == arcade.key.RIGHT:
+        elif key == arcade.key.D and self.player.change_x > 0:
             self.player.change_x = 0
-
-    def on_mouse_motion(self, x, y, dx, dy):
-        """Handle mouse motion events"""
-        # Update player target for dash
-        self.player.target_x = x
-        self.player.target_y = y
 
     def on_mouse_press(self, x, y, button, modifiers):
         """Handle mouse press events"""
-        if button == arcade.MOUSE_BUTTON_LEFT:
-            # Dash
-            if self.player.dash_cooldown <= 0:
-                self._perform_dash()
-
-    def apply_skin_toggle(self):
-        """Toggle between available skins"""
-        # Get available skins and toggle to next one
-        available_skins = list(skin_manager.skin_data.keys())
-        current_skin = skin_manager.current_skin
-
-        # Find next skin in rotation
-        current_index = available_skins.index(current_skin)
-        next_index = (current_index + 1) % len(available_skins)
-        next_skin = available_skins[next_index]
-
-        # Apply the new skin
-        if skin_manager.set_skin(next_skin):
-            print(f"🎨 Switched to {next_skin} skin")
-
-            # Update player texture
-            self.player.texture = skin_manager.get_texture("player")
-            self.player.scale = skin_manager.get_player_scale()
-
-            # Update heart textures
-            self.player.heart_textures = {
-                "red": skin_manager.get_texture("heart", "assets/ui/heart_red.png"),
-                "gray": skin_manager.get_texture("heart_gray", "assets/ui/heart_gray.png"),
-                "gold": skin_manager.get_texture("heart_gold", "assets/ui/heart_gold.png")
-            }
-        else:
-            print("⚠️ Skin not found or not unlocked")
-
-    def _perform_dash(self):
-        """Perform player dash"""
-        self.player.perform_dash()
-
-    def _check_collisions(self):
-        """Check for collisions between game objects"""
-        # TODO: Implement collision detection
-        pass
-
-    def _update_pickup_texts(self, delta_time):
-        """Update floating pickup text animations"""
-        for i, (text, x, y, timer) in enumerate(self.pickup_texts):
-            self.pickup_texts[i] = (text, x, y + 1, timer - delta_time)
-
-        # Remove expired pickup texts
-        self.pickup_texts = [pt for pt in self.pickup_texts if pt[3] > 0]
-
-    def _draw_debug_info(self):
-        """Draw debug information"""
-        debug_info = [
-            f"FPS: {arcade.get_fps(60):.1f}",
-            f"Player Pos: ({self.player.center_x:.1f}, {self.player.center_y:.1f})",
-            f"Wave: {self.wave_manager.wave}",
-            f"Enemies: {len(self.enemies)}",
-            f"Orbs: {len(self.orbs)}",
-            f"Bullets: {len(self.bullets)}",
-        ]
-
-        for i, text in enumerate(debug_info):
-            arcade.draw_text(
-                text,
-                10,
-                SCREEN_HEIGHT - 120 - i * 20,
-                arcade.color.WHITE,
-                12
-            )
+        #

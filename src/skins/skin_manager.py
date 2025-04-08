@@ -1,183 +1,168 @@
-"""Skin manager for handling different visual styles."""
+﻿# src/skins/skin_manager.py
 
-import os
 import json
+import os
 import arcade
-from src.core.resource_manager import resource_path
+import appdirs
+
+# Define app-specific user data dir
+APP_NAME = "Neododge"
+USER_DATA_DIR = os.path.join(appdirs.user_data_dir(APP_NAME), "data")
+os.makedirs(USER_DATA_DIR, exist_ok=True)
+
+# Cross-platform safe JSON file location
+UNLOCKS_FILE = os.path.join(USER_DATA_DIR, "unlocks.json")
 
 class SkinManager:
     def __init__(self):
-        self.data = {
-            "skins": {},
-            "selected": "default",
-            "shared": {},
-            "unlocked": ["default", "mdma"]
-        }
-        self.textures = {}
-        self.scales = {
+        print("🎨 [INIT] Initializing skin manager")
+        self.skin_data = {
             "default": {
-                "player": 0.045,
-                "heart": 0.035,
-                "artifact": 0.17,
-                "orb": 0.17
+                "path": "assets/skins/default",
+                "name": "Default",
+                "description": "The default skin"
             },
             "mdma": {
-                "player": 0.045,
-                "heart": 0.035,
-                "artifact": 0.035,
-                "orb": 0.035
+                "path": "assets/skins/mdma",
+                "name": "MDMA",
+                "description": "Psychedelic skin"
             }
         }
 
-    def load_skins(self):
-        """Load all available skins from the skins directory."""
-        print("?? [INIT] Initializing skin manager")
+        # Load unlocked skins from file
+        self.load_unlocks()
 
-        # Load skin data from JSON file
+        # Set default skin
+        self.current_skin = "default"
+        print(f"🎨 [INIT] Using skin: {self.current_skin}")
+
+        # Preload assets
+        self.preload_assets()
+
+    def load_unlocks(self):
+        """Load unlocked skins from file"""
         try:
-            with open(resource_path("assets/skins/skins.json"), "r") as f:
-                self.data = json.load(f)
-                # Ensure unlocked list exists
-                if "unlocked" not in self.data:
-                    self.data["unlocked"] = ["default", "mdma"]
+            if os.path.exists(UNLOCKS_FILE):
+                with open(UNLOCKS_FILE, 'r') as f:
+                    self.data = json.load(f)
+            else:
+                # Default unlocks
+                self.data = {
+                    "unlocked": ["default", "mdma"]
+                }
+                # Save default unlocks
+                self.save_unlocks()
         except Exception as e:
-            print(f"Error loading skins.json: {e}")
-            # Create default skin data
+            print(f"⚠️ Error loading unlocks: {e}")
             self.data = {
-                "skins": {
-                    "default": {
-                        "name": "Default",
-                        "description": "The default skin"
-                    },
-                    "mdma": {
-                        "name": "MDMA",
-                        "description": "Trippy skin"
-                    }
-                },
-                "selected": "default",
-                "shared": {},
-                "unlocked": ["default", "mdma"]
+                "unlocked": ["default"]
             }
 
-        # Preload all textures
-        self.textures = {}
-
-        # Load textures for each skin
-        for skin_id in self.data["skins"]:
-            self.textures[skin_id] = {}
-
-            # Player texture
-            try:
-                self.textures[skin_id]["player/default"] = arcade.load_texture(
-                    resource_path(f"assets/skins/{skin_id}/player/default.png")
-                )
-            except Exception as e:
-                print(f"Error loading texture player/default for skin {skin_id}: {e}")
-
-            # Orb textures
-            for orb_type in ["speed", "shield", "cooldown", "multiplier", "vision", "hitbox"]:
-                try:
-                    self.textures[skin_id][f"orbs/{orb_type}"] = arcade.load_texture(
-                        resource_path(f"assets/skins/{skin_id}/orbs/{orb_type}.png")
-                    )
-                except Exception as e:
-                    print(f"Error loading texture orbs/{orb_type} for skin {skin_id}: {e}")
-
-            # Artifact textures
-            for artifact_type in ["dash", "magnet", "slow", "bullet_time", "clone"]:
-                try:
-                    self.textures[skin_id][f"artifacts/{artifact_type}"] = arcade.load_texture(
-                        resource_path(f"assets/skins/{skin_id}/artifacts/{artifact_type}.png")
-                    )
-                except Exception as e:
-                    print(f"Error loading texture artifacts/{artifact_type} for skin {skin_id}: {e}")
-
-        # Load shared assets
-        self.textures["shared"] = {}
-
-        # Heart textures
+    def save_unlocks(self):
+        """Save unlocked skins to file"""
         try:
-            self.textures["shared"]["hearts/red"] = arcade.load_texture(
-                resource_path("assets/ui/heart_red.png")
-            )
-            self.textures["shared"]["hearts/gray"] = arcade.load_texture(
-                resource_path("assets/ui/heart_gray.png")
-            )
-            self.textures["shared"]["hearts/gold"] = arcade.load_texture(
-                resource_path("assets/ui/heart_gold.png")
-            )
+            with open(UNLOCKS_FILE, 'w') as f:
+                json.dump(self.data, f)
         except Exception as e:
-            print(f"Error loading heart textures: {e}")
-
-        # Coin textures
-        try:
-            self.textures["shared"]["coins/gold"] = arcade.load_texture(
-                resource_path("assets/items/coin/gold_coin.png")
-            )
-        except Exception as e:
-            print(f"Error loading coin texture: {e}")
-
-    def select(self, skin_id):
-        """Select a skin by ID."""
-        if skin_id in self.data["skins"]:
-            self.data["selected"] = skin_id
-            print(f"?? [INIT] Using skin: {skin_id}")
-            return True
-        else:
-            print(f"Skin {skin_id} not found, using default")
-            self.data["selected"] = "default"
-            return False
-
-    def get_texture(self, category, item_id):
-        """Get a texture by category and item ID for the currently selected skin."""
-        skin_id = self.data["selected"]
-        texture_id = f"{category}/{item_id}"
-
-        # Check if texture exists in current skin
-        if skin_id in self.textures and texture_id in self.textures[skin_id]:
-            return self.textures[skin_id][texture_id]
-
-        # Check if texture exists in shared assets
-        if texture_id.startswith("hearts/") or texture_id.startswith("coins/"):
-            if "shared" in self.textures and texture_id in self.textures["shared"]:
-                return self.textures["shared"][texture_id]
-
-        # Check if texture exists in default skin as fallback
-        if "default" in self.textures and texture_id in self.textures["default"]:
-            return self.textures["default"][texture_id]
-
-        # Return None if texture not found
-        print(f"Texture {texture_id} not found in skin {skin_id}")
-        return None
-
-    def get_player_scale(self):
-        """Get the scale for player based on the current skin."""
-        skin_id = self.data["selected"]
-        return self.scales.get(skin_id, {}).get("player", 0.045)
-
-    def get_heart_scale(self):
-        """Get the scale for hearts based on the current skin."""
-        skin_id = self.data["selected"]
-        return self.scales.get(skin_id, {}).get("heart", 0.035)
-
-    def get_artifact_scale(self):
-        """Get the scale for artifacts based on the current skin."""
-        skin_id = self.data["selected"]
-        return self.scales.get(skin_id, {}).get("artifact", 0.17)
-
-    def get_orb_scale(self):
-        """Get the scale for orbs based on the current skin."""
-        skin_id = self.data["selected"]
-        return self.scales.get(skin_id, {}).get("orb", 0.17)
+            print(f"⚠️ Error saving unlocks: {e}")
 
     def get_selected(self):
-        """Get the currently selected skin ID."""
-        return self.data["selected"]
+        """Get the currently selected skin"""
+        return self.current_skin
 
-# Create a singleton instance
+    def set_skin(self, skin_name):
+        """Set the current skin by name"""
+        if skin_name in self.skin_data:
+            self.current_skin = skin_name
+            print(f"🎨 Skin set to: {skin_name}")
+            return True
+        else:
+            print(f"⚠️ Skin '{skin_name}' not found")
+            return False
+
+    def unlock(self, skin_name):
+        """Unlock a skin"""
+        if skin_name in self.skin_data and skin_name not in self.data["unlocked"]:
+            self.data["unlocked"].append(skin_name)
+            self.save_unlocks()
+            return True
+        return False
+
+    def preload_assets(self):
+        """Preload all skin assets to avoid loading during gameplay"""
+        print("Preloading skin assets...")
+        try:
+            # Preload all skin textures
+            for skin_name, skin_info in self.skin_data.items():
+                # Preload player texture
+                self.get_texture("player", skin_name=skin_name)
+
+                # Preload orb textures
+                for orb_type in ["speed", "shield", "multiplier", "cooldown", "hitbox", "vision"]:
+                    self.get_texture(f"orbs/{orb_type}", skin_name=skin_name)
+
+                # Preload artifact textures
+                for artifact_type in ["dash", "magnet", "slow", "bullet_time", "clone"]:
+                    self.get_texture(f"artifacts/{artifact_type}", skin_name=skin_name)
+
+            print("✅ All assets preloaded successfully")
+        except Exception as e:
+            print(f"⚠️ Error preloading assets: {e}")
+
+    def get_texture(self, texture_name, fallback_path=None, skin_name=None):
+        """Get a texture by name, with optional fallback path"""
+        # Use specified skin or current skin
+        skin = skin_name if skin_name else self.current_skin
+
+        if skin in self.skin_data:
+            skin_path = self.skin_data[skin]["path"]
+
+            # Determine the texture path based on the texture name
+            if texture_name == "player":
+                texture_path = f"{skin_path}/player/default.png"
+            elif texture_name == "heart_red":
+                texture_path = "assets/ui/heart_red.png"
+            elif texture_name == "heart_gray":
+                texture_path = "assets/ui/heart_gray.png"
+            elif texture_name == "heart_gold":
+                texture_path = "assets/ui/heart_gold.png"
+            elif "/" in texture_name:
+                # For paths like "orbs/speed"
+                texture_path = f"{skin_path}/{texture_name}.png"
+            else:
+                # For other textures, use a generic approach
+                texture_path = f"{skin_path}/{texture_name}.png"
+
+            try:
+                return arcade.load_texture(texture_path)
+            except Exception as e:
+                print(f"⚠️ Error loading texture '{texture_name}' from '{texture_path}': {e}")
+
+                # Try fallback path if provided
+                if fallback_path:
+                    try:
+                        return arcade.load_texture(fallback_path)
+                    except Exception as e2:
+                        print(f"⚠️ Error loading fallback texture from '{fallback_path}': {e2}")
+
+                # Return a placeholder texture
+                return arcade.make_soft_square_texture(32, arcade.color.PURPLE, outer_alpha=255)
+        else:
+            print(f"⚠️ Skin '{skin}' not found")
+
+            # Try fallback path if provided
+            if fallback_path:
+                try:
+                    return arcade.load_texture(fallback_path)
+                except Exception as e:
+                    print(f"⚠️ Error loading fallback texture from '{fallback_path}': {e}")
+
+            # Return a placeholder texture
+            return arcade.make_soft_square_texture(32, arcade.color.PURPLE, outer_alpha=255)
+
+    def get_orb_scale(self):
+        """Get the scale for orbs based on the current skin"""
+        return 0.5  # Default scale for all skins
+
+# Global instance (singleton)
 skin_manager = SkinManager()
-
-def preload_all_skins():
-    """Preload all skins."""
-    skin_manager.load_skins()
-    skin_manager.select("default")

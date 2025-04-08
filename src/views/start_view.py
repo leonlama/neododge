@@ -1,4 +1,4 @@
-import arcade
+﻿import arcade
 import pyglet
 from src.core.resource_manager import resource_path
 from src.skins.skin_manager import skin_manager
@@ -34,38 +34,24 @@ class StartView(arcade.View):
                          arcade.color.LIGHT_GRAY, font_size=20, anchor_x="center")
         arcade.draw_text("Press 'T' to toggle skin", SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 80,
                          arcade.color.LIGHT_GRAY, font_size=16, anchor_x="center")
-        arcade.draw_text(f"Current skin: {skin_manager.get_selected()}", SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 110,
+        arcade.draw_text(f"Current skin: {skin_manager.current_skin}", SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 110,
                          arcade.color.LIGHT_GRAY, font_size=14, anchor_x="center")
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.T:
             # Toggle skin
-            current = skin_manager.get_selected()
+            current = skin_manager.current_skin
             new_skin = "default" if current == "mdma" else "mdma"
-            if skin_manager.select(new_skin):
+            if skin_manager.set_skin(new_skin):
                 print(f"Skin changed to: {new_skin}")
         else:
             self.start_game()
 
     def start_game(self):
-        # Stop title music
-        if self.media_player:
-            self.media_player.pause()
-
-        # Play click sound
-        try:
-            click_sound = arcade.load_sound(resource_path("assets/audio/start_click.wav"))
-            arcade.play_sound(click_sound)
-        except Exception as e:
-            print(f"Failed to load click sound: {e}")
-
-        # Create game view and show it
+        """Start the game"""
         from src.views.game_view import NeododgeGame
         game_view = NeododgeGame()
-        game_view.setup()
-
-        # Delay switching views using pyglet
-        pyglet.clock.schedule_once(lambda dt: self.window.show_view(game_view), 0.5)
+        self.window.show_view(game_view)
 
     def on_mouse_press(self, x, y, button, modifiers):
         self.start_game()
