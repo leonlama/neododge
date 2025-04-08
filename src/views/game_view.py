@@ -1,10 +1,9 @@
 ﻿import arcade
 import random
 import math
-import time
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
 from src.entities.player import Player
-# Import individual functions instead of draw_hud
 from src.ui.hud import (
     draw_player_health, draw_score, draw_wave_info, 
     draw_active_effects, draw_coin_count, draw_wave_message
@@ -14,15 +13,10 @@ class NeododgeGame(arcade.View):
     def __init__(self):
         super().__init__()
 
-        # Set up the game window
-        self.width = 800
-        self.height = 600
-
         # Game state
         self.score = 0
         self.game_over = False
         self.paused = False
-        self.coins = 0
 
         # Wave management
         self.current_wave = 1
@@ -31,15 +25,10 @@ class NeododgeGame(arcade.View):
         self.wave_message = None
         self.wave_message_timer = 0
 
-        # Player setup
-        self.player = Player()
-        self.player.center_x = self.width / 2
-        self.player.center_y = self.height / 2
-
         # Lists to track game objects
-        self.enemies = []
-        self.orbs = []
-        self.coins_list = []
+        self.enemies = arcade.SpriteList()
+        self.orbs = arcade.SpriteList()
+        self.coins_list = arcade.SpriteList()
 
         # Active effects for the HUD
         self.active_effects = []
@@ -47,13 +36,40 @@ class NeododgeGame(arcade.View):
         # Mouse tracking
         self.mouse_x = 0
         self.mouse_y = 0
-        self.mouse_pressed = False
+        self.right_mouse_down = False
 
         # Set up the camera
-        self.camera = arcade.Camera(self.width, self.height)
+        self.camera = arcade.Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         # Set up the GUI camera
-        self.gui_camera = arcade.Camera(self.width, self.height)
+        self.gui_camera = arcade.Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
+
+    def setup(self):
+        """Set up the game"""
+        # Reset game state
+        self.score = 0
+        self.game_over = False
+        self.paused = False
+        self.current_wave = 1
+        self.wave_timer = 0
+        self.wave_duration = 30
+        self.wave_message = "Wave 1"
+        self.wave_message_timer = 3.0
+
+        # Create player
+        self.player = Player()
+        self.player.center_x = SCREEN_WIDTH / 2
+        self.player.center_y = SCREEN_HEIGHT / 2
+
+        # Clear game objects
+        self.enemies = arcade.SpriteList()
+        self.orbs = arcade.SpriteList()
+        self.coins_list = arcade.SpriteList()
+        self.active_effects = []
+
+        # Display welcome message
+        self.wave_message = "Get Ready!"
+        self.wave_message_timer = 3.0
 
     def on_show(self):
         """Called when this view becomes active"""
@@ -68,27 +84,25 @@ class NeododgeGame(arcade.View):
         self.camera.use()
 
         # Draw the player
-        self.player.draw()
+        if self.player:
+            self.player.draw()
 
         # Draw all game objects
-        for enemy in self.enemies:
-            enemy.draw()
-
-        for orb in self.orbs:
-            orb.draw()
-
-        for coin in self.coins_list:
-            coin.draw()
+        self.enemies.draw()
+        self.orbs.draw()
+        self.coins_list.draw()
 
         # Activate the GUI camera for HUD elements
         self.gui_camera.use()
 
-        # Draw the HUD components individually
-        draw_player_health(self.player)
+        # Draw the HUD components
+        if self.player:
+            draw_player_health(self.player)
+            draw_coin_count(self.player.coins)
+
         draw_score(self.score)
         draw_wave_info(self.current_wave, self.wave_timer, self.wave_duration)
         draw_active_effects(self.active_effects)
-        draw_coin_count(self.coins)
 
         # Draw wave message if active
         if self.wave_message and self.wave_message_timer > 0:
@@ -102,17 +116,15 @@ class NeododgeGame(arcade.View):
             return
 
         # Update player
-        self.player.update(delta_time)
-        
-        # Update player movement based on mouse if mouse is pressed
-        if self.mouse_pressed and self.player.target_x is not None and self.player.target_y is not None:
-            # Update target to current mouse position
-            self.player.target_x = self.mouse_x
-            self.player.target_y = self.mouse_y
+        if self.player:
+            self.player.update(delta_time)
+
+        # If right mouse is held down, continuously update target
+        if self.right_mouse_down and self.player:
+            self.player.set_target(self.mouse_x, self.mouse_y)
 
         # Update enemies
-        for enemy in self.enemies:
-            enemy.update(delta_time)
+        self.enemies.update()
 
         # Update wave timer
         self.wave_timer += delta_time
@@ -198,6 +210,13 @@ class NeododgeGame(arcade.View):
                 # Update player texture
                 if self.player:
                     self.player.texture = skin_manager.get_texture("player")
+
+                    # Update heart textures
+                    self.player.heart_textures = {
+                        "red": skin_manager.get_texture("heart_red", "assets/ui/heart_red.png"),
+                        "gray": skin_manager.get_texture("heart_gray", "assets/ui/heart_gray.png"),
+                        "gold": skin_manager.get_texture("heart_gold", "assets/ui/heart_gold.png")
+                    }
             else:
                 print(f"⚠️ Failed to switch skin")
         else:
@@ -216,18 +235,22 @@ class NeododgeGame(arcade.View):
             # Toggle skin
             self.apply_skin_toggle()
 
-    def on_key_release(self, key, modifiers):
-        """Handle key release events"""
-        pass
-
     def on_mouse_press(self, x, y, button, modifiers):
         """Handle mouse press events"""
-        if button == arcade.MOUSE_BUTTON_LEFT or button == arcade.MOUSE_BUTTON_RIGHT:
-            # Set target position for player to move toward
-            self.mouse_x = x
-            self.mouse_y = y
-            self.mouse_pressed = True
-            
-            # Update player target
-            self.player.target_x = x
-            self.player.target_y = y
+        if button == arcade.MOUSE_BUTTON_RIGHT:
+            # Set player target with right click
+            if self.player:
+                self.player.set_target(x, y)
+                self.right_mouse_down = True
+                self.mouse_x = x
+                self.mouse_y = y
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        """Handle mouse release events"""
+        if button == arcade.MOUSE_BUTTON_RIGHT:
+            self.right_mouse_down = False
+
+    def on_mouse_motion(self, x, y, dx, dy):
+        """Handle mouse motion events"""
+        self.mouse_x = x
+        self.mouse_y = y
