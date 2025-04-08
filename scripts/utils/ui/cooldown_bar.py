@@ -12,38 +12,57 @@ class CooldownBar:
         self.timer = 0.0     # Time since last use
 
     def reset(self):
+        """Reset the timer to 0 (just used)"""
         self.timer = 0.0
 
     def update(self, delta_time: float):
+        """Increment the timer by delta_time"""
         if self.timer < self.cooldown:
             self.timer += delta_time
 
     def set_cooldown(self, cooldown: float):
+        """Set the total cooldown time"""
         self.cooldown = cooldown
 
+    def set_progress(self, fraction: float):
+        """Set the progress of the cooldown bar directly (0.0 to 1.0)"""
+        self.timer = self.cooldown * fraction
+
     def draw(self):
-        # Background (gray)
-        arcade.draw_rectangle_filled(
-            self.x + self.width / 2, self.y + self.height / 2,
-            self.width, self.height,
-            arcade.color.GRAY
-        )
+        """Draw the cooldown bar with the specified visual style"""
+        # Calculate progress percentage (0.0 to 1.0)
+        progress = min(self.timer / self.cooldown, 1.0)
+        fill_width = self.width * progress
+        
+        # Determine color based on readiness
+        ready = progress >= 1.0
+        text_color = arcade.color.YELLOW if ready else arcade.color.GRAY
+        fill_color = arcade.color.YELLOW if ready else arcade.color.GRAY
 
-        # Fill amount (yellow)
-        percent = min(self.timer / self.cooldown, 1.0)
-        fill_width = self.width * percent
-
-        arcade.draw_rectangle_filled(
-            self.x + fill_width / 2, self.y + self.height / 2,
-            fill_width, self.height,
-            arcade.color.YELLOW
-        )
-
-        # Text label
+        # Draw label (uppercase "DASH")
         arcade.draw_text(
-            self.label,
+            self.label.upper(),  # Convert to uppercase
             self.x,
-            self.y + self.height + 5,
-            arcade.color.LIGHT_GRAY,
-            font_size=10
+            self.y + 12,  # Position above the bar
+            text_color,
+            font_size=12
         )
+
+        # Draw background bar
+        arcade.draw_lrtb_rectangle_filled(
+            self.x, 
+            self.x + self.width, 
+            self.y + self.height, 
+            self.y, 
+            arcade.color.DARK_GRAY
+        )
+
+        # Draw fill
+        if fill_width > 0:
+            arcade.draw_lrtb_rectangle_filled(
+                self.x, 
+                self.x + fill_width, 
+                self.y + self.height, 
+                self.y, 
+                fill_color
+            )

@@ -341,6 +341,7 @@ class Player(arcade.Sprite):
             # Set dash cooldown
             self.dash_cooldown = 0  # Set cooldown
             self.can_dash = False  # Disable dash until cooldown is over
+            self.dash_timer = 0  # Reset dash timer for cooldown bar
 
             # Calculate dash direction
             dx = target_x - self.center_x
@@ -545,89 +546,11 @@ class Player(arcade.Sprite):
             x = x_start + (self.max_slots + i) * 40
             arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["gold"])
 
-    """def draw_artifacts(self):
-        start_x = 30
-        y = 50
-        font_size = 13
-        font = "Kenney Pixel"
-        bar_width = 120
-        bar_height = 10
-        spacing = 30
-
-        for artifact_name in self.artifacts:
-            # Get cooldown progress
-            if artifact_name == "Dash":
-                cooldown = self.cooldown
-                cooldown_timer = self.dash_timer
-            else:
-                cooldown = getattr(self, "cooldown", 10)
-                cooldown_timer = self.artifacts[artifact_name]
-
-            percent = min(max(cooldown_timer / cooldown, 0), 1)
-            ready = percent >= 1.0
-
-            # Text color
-            text_color = arcade.color.YELLOW if ready else arcade.color.GRAY
-            fill_color = arcade.color.YELLOW
-
-            # Draw name
-            arcade.draw_text(
-                artifact_name,
-                start_x,
-                y,
-                text_color,
-                font_size=font_size,
-                font_name=font,
-            )
-
-            # Draw bar background (gray)
-            bar_center_x = start_x + bar_width // 2
-            bar_y = y - font_size - 4
-            arcade.draw_rectangle_filled(
-                bar_center_x,
-                bar_y,
-                bar_width,
-                bar_height,
-                arcade.color.GRAY,
-            )
-
-            # Draw fill (yellow)
-            if percent > 0:
-                fill_width = bar_width * percent
-                arcade.draw_rectangle_filled(
-                    bar_center_x - (bar_width - fill_width) / 2,
-                    bar_y,
-                    fill_width,
-                    bar_height,
-                    fill_color,
-                )
-
-            y -= spacing"""
-
     def draw_artifacts(self, x=30, y=50):
-        """Draw a cooldown bar for the Dash artifact."""
-        if not self.has_dash_artifact:
-            return
-
-        # Parameters
-        width = 160
-        height = 10
-        font_size = 12
-        label = "Dash"
-
-        # Cooldown fraction
-        fraction = min(self.dash_timer / (self.cooldown * self.cooldown_factor), 1.0)
-        bar_color = arcade.color.YELLOW if fraction >= 1 else arcade.color.GRAY
-
-        # Draw label
-        arcade.draw_text(label, x, y + 12, arcade.color.LIGHT_GRAY, font_size)
-
-        # Draw background bar
-        arcade.draw_lrtb_rectangle_filled(x, x + width, y + height, y, arcade.color.DARK_GRAY)
-
-        # Draw fill
-        fill_width = width * fraction
-        arcade.draw_lrtb_rectangle_filled(x, x + fill_width, y + height, y, bar_color)
+        """Draw artifact indicators if needed"""
+        # The dash cooldown is now handled by the game view's dash_bar
+        # This method is kept for compatibility and potential future artifacts
+        pass
 
 
     def draw_orb_status(self, screen_width=800, screen_height=600):

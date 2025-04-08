@@ -28,6 +28,7 @@ from scripts.enemies.base_enemy import BaseEnemy
 from scripts.enemies.chaser_enemy import ChaserEnemy
 from scripts.enemies.enemy_manager import EnemyManager
 from scripts.utils.ui.cooldown_bar import CooldownBar
+from scripts.utils.constants import DASH_COOLDOWN
 
 class NeododgeGame(arcade.View):
     def __init__(self):
@@ -129,26 +130,35 @@ class NeododgeGame(arcade.View):
         """Update the game state."""
         # Update wave manager
         self.wave_manager.update(delta_time)
-        
+
         # Update timers
         self._update_timers(delta_time)
-        
+
         # Update entities
         self._update_entities(delta_time)
-        
+
         # Handle collisions - pass delta_time
         self._handle_collisions(delta_time)
-        
+
         # Check game state
         self._check_game_state()
 
-        # Update cooldown bar from dash artifact, if present
-        if self.dash_bar:
-            self.dash_bar.update(delta_time)
-            for artifact in self.player.artifacts:
-                if isinstance(artifact, DashArtifact):
-                    self.dash_bar.timer = artifact.get_cooldown_percent() * artifact.cooldown
-        
+        # Update cooldown bar from player's dash timer
+        if self.dash_bar and self.player and self.player.has_dash_artifact:
+            # Debug print
+            print(f"Player dash_timer: {self.player.dash_timer}, cooldown: {self.player.cooldown}")
+
+            # First, make sure the cooldown value matches the player's cooldown
+            effective_cooldown = self.player.cooldown * self.player.cooldown_factor
+            if self.dash_bar.cooldown != effective_cooldown:
+                self.dash_bar.cooldown = effective_cooldown
+
+            # Now set the timer directly - this is what makes the bar fill up
+            self.dash_bar.timer = self.player.dash_timer
+
+            # Debug print
+            print(f"Bar timer: {self.dash_bar.timer}, cooldown: {self.dash_bar.cooldown}, progress: {self.dash_bar.timer/self.dash_bar.cooldown}")
+
     def _update_timers(self, delta_time):
         """Update game timers."""
         # Wave timer
@@ -248,12 +258,18 @@ class NeododgeGame(arcade.View):
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             self.player.has_dash_artifact = True  # Enable dash for player
             self.player.can_dash = True  # Make dash available immediately
-            self.dash_artifact = None  # Remove the artifact from the game
-            print("✨ Dash unlocked!")
-            from scripts.utils.ui.cooldown_bar import CooldownBar
-            self.dash_bar = CooldownBar("Dash", 10, 10, 200, 10)
-            self.dash_bar.set_cooldown(10.0)
-            self.dash_bar.reset()
+
+            # Create cooldown bar with better dimensions
+            if not self.dash_bar:
+                from scripts.utils.ui.cooldown_bar import CooldownBar
+                # Use a more appropriate size and position
+                self.dash_bar = CooldownBar("Dash", 30, 50, 160, 10)  # Match player.draw_artifacts dimensions
+                self.dash_bar.set_cooldown(DASH_COOLDOWN)  # Use the constant
+                # Initialize with player's current dash timer instead of resetting
+                self.dash_bar.timer = self.player.dash_timer
+
+            # Remove the artifact from the game
+            self.dash_artifact = None
 
             # Add pickup text
             self.pickup_texts.append(["Dash Unlocked!", self.player.center_x, self.player.center_y + 30, 2.0])
@@ -294,7 +310,7 @@ class NeododgeGame(arcade.View):
                 game_state.coins += coin.coin_value
                 arcade.play_sound(self.coin_sound)
                 self.coins.remove(coin)
-    
+
     def _check_game_state(self):
         """Check for game state transitions."""
         # Currently just a placeholder for future game state checks
