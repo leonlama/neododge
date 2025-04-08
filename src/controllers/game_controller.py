@@ -237,11 +237,11 @@ class GameController:
                 # Create the artifact
                 try:
                     try:
-                        from src.mechanics.artifacts.dash import DashArtifact
-                        dash_artifact = DashArtifact(x, y)
+                        from src.entities.artifacts import DashArtifact
+                        dash_artifact = DashArtifact(x, y)  # Only pass x and y
                     except ImportError:
-                        from src.mechanics.artifacts.dash import DashArtifact
-                        dash_artifact = DashArtifact(x, y)
+                        from entities.artifacts import DashArtifact
+                        dash_artifact = DashArtifact(x, y)  # Only pass x and y
 
                     self.game_view.dash_artifact = dash_artifact
 
@@ -250,6 +250,8 @@ class GameController:
                         self.game_view.artifacts.append(dash_artifact)
                 except ImportError:
                     print("Error: Could not import DashArtifact class")
+                except Exception as e:
+                    print(f"Error creating DashArtifact: {e}")
 
                 # Reset timer
                 self.game_view.artifact_spawn_timer = random.uniform(20, 30)

@@ -37,6 +37,18 @@ class StartView(arcade.View):
                     random.randint(100, 255)
                 )
             })
+            
+        # Setup UI elements
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Set up UI elements based on current skin."""
+        # We don't need to load these textures since they don't exist in the asset structure
+        self.background_texture = None
+        self.logo_texture = None
+        self.start_button_texture = None
+        self.options_button_texture = None
+        self.quit_button_texture = None
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -149,24 +161,36 @@ class StartView(arcade.View):
             self.start_game()
 
     def toggle_skin(self):
-        """Toggle between available skins"""
-        # Get available skins
-        available_skins = list(skin_manager.skin_data.keys())
-        current_skin = skin_manager.current_skin
+        """Toggle between available skins."""
+        try:
+            # Get available skins
+            available_skins = skin_manager.get_available_skins()
 
-        # Find next skin
-        if current_skin in available_skins:
-            current_index = available_skins.index(current_skin)
+            if not available_skins:
+                print("⚠️ No skins available")
+                return
+
+            # Find current skin index
+            current_index = available_skins.index(skin_manager.current_skin) if skin_manager.current_skin in available_skins else 0
+
+            # Get next skin
             next_index = (current_index + 1) % len(available_skins)
             next_skin = available_skins[next_index]
 
-            # Apply new skin
-            if skin_manager.set_skin(next_skin):
-                print(f"🎨 Skin set to: {next_skin}")
-            else:
-                print(f"⚠️ Failed to switch skin")
-        else:
-            print(f"⚠️ Current skin '{current_skin}' not found in available skins")
+            # Set new skin
+            skin_manager.set_skin(next_skin)
+
+            # Update UI elements that depend on skin
+            self.setup_ui()
+
+            # Play sound effect
+            try:
+                sound = arcade.load_sound("assets/audio/toggle.wav")
+                arcade.play_sound(sound, volume=0.3)
+            except:
+                pass
+        except Exception as e:
+            print(f"⚠️ Error toggling skin: {e}")
 
     def on_mouse_press(self, x, y, button, modifiers):
         # Play sound

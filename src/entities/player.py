@@ -3,6 +3,7 @@ import math
 import random
 from src.core.constants import PLAYER_SPEED, PLAYER_DASH_DISTANCE, PLAYER_DASH_COOLDOWN
 from src.skins.skin_manager import skin_manager
+from src.core.constants import PLAYER_DASH_SPEED
 
 class Player(arcade.Sprite):
     """Player character class"""
@@ -11,8 +12,8 @@ class Player(arcade.Sprite):
         super().__init__()
 
         # Set up player texture
-        self.texture = skin_manager.get_texture('player')
-        self.scale = 0.035
+        self.texture = skin_manager.get_texture('player', 'default')
+        self.scale = skin_manager.get_player_scale()
         
         # Set initial position
         self.center_x = x
@@ -24,24 +25,26 @@ class Player(arcade.Sprite):
         self.target_x = None
         self.target_y = None
         self.speed = PLAYER_SPEED
-        self.speed_bonus = 1.0
+        self.speed_multiplier = 1.0
+        self.speed_buff_timer = 0.0
         self.inverse_move = False
 
         # Player dash
-        self.dash_cooldown = 0
-        self.dash_cooldown_max = 1.0
-        self.dash_distance = 150
-        self.dash_timer = 0
+        self.can_dash = True
+        self.dash_cooldown = 0.0
+        self.dash_speed = PLAYER_DASH_SPEED
+        self.dash_duration = 0.15
+        self.dash_timer = 0.0
+        self.dashing = False
         self.dash_direction_x = 0
         self.dash_direction_y = 0
-        self.dash_speed = 0
-        self.is_dashing = False
 
         # Player health
-        self.max_slots = 3
-        self.current_hearts = 3.0
+        self.max_health = 3
+        self.health = 3
         self.gold_hearts = 0
-        self.shield = False
+        self.shield_active = False
+        self.shield_timer = 0.0
 
         # Player invincibility
         self.invincible = False
@@ -56,9 +59,25 @@ class Player(arcade.Sprite):
 
         # Player artifacts
         self.artifacts = []
+        self.artifact_slots = []
+        self.artifact_cooldowns = {}
+        self.active_artifacts = {}
 
         # Active orb effects
         self.active_orbs = []
+
+        # Status effects
+        self.vision_blur = False
+        self.vision_blur_timer = 0.0
+        self.hitbox_multiplier = 1.0
+        self.hitbox_timer = 0.0
+
+        # Pickup messages
+        self.pickup_texts = []
+
+        # Parent view reference
+        self.parent_view = None
+        self.window = None
 
         # Load heart textures
         self.heart_textures = {
@@ -71,20 +90,26 @@ class Player(arcade.Sprite):
         self.dash_particles = []
 
     def update(self, delta_time):
-        """Update player state"""
+        """Update the player.
+
+        Args:
+            delta_time: Time since last update.
+        """
         # Update dash cooldown
-        if self.dash_cooldown > 0:
+        if not self.can_dash:
             self.dash_cooldown -= delta_time
+            if self.dash_cooldown <= 0:
+                self.can_dash = True
+                self.dash_cooldown = 0
 
-        # Update invincibility
-        if self.invincible:
-            self.invincible_timer -= delta_time
-            if self.invincible_timer <= 0:
-                self.invincible = False
-
-        # Update dash
-        if self.is_dashing:
-            self.update_dash(delta_time)
+        # Update dash timer
+        if self.dashing:
+            self.dash_timer -= delta_time
+            if self.dash_timer <= 0:
+                self.dashing = False
+                self.dash_timer = 0
+                self.change_x = 0
+                self.change_y = 0
         else:
             # Move towards target if set
             if self.target_x is not None and self.target_y is not None:
@@ -113,6 +138,24 @@ class Player(arcade.Sprite):
                     self.center_x += dx * delta_time
                     self.center_y += dy * delta_time
 
+        # Update speed buff timer
+        if self.speed_buff_timer > 0:
+            self.speed_buff_timer -= delta_time
+            if self.speed_buff_timer <= 0:
+                self.speed_multiplier = 1.0
+
+        # Update invincibility timer
+        if self.invincible:
+            self.invincible_timer -= delta_time
+            if self.invincible_timer <= 0:
+                self.invincible = False
+
+        # Update shield timer
+        if self.shield_active:
+            self.shield_timer -= delta_time
+            if self.shield_timer <= 0:
+                self.shield_active = False
+
         # Keep player on screen
         self.center_x = max(0, min(self.center_x, arcade.get_window().width))
         self.center_y = max(0, min(self.center_y, arcade.get_window().height))
@@ -138,7 +181,7 @@ class Player(arcade.Sprite):
                 })
         else:
             # End dash
-            self.is_dashing = False
+            self.dashing = False
             self.dash_speed = 0
 
     def update_orb_effects(self, delta_time):
@@ -181,7 +224,7 @@ class Player(arcade.Sprite):
                 self.dash_direction_y = dy / length
                 
                 # Start dash
-                self.is_dashing = True
+                self.dashing = True
                 self.dash_timer = 0.2  # Dash duration in seconds
                 self.dash_speed = self.dash_distance / self.dash_timer
                 self.dash_cooldown = self.dash_cooldown_max
@@ -195,26 +238,24 @@ class Player(arcade.Sprite):
         self.perform_dash()
 
     def take_damage(self, amount=1.0):
-        """Take damage and handle player health"""
-        if self.invincible or self.shield:
-            # No damage if invincible or shielded
-            if self.shield:
-                self.shield = False  # Remove shield
-            return False
+        """Handle player taking damage."""
+        if self.invincible or self.shield_active:  # Changed from self.shield to self.shield_active
+            # If player has a shield, remove it instead of taking damage
+            if self.shield_active:
+                self.shield_active = False
+                self.shield_timer = 0
+                return True  # Damage was blocked
+            return False  # No damage taken
 
         # Reduce health
-        self.current_hearts -= amount
+        self.health -= 1
 
-        # Make player briefly invincible
+        # Make player invincible briefly
         self.invincible = True
         self.invincible_timer = 1.0
 
-        # Check if player is dead
-        if self.current_hearts <= 0:
-            self.on_death()
-            return True
-
-        return False
+        # Return whether player is still alive
+        return self.health > 0
 
     def on_death(self):
         """Handle player death"""
@@ -261,7 +302,7 @@ class Player(arcade.Sprite):
             mult_bonus = float(orb_type.split("_")[1].replace("_", "."))
             self.multiplier *= mult_bonus
         elif orb_type == "shield":
-            self.shield = True
+            self.shield_active = True
         elif orb_type == "slow":
             self.speed_bonus *= 0.5
         elif orb_type == "mult_down_0_5":
@@ -284,7 +325,7 @@ class Player(arcade.Sprite):
             mult_bonus = float(orb_type.split("_")[1].replace("_", "."))
             self.multiplier /= mult_bonus
         elif orb_type == "shield":
-            self.shield = False
+            self.shield_active = False
         elif orb_type == "slow":
             self.speed_bonus *= 2.0
         elif orb_type == "mult_down_0_5":
@@ -348,7 +389,7 @@ class Player(arcade.Sprite):
         super().draw()
 
         # Draw shield if active
-        if self.shield:
+        if self.shield_active:
             arcade.draw_circle_outline(
                 self.center_x, self.center_y,
                 self.width * 0.7,

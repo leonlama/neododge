@@ -85,18 +85,44 @@ class NeododgeGame(arcade.View):
         # Initialize game controller
         self.game_controller = GameController(self, self.window.width, self.window.height)
 
-        # Load sound effects
+        # Load sound effects with reduced volume
         try:
             self.coin_sound = arcade.load_sound("assets/audio/coin.flac")
             self.damage_sound = arcade.load_sound("assets/audio/damage.wav")
             self.buff_sound = arcade.load_sound("assets/audio/buff.wav")
             self.debuff_sound = arcade.load_sound("assets/audio/debuff.wav")
+
+            # Set volume to 50%
+            self.coin_sound_player = None
+            self.damage_sound_player = None
+            self.buff_sound_player = None
+            self.debuff_sound_player = None
         except Exception as e:
             print(f"Error loading sounds: {e}")
             self.coin_sound = None
             self.damage_sound = None
             self.buff_sound = None
             self.debuff_sound = None
+
+    def play_coin_sound(self):
+        """Play the coin pickup sound."""
+        if self.coin_sound:
+            self.coin_sound_player = arcade.play_sound(self.coin_sound, volume=0.3)
+
+    def play_damage_sound(self):
+        """Play the damage sound."""
+        if self.damage_sound:
+            self.damage_sound_player = arcade.play_sound(self.damage_sound, volume=0.3)
+
+    def play_buff_sound(self):
+        """Play the buff pickup sound."""
+        if self.buff_sound:
+            self.buff_sound_player = arcade.play_sound(self.buff_sound, volume=0.3)
+
+    def play_debuff_sound(self):
+        """Play the debuff pickup sound."""
+        if self.debuff_sound:
+            self.debuff_sound_player = arcade.play_sound(self.debuff_sound, volume=0.3)
 
     def on_show(self):
         """Called when this view becomes active"""
@@ -372,8 +398,7 @@ class NeododgeGame(arcade.View):
                 self.player.take_damage()
                 
                 # Play damage sound
-                if hasattr(self, 'damage_sound') and self.damage_sound:
-                    arcade.play_sound(self.damage_sound)
+                self.play_damage_sound()
 
             # Remove enemy if it's a one-hit enemy
             if hasattr(enemy, 'is_one_hit') and enemy.is_one_hit:
@@ -399,8 +424,7 @@ class NeododgeGame(arcade.View):
                 self.score += 10
 
                 # Play coin sound
-                if hasattr(self, 'coin_sound') and self.coin_sound:
-                    arcade.play_sound(self.coin_sound)
+                self.play_coin_sound()
 
                 # Add pickup text
                 if hasattr(self, 'add_pickup_text'):
@@ -424,10 +448,10 @@ class NeododgeGame(arcade.View):
                     orb.apply_effect(self.player)
 
                 # Play appropriate sound
-                if is_buff and hasattr(self, 'buff_sound') and self.buff_sound:
-                    arcade.play_sound(self.buff_sound)
-                elif not is_buff and hasattr(self, 'debuff_sound') and self.debuff_sound:
-                    arcade.play_sound(self.debuff_sound)
+                if is_buff:
+                    self.play_buff_sound()
+                else:
+                    self.play_debuff_sound()
 
                 # Add pickup text
                 if hasattr(self, 'add_pickup_text'):
@@ -452,8 +476,7 @@ class NeododgeGame(arcade.View):
                     self.dash_artifact = None
 
                     # Play buff sound (artifacts are generally positive)
-                    if hasattr(self, 'buff_sound') and self.buff_sound:
-                        arcade.play_sound(self.buff_sound)
+                    self.play_buff_sound()
 
                     # Add pickup text
                     if hasattr(self, 'add_pickup_text'):
@@ -476,8 +499,7 @@ class NeododgeGame(arcade.View):
                         self.player.take_damage(1)
                         
                         # Play damage sound
-                        if hasattr(self, 'damage_sound') and self.damage_sound:
-                            arcade.play_sound(self.damage_sound)
+                        self.play_damage_sound()
 
     def show_shop(self):
         """Show the shop view."""

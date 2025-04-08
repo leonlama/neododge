@@ -22,7 +22,9 @@ COOLDOWN_BAR_HEIGHT = 10
 
 # Artifact settings
 ARTIFACT_SCALE = 0.035
+PLAYER_DASH_SPEED = 1000
 
 # Asset paths
+SKINS_DIR = "assets/skins"
 DEFAULT_SKIN_PATH = "assets/skins/default"
 MDMA_SKIN_PATH = "assets/skins/mdma"
