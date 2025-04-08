@@ -109,3 +109,27 @@ class WaveGenerator:
             "coins": random.randint(3, 8),
             "message": f"Wave {wave_number}"
         }
+    
+    def _weighted_choice(self, weights_dict):
+        """Choose a random item based on weights."""
+        if not weights_dict:
+            return "chaser"  # Default
+
+        items = list(weights_dict.keys())
+        weights = list(weights_dict.values())
+
+        # Normalize weights if they don't sum to 1
+        total = sum(weights)
+        if total != 1.0:
+            weights = [w/total for w in weights]
+
+        # Choose a random item based on weights
+        r = random.random()
+        cumulative_weight = 0
+        for i, weight in enumerate(weights):
+            cumulative_weight += weight
+            if r <= cumulative_weight:
+                return items[i]
+
+        # Fallback
+        return items[-1]

@@ -30,7 +30,6 @@ class DifficultyAdjuster:
             "orb_types": self._determine_orb_types(player_profile),
             "spawn_artifact": self._should_spawn_artifact(wave_number, player_profile)
         }
-
     def _calculate_enemy_count(self, difficulty, wave_number):
         """Calculate number of enemies based on difficulty"""
         base_count = 3 + wave_number + wave_number // 3

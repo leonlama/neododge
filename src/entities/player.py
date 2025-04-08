@@ -274,6 +274,48 @@ class Player(arcade.Sprite):
             # TODO: Remove hitbox effect
             pass
 
+    def draw_hearts(self):
+        """Draw the player's health as hearts."""
+        # Calculate heart positions
+        heart_scale = 0.035
+        heart_width = self.heart_textures['red'].width * heart_scale
+        heart_height = self.heart_textures['red'].height * heart_scale
+        heart_padding = 5
+        start_x = 20
+        start_y = arcade.get_window().height - 30
+
+        # Draw hearts based on health
+        for i in range(self.max_slots):
+            x = start_x + i * (heart_width + heart_padding)
+            y = start_y
+
+            # Determine which heart texture to use
+            if i < self.current_hearts:
+                # Full heart
+                texture = self.heart_textures['red']
+            else:
+                # Empty heart
+                texture = self.heart_textures['gray']
+
+            # Draw the heart
+            arcade.draw_texture_rectangle(
+                x, y, 
+                heart_width, heart_height,
+                texture
+            )
+
+        # Draw gold hearts if player has any
+        if self.gold_hearts > 0:
+            for i in range(self.gold_hearts):
+                x = start_x + (self.max_slots + i) * (heart_width + heart_padding)
+                y = start_y
+
+                arcade.draw_texture_rectangle(
+                    x, y, 
+                    heart_width, heart_height,
+                    self.heart_textures['gold']
+                )
+
     def draw(self):
         """Draw the player and effects"""
         # Draw player with alpha if invincible

@@ -180,18 +180,40 @@ class NeododgeGame(arcade.View):
         self.window.show_view(shop_view)
 
     def draw_hud(self):
-        """Draw HUD elements."""
-        # Draw score
-        arcade.draw_text(
-            f"Score: {int(self.score)}",
-            20,
-            self.window.height - 60,
-            arcade.color.WHITE,
-            16
-        )
-
+        """Draw the heads-up display."""
         # Draw player health
-        self.player.draw_hearts()
+        if hasattr(self.player, 'draw_hearts'):
+            self.player.draw_hearts()
+        else:
+            # Fallback if draw_hearts is not available
+            health_text = f"Health: {self.player.health}/{self.player.max_health}"
+            arcade.draw_text(health_text, 20, arcade.get_window().height - 30, 
+                             arcade.color.WHITE, 18)
+
+        # Draw score
+        score_text = f"Score: {int(self.score)}"
+        arcade.draw_text(score_text, 20, arcade.get_window().height - 60, 
+                         arcade.color.WHITE, 18)
+
+        # Draw wave info
+        if hasattr(self, 'game_controller'):
+            wave_info = self.game_controller.get_wave_info()
+            wave_text = f"Wave: {wave_info['wave_number']}"
+            arcade.draw_text(wave_text, 20, arcade.get_window().height - 90, 
+                             arcade.color.WHITE, 18)
+
+            # Draw wave message if visible
+            if wave_info['message_alpha'] > 0:
+                arcade.draw_text(
+                    wave_info['message'],
+                    arcade.get_window().width / 2,
+                    arcade.get_window().height / 2,
+                    arcade.color.WHITE,
+                    24,
+                    anchor_x="center",
+                    anchor_y="center",
+                    alpha=wave_info['message_alpha']
+                )
 
         # Draw player orb status
         if hasattr(self.player, 'draw_orb_status'):
@@ -205,9 +227,9 @@ class NeododgeGame(arcade.View):
         arcade.draw_text(
             f"Coins: {self.player.coins}",
             20,
-            self.window.height - 90,
+            arcade.get_window().height - 120,
             arcade.color.GOLD,
-            16
+            18
         )
 
     def apply_skin_toggle(self):
