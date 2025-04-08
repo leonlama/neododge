@@ -1,9 +1,9 @@
 import arcade
 import math
 import random
-from src.entities.enemies.base_enemy import BaseEnemy
+from src.entities.enemies.enemy import Enemy
 
-class ChaserEnemy(BaseEnemy):
+class ChaserEnemy(Enemy):
     """Enemy that chases the player"""
 
     def __init__(self, x=None, y=None):

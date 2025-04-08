@@ -5,6 +5,7 @@ class WaveManager:
         self.wave = 1
         self.player = player
         self.wave_history = []
+        self.last_message_drawn = ""
 
     def generate_wave(self, wave_number):
         """Generate a wave configuration based on wave number"""
@@ -99,6 +100,61 @@ class WaveManager:
             "message": "Rest Wave - Catch your breath!"
         }
 
+    def spawn_enemies(self, enemy_list, screen_width, screen_height):
+        """Spawn enemies for the current wave"""
+        from src.entities.enemies.enemy import Enemy
+        from src.entities.enemies.chaser import ChaserEnemy
+        #from src.entities.enemies.shooter_enemy import ShooterEnemy
+        
+        # Generate wave configuration
+        wave_config = self.generate_wave(self.wave)
+        
+        # Clear existing enemies
+        enemy_list.clear()
+        
+        # Spawn new enemies based on wave configuration
+        for enemy_type in wave_config["enemy_types"]:
+            # Random position away from player
+            while True:
+                x = random.randint(50, screen_width - 50)
+                y = random.randint(50, screen_height - 50)
+                
+                # Make sure enemy doesn't spawn too close to player
+                dx = x - self.player.center_x
+                dy = y - self.player.center_y
+                distance = (dx**2 + dy**2)**0.5
+                
+                if distance > 200:  # Minimum distance from player
+                    break
+            
+            # Create appropriate enemy type
+            if enemy_type == "basic":
+                enemy = Enemy(x, y)
+            elif enemy_type == "chaser":
+                enemy = ChaserEnemy(x, y)
+            elif enemy_type == "shooter":
+                #enemy = ShooterEnemy(x, y)
+                enemy = Enemy(x, y)  # Fallback to basic enemy
+            elif enemy_type == "boss":
+                # For now, use shooter as boss
+                #enemy = ShooterEnemy(x, y)
+                enemy = Enemy(x, y)  # Fallback to basic enemy
+                enemy.scale = 1.5
+                enemy.health = 5
+            else:
+                enemy = Enemy(x, y)
+            
+            # Apply wave parameters
+            enemy.speed *= wave_config["enemy_params"]["speed"]
+            if hasattr(enemy, "health"):
+                enemy.health *= wave_config["enemy_params"]["health"]
+            
+            # Add to enemy list
+            enemy_list.append(enemy)
+        
+        # Return the wave message
+        return wave_config["message"]
+
     def update_analytics(self, delta_time):
         """Placeholder for analytics update"""
         pass
@@ -133,7 +189,7 @@ class WaveManager:
         y = random.randint(100, screen_height - 100)
 
         if artifact_type == "dash":
-            from src.mechanics.artifacts.dash_artifact import DashArtifact
+            from src.mechanics.artifacts.dash import DashArtifact
             return DashArtifact(x, y)
         elif artifact_type == "magnet_pulse":
             from src.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact

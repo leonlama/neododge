@@ -7,19 +7,23 @@ from src.skins.skin_manager import skin_manager
 class Player(arcade.Sprite):
     """Player character class"""
 
-    def __init__(self):
+    def __init__(self, x=0, y=0):
         super().__init__()
 
         # Set up player texture
         self.texture = skin_manager.get_texture('player')
         self.scale = 0.035
+        
+        # Set initial position
+        self.center_x = x
+        self.center_y = y
 
         # Player movement
         self.change_x = 0
         self.change_y = 0
         self.target_x = None
         self.target_y = None
-        self.speed = 300
+        self.speed = PLAYER_SPEED
         self.speed_bonus = 1.0
         self.inverse_move = False
 

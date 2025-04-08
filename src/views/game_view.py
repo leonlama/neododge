@@ -1,8 +1,18 @@
 ﻿import arcade
-from src.game_controller import GameController
+import random
+from src.controllers.game_controller import GameController
 from src.entities.player import Player
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
+
+from src.mechanics.artifacts.dash import DashArtifact
+from src.mechanics.coins.coin import Coin
+from src.mechanics.orbs.buff_orbs import BuffOrb
+from src.mechanics.orbs.debuff_orbs import DebuffOrb
+from src.views.shop_view import ShopView
+
+from src.mechanics.wave_management.wave_manager import WaveManager
+from src.controllers.game_controller import GameController
 
 class NeododgeGame(arcade.View):
     """Main game view."""
@@ -32,33 +42,61 @@ class NeododgeGame(arcade.View):
     def setup(self):
         """Set up the game."""
         # Create player
-        self.player = Player()
-        self.player.center_x = self.window.width // 2
-        self.player.center_y = self.window.height // 2
+        self.player = Player(self.window.width // 2, self.window.height // 2)
         self.player.window = self.window
         self.player.parent_view = self
 
-        # Initialize game controller
-        self.game_controller = GameController(
-            self.player, 
-            self.window.width, 
-            self.window.height
-        )
-        self.game_controller.initialize(
-            self.enemies, 
-            self.orbs, 
-            self.coins, 
-            self.artifacts
-        )
+        # Initialize sprite lists
+        self.enemies = arcade.SpriteList()
+        self.orbs = arcade.SpriteList()
+        self.coins = arcade.SpriteList()
+        self.artifacts = arcade.SpriteList()
 
-        # Reset score
+        # Initialize wave manager
+        self.wave_manager = WaveManager(self.player)
+        self.wave_manager.wave = 1
+        self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
+
+        # Initialize dash artifact (but don't spawn it yet)
+        self.dash_artifact = None
+
+        # Set up coin spawning (start with a delay)
+        self.coins_to_spawn = 5
+        self.coin_spawn_timer = 3.0  # First coin spawns after 3 seconds
+
+        # Set up orb spawning
+        self.orb_spawn_timer = random.uniform(4, 8)
+
+        # Set up artifact spawning
+        self.artifact_spawn_timer = random.uniform(20, 30)
+
+        # Initialize other game state variables
         self.score = 0
-        
-        # Load sounds
+        self.level_timer = 0.0
+        self.wave_duration = 20.0
+        self.in_wave = True
+        self.wave_pause = False
+        self.wave_message = ""
+        self.wave_message_alpha = 0
+
+        # Initialize pickup texts
+        self.pickup_texts = []
+
+        # Initialize game controller
+        self.game_controller = GameController(self, self.window.width, self.window.height)
+
+        # Load sound effects
         try:
-            self.coin_sound = arcade.load_sound("X:/neododge/assets/audio/coin.flac")
-        except:
+            self.coin_sound = arcade.load_sound("assets/audio/coin.flac")
+            self.damage_sound = arcade.load_sound("assets/audio/damage.wav")
+            self.buff_sound = arcade.load_sound("assets/audio/buff.wav")
+            self.debuff_sound = arcade.load_sound("assets/audio/debuff.wav")
+        except Exception as e:
+            print(f"Error loading sounds: {e}")
             self.coin_sound = None
+            self.damage_sound = None
+            self.buff_sound = None
+            self.debuff_sound = None
 
     def on_show(self):
         """Called when this view becomes active"""
@@ -146,6 +184,19 @@ class NeododgeGame(arcade.View):
         if hasattr(self, 'game_controller'):
             self.game_controller.update(delta_time)
 
+        # Check if we should show the shop
+        if self.game_controller.should_show_shop():
+            # Show shop view
+            from src.views.shop_view import ShopView
+            shop_view = ShopView()
+            shop_view.player = self.player
+            shop_view.previous_view = self
+            self.window.show_view(shop_view)
+
+            # Reset shop flag to prevent showing it again immediately
+            self.game_controller.reset_shop_flag()
+            return
+
         # Update enemies
         for enemy in self.enemies:
             enemy.update(delta_time)
@@ -165,6 +216,66 @@ class NeododgeGame(arcade.View):
         # Update coins
         self.coins.update()
 
+        # Update coin animations
+        for coin in self.coins:
+            if hasattr(coin, 'update_animation'):
+                coin.update_animation(delta_time)
+
+        # Handle coin spawning
+        if hasattr(self, 'coins_to_spawn') and self.coins_to_spawn > 0:
+            if hasattr(self, 'coin_spawn_timer'):
+                self.coin_spawn_timer -= delta_time
+                if self.coin_spawn_timer <= 0:
+                    # Spawn a coin at a random position
+                    x = random.randint(50, arcade.get_window().width - 50)
+                    y = random.randint(50, arcade.get_window().height - 50)
+
+                    # Create the coin
+                    coin = Coin(x, y)
+                    self.coins.append(coin)
+
+                    # Update spawn counter and timer
+                    self.coins_to_spawn -= 1
+                    self.coin_spawn_timer = random.uniform(3, 7)  # Random time until next coin
+                    print(f"🪙 Spawned a coin! Remaining: {self.coins_to_spawn}")
+
+        # Handle orb spawning
+        if hasattr(self, 'orb_spawn_timer'):
+            self.orb_spawn_timer -= delta_time
+            if self.orb_spawn_timer <= 0:
+                # Spawn an orb at a random position
+                x = random.randint(50, arcade.get_window().width - 50)
+                y = random.randint(50, arcade.get_window().height - 50)
+
+                # Create a random orb
+                orb_type = random.choice(["buff", "debuff"])
+                if orb_type == "buff":
+                    orb = BuffOrb(x, y)
+                else:
+                    orb = DebuffOrb(x, y)
+
+                self.orbs.append(orb)
+
+                # Reset timer
+                self.orb_spawn_timer = random.uniform(4, 8)
+                print(f"🔮 Spawned a {orb_type} orb!")
+
+        # Handle artifact spawning
+        if hasattr(self, 'artifact_spawn_timer'):
+            self.artifact_spawn_timer -= delta_time
+            if self.artifact_spawn_timer <= 0 and not hasattr(self, 'dash_artifact'):
+                # Spawn an artifact at a random position
+                x = random.randint(50, arcade.get_window().width - 50)
+                y = random.randint(50, arcade.get_window().height - 50)
+
+                # Create the artifact
+                self.dash_artifact = DashArtifact(x, y)
+                self.artifacts.append(self.dash_artifact)
+
+                # Reset timer
+                self.artifact_spawn_timer = random.uniform(20, 30)
+                print("✨ Spawned a dash artifact!")
+
         # Update artifacts
         self.artifacts.update()
 
@@ -179,10 +290,6 @@ class NeododgeGame(arcade.View):
                     # Move text upward
                     self.pickup_texts[i] = [text, x, y + 1, lifetime]
 
-        # Check if it's time to show the shop
-        if self.game_controller.should_show_shop():
-            self.show_shop()
-
         # Check for collisions
         self.check_collisions()
 
@@ -196,7 +303,11 @@ class NeododgeGame(arcade.View):
         for enemy in enemy_hit_list:
             # Handle player taking damage
             if hasattr(self.player, 'take_damage'):
-                self.player.take_damage(1)
+                self.player.take_damage()
+                
+                # Play damage sound
+                if hasattr(self, 'damage_sound') and self.damage_sound:
+                    arcade.play_sound(self.damage_sound)
 
             # Remove enemy if it's a one-hit enemy
             if hasattr(enemy, 'is_one_hit') and enemy.is_one_hit:
@@ -213,35 +324,78 @@ class NeododgeGame(arcade.View):
                 self.player.collect_coin()
             else:
                 # Fallback if player doesn't have collect_coin method
+                if hasattr(self.player, 'coins'):
+                    self.player.coins += 1
+                else:
+                    self.player.coins = 1
+
+                # Add to score
                 self.score += 10
-                try:
+
+                # Play coin sound
+                if hasattr(self, 'coin_sound') and self.coin_sound:
                     arcade.play_sound(self.coin_sound)
-                except:
-                    pass
+
+                # Add pickup text
+                if hasattr(self, 'add_pickup_text'):
+                    self.add_pickup_text("Coin collected!", self.player.center_x, self.player.center_y)
 
         # Player-Orb collisions
         orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
         for orb in orb_hit_list:
+            # Store the message before removing the orb
+            message = getattr(orb, 'message', "Orb collected!")
+
+            # Determine if it's a buff or debuff orb
+            is_buff = isinstance(orb, BuffOrb) if 'BuffOrb' in globals() else 'buff' in str(orb.__class__).lower()
+
             # Remove the orb
             orb.remove_from_sprite_lists()
 
-            # Handle orb collection
-            if hasattr(orb, 'apply_effect'):
-                orb.apply_effect(self.player)
-            elif hasattr(self.player, 'collect_orb'):
-                self.player.collect_orb(orb)
+            try:
+                # Try to apply the effect
+                if hasattr(orb, 'apply_effect'):
+                    orb.apply_effect(self.player)
+
+                # Play appropriate sound
+                if is_buff and hasattr(self, 'buff_sound') and self.buff_sound:
+                    arcade.play_sound(self.buff_sound)
+                elif not is_buff and hasattr(self, 'debuff_sound') and self.debuff_sound:
+                    arcade.play_sound(self.debuff_sound)
+
+                # Add pickup text
+                if hasattr(self, 'add_pickup_text'):
+                    self.add_pickup_text(message, self.player.center_x, self.player.center_y)
+                elif hasattr(self, 'pickup_texts'):
+                    self.pickup_texts.append([message, self.player.center_x, self.player.center_y, 1.0])
+            except Exception as e:
+                print(f"Error applying orb effect: {e}")
 
         # Player-Artifact collisions
-        artifact_hit_list = arcade.check_for_collision_with_list(self.player, self.artifacts)
-        for artifact in artifact_hit_list:
-            # Remove the artifact
-            artifact.remove_from_sprite_lists()
+        if hasattr(self, 'dash_artifact') and self.dash_artifact:
+            if arcade.check_for_collision(self.player, self.dash_artifact):
+                # Store the message before removing the artifact
+                message = getattr(self.dash_artifact, 'name', "Artifact collected!")
 
-            # Handle artifact collection
-            if hasattr(artifact, 'apply_effect'):
-                artifact.apply_effect(self.player)
-            elif hasattr(self.player, 'collect_artifact'):
-                self.player.collect_artifact(artifact)
+                try:
+                    # Apply the effect
+                    self.dash_artifact.apply_effect(self.player)
+
+                    # Remove the artifact
+                    self.dash_artifact.remove_from_sprite_lists()
+                    self.dash_artifact = None
+
+                    # Play buff sound (artifacts are generally positive)
+                    if hasattr(self, 'buff_sound') and self.buff_sound:
+                        arcade.play_sound(self.buff_sound)
+
+                    # Add pickup text
+                    if hasattr(self, 'add_pickup_text'):
+                        self.add_pickup_text(f"{message} unlocked!", self.player.center_x, self.player.center_y)
+                    elif hasattr(self, 'pickup_texts'):
+                        self.pickup_texts.append([f"{message} unlocked!", self.player.center_x, self.player.center_y, 1.0])
+                except Exception as e:
+                    print(f"Error applying artifact effect: {e}")
 
         # Enemy bullet collisions with player
         for enemy in self.enemies:
@@ -254,10 +408,13 @@ class NeododgeGame(arcade.View):
                     # Handle player taking damage
                     if hasattr(self.player, 'take_damage'):
                         self.player.take_damage(1)
+                        
+                        # Play damage sound
+                        if hasattr(self, 'damage_sound') and self.damage_sound:
+                            arcade.play_sound(self.damage_sound)
 
     def show_shop(self):
         """Show the shop view."""
-        from src.views.shop_view import ShopView
         shop_view = ShopView(self.player, self)
         self.window.show_view(shop_view)
 
@@ -266,52 +423,63 @@ class NeododgeGame(arcade.View):
         # Draw player health
         if hasattr(self.player, 'draw_hearts'):
             self.player.draw_hearts()
-        else:
-            # Fallback if draw_hearts is not available
-            health_text = f"Health: {self.player.health}/{self.player.max_health}"
-            arcade.draw_text(health_text, 20, arcade.get_window().height - 30, 
-                             arcade.color.WHITE, 18)
 
         # Draw score
-        score_text = f"Score: {self.score}"
-        arcade.draw_text(score_text, 20, arcade.get_window().height - 60, 
-                         arcade.color.WHITE, 18)
-
-        # Draw wave info
-        if hasattr(self, 'game_controller'):
-            wave_info = self.game_controller.get_wave_info()
-            wave_text = f"Wave: {wave_info['wave_number']}"
-            arcade.draw_text(wave_text, 20, arcade.get_window().height - 90, 
-                             arcade.color.WHITE, 18)
-
-            # Draw wave message if visible
-            if wave_info['message_alpha'] > 0:
-                arcade.draw_text(
-                    wave_info['message'],
-                    arcade.get_window().width / 2,
-                    arcade.get_window().height / 2,
-                    arcade.color.WHITE,
-                    24,
-                    anchor_x="center",
-                    anchor_y="center"
-                )
-
-        # Draw player orb status
-        if hasattr(self.player, 'draw_orb_status'):
-            self.player.draw_orb_status()
-
-        # Draw player artifacts
-        if hasattr(self.player, 'draw_artifacts'):
-            self.player.draw_artifacts()
+        arcade.draw_text(f"Score: {int(self.score)}", 30, arcade.get_window().height - 60, 
+                         arcade.color.WHITE, 16)
 
         # Draw coin count
-        arcade.draw_text(
-            f"Coins: {self.player.coins}",
-            20,
-            arcade.get_window().height - 120,
-            arcade.color.GOLD,
-            18
-        )
+        if hasattr(self.player, 'coins'):
+            arcade.draw_text(f"Coins: {self.player.coins}", arcade.get_window().width - 100, 30, 
+                             arcade.color.GOLD, 18)
+
+        # Draw wave info
+        if hasattr(self, 'wave_manager'):
+            # Draw wave number
+            wave_number = self.wave_manager.wave if hasattr(self.wave_manager, 'wave') else 1
+            color = arcade.color.GOLD if wave_number % 5 == 0 else arcade.color.LIGHT_GREEN
+            arcade.draw_text(
+                f"Wave {wave_number}",
+                arcade.get_window().width // 2,
+                arcade.get_window().height - 35,
+                color,
+                font_size=18,
+                anchor_x="center"
+            )
+
+            # Draw wave timer if in a wave
+            if hasattr(self, 'in_wave') and self.in_wave and hasattr(self, 'level_timer') and hasattr(self, 'wave_duration'):
+                time_left = max(0, int(self.wave_duration - self.level_timer))
+                arcade.draw_text(f"⏱ {time_left}s left", arcade.get_window().width // 2, 
+                                 arcade.get_window().height - 70, arcade.color.LIGHT_GRAY, 16, 
+                                 anchor_x="center")
+
+        # Draw wave message only if not already drawn by wave manager
+        if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
+            # Check if wave manager has already drawn this message
+            wave_manager_drew_message = False
+            if hasattr(self, 'wave_manager') and hasattr(self.wave_manager, 'last_message_drawn'):
+                wave_manager_drew_message = (self.wave_manager.last_message_drawn == self.wave_message)
+
+            # Only draw if not already drawn
+            if not wave_manager_drew_message:
+                color = arcade.color.LIGHT_GREEN
+                arcade.draw_text(
+                    self.wave_message,
+                    arcade.get_window().width / 2,
+                    arcade.get_window().height / 2,
+                    color,
+                    font_size=24,
+                    anchor_x="center"
+                )
+
+    def add_pickup_text(self, text, x, y):
+        """Add a pickup text that floats upward and fades out."""
+        if not hasattr(self, 'pickup_texts'):
+            self.pickup_texts = []
+
+        # Add the text with position and lifetime
+        self.pickup_texts.append([text, x, y, 1.0])  # 1.0 second lifetime
 
     def apply_skin_toggle(self):
         """Toggle between available skins"""

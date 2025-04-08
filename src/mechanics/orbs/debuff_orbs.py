@@ -47,19 +47,20 @@ class DebuffOrb(Orb):
 
     def apply_effect(self, player):
         """Apply the debuff effect to the player"""
-        # Apply different effects based on orb type
-        if "slow" in self.orb_type:
-            # Slow down player
-            player.base_speed *= 0.7
+        if self.orb_type == "slow":
+            # Check if player has speed attribute
+            if hasattr(player, 'speed'):
+                player.speed *= 0.7  # Reduce speed by 30%
+            elif hasattr(player, 'speed_multiplier'):
+                player.speed_multiplier *= 0.7
+            else:
+                # Fallback - create a speed multiplier attribute
+                player.speed_multiplier = 0.7
 
-            # Add effect to player's active effects
-            player.parent_view.add_effect(
-                "slow", 
-                0.7, 
-                self.effect_duration,
-                arcade.color.RED,
-                "speed"
-            )
+            # Set a timer for the effect if possible
+            if hasattr(player, 'effect_timers'):
+                player.effect_timers['slow'] = 5.0  # 5 seconds
+            print("🐢 Player slowed!")
 
             # Add pickup message
             if hasattr(player, 'pickup_texts'):
@@ -70,45 +71,52 @@ class DebuffOrb(Orb):
                     2.0
                 ])
 
-        elif "mult_down" in self.orb_type:
-            # Extract multiplier value from orb type (e.g., "mult_down_0_5" -> 0.5x score multiplier)
-            try:
-                mult_parts = self.orb_type.split('_')
-                mult_value = float(f"{mult_parts[2]}.{mult_parts[3]}" if len(mult_parts) > 3 else mult_parts[2])
-                player.score_multiplier *= mult_value
+        elif self.orb_type == "mult_down_0_5":
+            if hasattr(player, 'score_multiplier'):
+                player.score_multiplier = 0.5
+            elif hasattr(player, 'multiplier'):
+                player.multiplier = 0.5
 
-                # Add effect to player's active effects
-                player.parent_view.add_effect(
-                    "multiplier_down", 
-                    mult_value, 
-                    self.effect_duration,
-                    arcade.color.RED,
-                    "multiplier"
-                )
+            # Set a timer for the effect if possible
+            if hasattr(player, 'effect_timers'):
+                player.effect_timers['multiplier'] = 30.0  # 30 seconds
+            print("💥 Score x0.5 for 30s")
 
-                # Add pickup message
-                if hasattr(player, 'pickup_texts'):
-                    player.pickup_texts.append([
-                        f"{mult_value}x Score", 
-                        player.center_x, 
-                        player.center_y, 
-                        2.0
-                    ])
-            except:
-                pass
+            # Add pickup message
+            if hasattr(player, 'pickup_texts'):
+                player.pickup_texts.append([
+                    "0.5x Score", 
+                    player.center_x, 
+                    player.center_y, 
+                    2.0
+                ])
 
-        elif "cooldown_up" in self.orb_type:
-            # Increase dash cooldown
-            player.dash_cooldown_max *= 1.5
+        elif self.orb_type == "mult_down_0_25":
+            if hasattr(player, 'score_multiplier'):
+                player.score_multiplier = 0.25
+            elif hasattr(player, 'multiplier'):
+                player.multiplier = 0.25
 
-            # Add effect to player's active effects
-            player.parent_view.add_effect(
-                "cooldown_up", 
-                1.5, 
-                self.effect_duration,
-                arcade.color.RED,
-                "cooldown"
-            )
+            # Set a timer for the effect if possible
+            if hasattr(player, 'effect_timers'):
+                player.effect_timers['multiplier'] = 30.0  # 30 seconds
+            print("💥 Score x0.25 for 30s")
+
+            # Add pickup message
+            if hasattr(player, 'pickup_texts'):
+                player.pickup_texts.append([
+                    "0.25x Score", 
+                    player.center_x, 
+                    player.center_y, 
+                    2.0
+                ])
+
+        elif self.orb_type == "cooldown_up":
+            if hasattr(player, 'cooldown_multiplier'):
+                player.cooldown_multiplier = 1.5  # Increase cooldown by 50%
+            elif hasattr(player, 'dash_cooldown'):
+                player.dash_cooldown *= 1.5
+            print("🔁 Cooldown increased!")
 
             # Add pickup message
             if hasattr(player, 'pickup_texts'):
@@ -119,18 +127,13 @@ class DebuffOrb(Orb):
                     2.0
                 ])
 
-        elif "vision_blur" in self.orb_type:
-            # Add vision blur effect
+        elif self.orb_type == "vision_blur":
             player.vision_blur = True
 
-            # Add effect to player's active effects
-            player.parent_view.add_effect(
-                "vision_blur", 
-                1.0, 
-                self.effect_duration,
-                arcade.color.PURPLE,
-                "vision"
-            )
+            # Set a timer for the effect if possible
+            if hasattr(player, 'effect_timers'):
+                player.effect_timers['vision_blur'] = 10.0  # 10 seconds
+            print("👁️ Vision blurred!")
 
             # Add pickup message
             if hasattr(player, 'pickup_texts'):
@@ -141,18 +144,18 @@ class DebuffOrb(Orb):
                     2.0
                 ])
 
-        elif "big_hitbox" in self.orb_type:
-            # Increase player hitbox
-            player.scale *= 1.5
+        elif self.orb_type == "big_hitbox":
+            # Store original scale if not already stored
+            if not hasattr(player, 'original_scale'):
+                player.original_scale = player.scale
 
-            # Add effect to player's active effects
-            player.parent_view.add_effect(
-                "big_hitbox", 
-                1.5, 
-                self.effect_duration,
-                arcade.color.ORANGE,
-                "hitbox"
-            )
+            # Increase hitbox size
+            player.scale = player.original_scale * 1.5
+
+            # Set a timer for the effect if possible
+            if hasattr(player, 'effect_timers'):
+                player.effect_timers['big_hitbox'] = 15.0  # 15 seconds
+            print("⬛ Hitbox increased!")
 
             # Add pickup message
             if hasattr(player, 'pickup_texts'):
