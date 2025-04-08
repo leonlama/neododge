@@ -6,7 +6,7 @@ from scripts.mechanics.artifacts.dash_artifact import DashArtifact
 from scripts.mechanics.orbs.buff_orbs import BuffOrb
 from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
 from scripts.mechanics.coins.coin_factory import create_coin, Coin
-from scripts.mechanics.wave_manager import WaveManager
+from scripts.managers.wave_manager import WaveManager
 from scripts.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, ARTIFACT_SCALE
 from scripts.utils.shaders import load_vision_shader, create_vision_geometry
 from scripts.utils.spawner import spawn_random_orb, spawn_dash_artifact
@@ -24,6 +24,10 @@ from scripts.utils.resource_helper import resource_path
 from scripts.utils.orb_utils import get_texture_name_from_orb_type
 from scripts.skins.skin_manager import skin_manager
 from scripts.mechanics.game_state import game_state
+from scripts.enemies.base_enemy import BaseEnemy
+from scripts.enemies.chaser_enemy import ChaserEnemy
+from scripts.enemies.enemy_manager import EnemyManager
+from scripts.utils.ui.cooldown_bar import CooldownBar
 
 class NeododgeGame(arcade.View):
     def __init__(self):
@@ -40,6 +44,7 @@ class NeododgeGame(arcade.View):
         self.artifact_spawn_timer = random.uniform(20, 30)
         self.score = 0
         self.wave_manager = None
+        self.enemy_manager = None
         self.in_wave = True
         self.wave_pause_timer = 0.0
         self.wave_message_alpha = 255
@@ -54,6 +59,7 @@ class NeododgeGame(arcade.View):
         self.right_mouse_down = False
         self.mouse_x = 0
         self.mouse_y = 0
+        self.dash_bar = None  # Start with no bar
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -61,12 +67,20 @@ class NeododgeGame(arcade.View):
         self.vision_geometry = create_vision_geometry(self.window)
 
     def setup(self):
-        self.player = Player(self.window.width // 2, self.window.height // 2)
+        """Set up the game and initialize variables."""
+        # Create player with position
+        self.player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
         self.player.window = self.window
         self.player.parent_view = self
-        self.wave_manager = WaveManager(self.player)
-        self.wave_manager.wave = 1  # Start at wave 4 for debugging the shop
-        self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
+
+        # Initialize managers
+        self.enemy_manager = EnemyManager(self)
+        self.wave_manager = WaveManager(self)
+
+        # Start first wave
+        self.enemy_manager.spawn_enemies(self.enemies, self.wave_manager.wave, self.window.width, self.window.height)
+
+        # Set up other game elements
         self.dash_artifact = spawn_dash_artifact(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.orbs = arcade.SpriteList()
 
@@ -93,7 +107,7 @@ class NeododgeGame(arcade.View):
         # --- HUD Layer ---
         self.player.draw_hearts()
         self.player.draw_orb_status()
-        self.player.draw_artifacts()
+        self.player.draw_artifacts()  # Ensure this line is active
         arcade.draw_text(f"Score: {int(self.score)}", 30, SCREEN_HEIGHT - 60, arcade.color.WHITE, 16)
         draw_pickup_texts(self.pickup_texts)
         draw_coin_count(game_state.coins)
@@ -107,18 +121,33 @@ class NeododgeGame(arcade.View):
         # Draw wave number
         draw_wave_number(self.wave_manager.wave)
 
+        # Draw Dash Cooldown Bar
+        if self.dash_bar:
+            self.dash_bar.draw()
+
     def on_update(self, delta_time):
+        """Update the game state."""
+        # Update wave manager
+        self.wave_manager.update(delta_time)
+        
         # Update timers
         self._update_timers(delta_time)
         
         # Update entities
         self._update_entities(delta_time)
         
-        # Handle collisions
+        # Handle collisions - pass delta_time
         self._handle_collisions(delta_time)
         
         # Check game state
-        self._check_game_state(delta_time)
+        self._check_game_state()
+
+        # Update cooldown bar from dash artifact, if present
+        if self.dash_bar:
+            self.dash_bar.update(delta_time)
+            for artifact in self.player.artifacts:
+                if isinstance(artifact, DashArtifact):
+                    self.dash_bar.timer = artifact.get_cooldown_percent() * artifact.cooldown
         
     def _update_timers(self, delta_time):
         """Update game timers."""
@@ -151,21 +180,34 @@ class NeododgeGame(arcade.View):
     def _update_entities(self, delta_time):
         """Update all game entities."""
         # Update player
-        self.player.update(delta_time)
+        if self.player:
+            self.player.update(delta_time)
+            
+            # Update mouse position for targeting
+            if self.right_mouse_down:
+                self.player.set_target(self.mouse_x, self.mouse_y)
+        
+        # Update enemies and their bullets
+        for enemy in self.enemies:
+            enemy.update(delta_time)
+            enemy.bullets.update()
+            
+        # Check for wave completion by enemy count
+        if self.wave_manager.in_wave and len(self.enemies) == 0:
+            self.wave_manager.complete_wave()
+            
+            # Start next wave after pause
+            if not self.wave_manager.wave % 3 == 0:  # Every 3rd wave shows shop
+                self.wave_manager.start_next_wave(self.enemy_manager, self.enemies)
+        
+        # Update orbs, coins, and other entities
+        self.orbs.update()
+        self.coins.update()
         
         # Update artifacts
         for artifact in self.player.artifacts:
             if hasattr(artifact, 'update'):
                 artifact.update(delta_time)
-        
-        # Update orbs
-        self.orbs.update()
-        
-        # Update coins
-        self.coins.update()
-        
-        # Update enemies
-        self.enemies.update()
         
         # Update score
         self.score += delta_time * 10
@@ -173,10 +215,12 @@ class NeododgeGame(arcade.View):
         # Handle random spawns
         self._handle_spawns(delta_time)
         
-        # Handle mouse movement
-        if self.right_mouse_down:
-            self.player.move_towards_mouse(self, delta_time)
-    
+        # Update pickup text animations
+        if hasattr(self, 'pickup_texts'):
+            for i, (text, x, y, timer) in enumerate(self.pickup_texts):
+                self.pickup_texts[i] = (text, x, y, timer - delta_time)
+            self.pickup_texts = [item for item in self.pickup_texts if item[3] > 0]
+            
     def _handle_spawns(self, delta_time):
         """Handle random spawning of game objects."""
         # Spawn orbs
@@ -202,16 +246,17 @@ class NeododgeGame(arcade.View):
         """Handle all collision detection in the game."""
         # Dash artifact collision
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
-            # Only add if not already collected
-            if not any(isinstance(a, DashArtifact) for a in self.player.artifacts):
-                if "Dash" not in self.player.artifacts:
-                    self.player.add_artifact("Dash")
-                    self.player.cooldown = 15  # Set dash cooldown to 15 seconds
-                print("✨ Dash unlocked!")
-            else:
-                print("⚠️ Dash already unlocked.")
-            self.player.can_dash = True
-            self.dash_artifact = None
+            self.player.has_dash_artifact = True  # Enable dash for player
+            self.player.can_dash = True  # Make dash available immediately
+            self.dash_artifact = None  # Remove the artifact from the game
+            print("✨ Dash unlocked!")
+            from scripts.utils.ui.cooldown_bar import CooldownBar
+            self.dash_bar = CooldownBar("Dash", 10, 10, 200, 10)
+            self.dash_bar.set_cooldown(10.0)
+            self.dash_bar.reset()
+
+            # Add pickup text
+            self.pickup_texts.append(["Dash Unlocked!", self.player.center_x, self.player.center_y + 30, 2.0])
         
         # Enemy and bullet collisions
         for enemy in self.enemies:
@@ -250,23 +295,25 @@ class NeododgeGame(arcade.View):
                 arcade.play_sound(self.coin_sound)
                 self.coins.remove(coin)
     
-    def _check_game_state(self, delta_time):
+    def _check_game_state(self):
         """Check for game state transitions."""
         # Currently just a placeholder for future game state checks
         pass
     
     def _start_next_wave(self):
         """Start the next wave of enemies."""
-        self.wave_manager.next_wave()
-        info = self.wave_manager.spawn_enemies(self.enemies, SCREEN_WIDTH, SCREEN_HEIGHT)
-        self.wave_manager.spawn_orbs(self.orbs, info["orbs"], SCREEN_WIDTH, SCREEN_HEIGHT)
-
+        # Start the next wave with the enemies sprite list
+        self.wave_manager.start_next_wave(self.enemy_manager, self.enemies)
+        
         # Set up the coin plan
         self.coins_to_spawn = random.randint(1, 5)
         self.coin_spawn_timer = random.uniform(3, 7)
         print(f"🪙 Will spawn {self.coins_to_spawn} coins over time")
-
-        if info["artifact"]:
+        
+        # Handle orbs and artifacts
+        info = self.wave_manager.spawn_orbs(self.orbs, 3, SCREEN_WIDTH, SCREEN_HEIGHT)
+        
+        if info and "artifact" in info and info["artifact"]:
             artifact = self.wave_manager.maybe_spawn_artifact(
                 self.player.artifacts,
                 self.dash_artifact,
@@ -275,11 +322,12 @@ class NeododgeGame(arcade.View):
             )
             if artifact:
                 self.dash_artifact = artifact
+        
         self.wave_duration = 20 + (self.wave_manager.wave - 1) * 5
         self.level_timer = 0
         self.in_wave = True
         print(f"🚀 Starting Wave {self.wave_manager.wave}")
-
+        
         # Check if it's time to go to the shop
         if self.wave_manager.wave % 5 == 0:
             from scripts.views.shop_view import ShopView
@@ -314,32 +362,29 @@ class NeododgeGame(arcade.View):
             artifact.update_appearance()
 
     def on_mouse_press(self, x, y, button, modifiers):
+        """Handle mouse button press."""
         if button == arcade.MOUSE_BUTTON_RIGHT:
+            # Set player target for movement (not dash)
+            self.player.set_target(x, y)
             self.right_mouse_down = True
-        self.player.set_target(x, y)
+            self.mouse_x = x
+            self.mouse_y = y
 
     def on_mouse_release(self, x, y, button, modifiers):
+        """Handle mouse button release."""
         if button == arcade.MOUSE_BUTTON_RIGHT:
             self.right_mouse_down = False
 
     def on_mouse_motion(self, x, y, dx, dy):
-        """
-        Track mouse movement
-
-        Args:
-            x: Mouse X position
-            y: Mouse Y position
-            dx: Change in X
-            dy: Change in Y
-        """
+        """Track mouse movement."""
         self.mouse_x = x
         self.mouse_y = y
 
     def on_key_press(self, symbol, modifiers):
-        """Handle key press events"""
+        """Handle key press."""
         if symbol == arcade.key.SPACE:
-            # Try to dash
-            self.player.try_dash()
+            # Dash toward mouse position
+            self.player.try_dash(self.mouse_x, self.mouse_y)
         elif symbol == arcade.key.S:
             self.player.set_target(self.player.center_x, self.player.center_y)
         elif symbol == arcade.key.T:

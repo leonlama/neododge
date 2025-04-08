@@ -23,7 +23,7 @@ ORB_SPAWN_INTERVAL = (4, 8)
 ARTIFACT_SPAWN_INTERVAL = (20, 30)
 
 # Player settings (new, won't break existing code)
-PLAYER_BASE_SPEED = 2
+PLAYER_BASE_SPEED = 2.5
 PLAYER_BASE_HEALTH = 3
 
 # Enemy settings (new, won't break existing code)
@@ -42,3 +42,6 @@ ARTIFACT_COOLDOWNS = {
     "BulletTime": 30,
     "CloneDash": 30
 }
+
+# Artifact settings
+DASH_COOLDOWN = 15

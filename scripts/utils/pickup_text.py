@@ -1,4 +1,3 @@
-
 import arcade
 
 def draw_pickup_texts(pickup_texts):
@@ -6,6 +5,22 @@ def draw_pickup_texts(pickup_texts):
         arcade.draw_text(text, x, y + 20, arcade.color.WHITE, 14, anchor_x="center")
 
 def update_pickup_texts(pickup_texts, delta_time):
-    for t in pickup_texts:
-        t[3] -= delta_time
-    return [t for t in pickup_texts if t[3] > 0]
+    """Update pickup text timers and positions."""
+    updated_texts = []
+
+    for text in pickup_texts:
+        # Convert tuple to list if needed
+        if isinstance(text, tuple):
+            text = list(text)
+
+        # Update timer
+        text[3] -= delta_time
+
+        # Move text upward
+        text[2] += 1
+
+        # Keep text if timer is still active
+        if text[3] > 0:
+            updated_texts.append(text)
+
+    return updated_texts

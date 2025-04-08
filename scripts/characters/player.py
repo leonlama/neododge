@@ -4,13 +4,11 @@ Player character implementation with movement, health, and artifact management.
 import arcade
 import math
 import random
-from scripts.utils.constants import PLAYER_BASE_SPEED, PLAYER_BASE_HEALTH
+from scripts.utils.constants import PLAYER_BASE_SPEED, PLAYER_BASE_HEALTH, SCREEN_WIDTH, SCREEN_HEIGHT, DASH_COOLDOWN
 from scripts.skins.skin_manager import skin_manager
 from scripts.utils.resource_helper import resource_path
 from scripts.mechanics.game_state import game_state
 from scripts.mechanics.event_manager import event_manager
-
-from scripts.utils.constants import PLAYER_BASE_SPEED
 
 # Load sound effects
 damage_sound = arcade.load_sound(resource_path("assets/audio/damage.wav"))
@@ -21,7 +19,7 @@ class Player(arcade.Sprite):
     Responds to user input and manages player state.
     """
 
-    def __init__(self, x, y):
+    def __init__(self, x=None, y=None):
         """
         Initialize the player character
 
@@ -29,14 +27,24 @@ class Player(arcade.Sprite):
             x: Initial x position
             y: Initial y position
         """
-        super().__init__()
+        # Get texture and scale from skin manager
+        texture = skin_manager.get_texture("player", "default")
+        scale = skin_manager.get_scale("player")
+
+        # Initialize with texture and scale
+        super().__init__(texture=texture, scale=scale)
+
+        # Set default position if not provided
+        if x is None:
+            x = SCREEN_WIDTH // 2
+        if y is None:
+            y = SCREEN_HEIGHT // 2
 
         # Core properties
         self.center_x = x
         self.center_y = y
-
-        # Load textures based on selected skin
-        self._load_textures()
+        self.target_x = x
+        self.target_y = y
 
         # Stats
         self.health = game_state.player_stats["max_health"]
@@ -56,9 +64,14 @@ class Player(arcade.Sprite):
         self.last_move_direction = (0, 1)  # Default facing up
 
         # Dash-related attributes
-        self.cooldown = 15.0      # Base cooldown in seconds
+        self.cooldown = DASH_COOLDOWN      # Base cooldown in seconds
         self.cooldown_factor = 1.0  # Cooldown multiplier (lower is better)
         self.dash_timer = self.cooldown  # Start with dash available
+        self.can_dash = False     # Start with dash disabled
+        self.has_dash_artifact = False  # Track if player has collected the dash artifact
+        self.dash_cooldown = 15  # Cooldown timer for dash
+        self.dash_distance = 150.0  # Distance to dash in pixels
+        self.is_dashing = False   # Flag to check if player is currently dashing
 
         # Effect-related attributes
         self.shield = False       # Shield status
@@ -74,10 +87,6 @@ class Player(arcade.Sprite):
         self.original_size = (self.width, self.height)  # Store original size
         self.hitbox_factor = 1.0  # Hitbox size multiplier
         self.big_hitbox_timer = 0  # Hitbox effect timer
-
-        # Target-related attributes
-        self.target_x = None      # Target X position
-        self.target_y = None      # Target Y position
 
         # Artifact-related attributes
         self.artifacts = {}       # Dictionary for cooldowns
@@ -181,13 +190,36 @@ class Player(arcade.Sprite):
         # Preload and cache textures
         self._load_textures()
 
-    def update(self, delta_time):
+    def update(self, delta_time: float = 1/60):
         """
         Update player state
 
         Args:
             delta_time: Time since last update in seconds
         """
+        # Update dash cooldown
+        if not self.can_dash:
+            # Apply cooldown reduction factor from orbs
+            self.dash_cooldown += delta_time * self.cooldown_factor
+            if self.dash_cooldown >= self.cooldown:  # Use cooldown from init (15 seconds)
+                self.can_dash = True
+                self.dash_cooldown = self.cooldown
+        
+        # Handle dashing
+        if self.is_dashing:
+            self.dash_timer += delta_time
+
+            if self.dash_timer >= self.dash_duration:
+                # End dash
+                self.is_dashing = False
+                self.center_x = self.dash_target_x
+                self.center_y = self.dash_target_y
+            else:
+                # Move towards target
+                progress = self.dash_timer / self.dash_duration
+                self.center_x = self.center_x + (self.dash_target_x - self.center_x) * progress * 2
+                self.center_y = self.center_y + (self.dash_target_y - self.center_y) * progress * 2
+                
         # Update dash cooldown (increment timer)
         if hasattr(self, 'dash_timer') and self.dash_timer < self.cooldown * self.cooldown_factor:
             self.dash_timer += delta_time
@@ -266,7 +298,7 @@ class Player(arcade.Sprite):
                     direction_y = -direction_y
 
                 # Calculate speed
-                base_speed = 1.6  # Reduced base speed for target movement
+                base_speed = PLAYER_BASE_SPEED 
                 if hasattr(self, 'speed_bonus'):
                     base_speed *= self.speed_bonus
 
@@ -297,40 +329,52 @@ class Player(arcade.Sprite):
         """Update player appearance after skin change"""
         self._load_textures()
 
-    def try_dash(self):
-        """Attempt to perform a dash if cooldown allows"""
-        # Calculate effective cooldown
-        effective_cooldown = self.cooldown * self.cooldown_factor
+    def try_dash(self, target_x=None, target_y=None):
+        """Try to perform a dash if available."""
+        # If no target is provided, use the current target or position
+        if target_x is None:
+            target_x = self.target_x if self.target_x is not None else self.center_x
+        if target_y is None:
+            target_y = self.target_y if self.target_y is not None else self.center_y
+            
+        if self.can_dash and self.has_dash_artifact:  # Only allow dash if player has the artifact
+            # Set dash cooldown
+            self.dash_cooldown = 0  # Set cooldown
+            self.can_dash = False  # Disable dash until cooldown is over
 
-        # Check if dash is available
-        if self.dash_timer >= effective_cooldown:
-            self.perform_dash()
-            self.dash_timer = 0  # Reset cooldown timer
-            return True
+            # Calculate dash direction
+            dx = target_x - self.center_x
+            dy = target_y - self.center_y
+            distance = math.sqrt(dx*dx + dy*dy)
+
+            if distance > 0:
+                # Normalize and apply dash
+                dx /= distance
+                dy /= distance
+                self.center_x += dx * self.dash_distance
+                self.center_y += dy * self.dash_distance
+
+                # Play dash sound
+                if hasattr(self, 'dash_sound') and self.dash_sound:
+                    arcade.play_sound(self.dash_sound, volume=0.2)
+                return True
+            return False
         else:
-            remaining = effective_cooldown - self.dash_timer
-            print(f"⏱️ Dash on cooldown! ({remaining:.1f}s remaining)")
+            # For backward compatibility with the old cooldown system
+            if not self.has_dash_artifact:
+                print("❌ Dash artifact not collected yet!")
+            elif hasattr(self, 'dash_timer') and hasattr(self, 'cooldown'):
+                effective_cooldown = self.cooldown * self.cooldown_factor
+                remaining = effective_cooldown - self.dash_timer
+                print(f"⏱️ Dash on cooldown! ({remaining:.1f}s remaining)")
+            else:
+                print("⏱️ Dash on cooldown!")
             return False
         
     def set_target(self, x, y):
-        """
-        Set a target position for the player to move towards
-
-        Args:
-            x: Target X position
-            y: Target Y position
-        """
+        """Set movement target for the player."""
         self.target_x = x
         self.target_y = y
-
-        # Calculate direction to target
-        dx = x - self.center_x
-        dy = y - self.center_y
-        distance = math.sqrt(dx**2 + dy**2)
-
-        if distance > 0:
-            # Normalize direction
-            self.last_move_direction = (dx / distance, dy / distance)
 
     def move_towards_mouse(self, view, delta_time):
         """
@@ -501,66 +545,91 @@ class Player(arcade.Sprite):
             x = x_start + (self.max_slots + i) * 40
             arcade.draw_texture_rectangle(x, y, 32, 32, self.heart_textures["gold"])
 
-    def draw_artifacts(self):
-        """Draw artifact slots and cooldowns"""
+    """def draw_artifacts(self):
         start_x = 30
         y = 50
-        font = "Kenney Pixel"
         font_size = 13
-        bar_width = 50
-        bar_height = 6
-        bar_offset = -10
+        font = "Kenney Pixel"
+        bar_width = 120
+        bar_height = 10
+        spacing = 30
 
-        for idx, artifact_name in enumerate(self.artifacts):
-            x = start_x + 70 * idx
-            text = artifact_name
-
-            # For dash, use the dash_timer
+        for artifact_name in self.artifacts:
+            # Get cooldown progress
             if artifact_name == "Dash":
-                effective_cooldown = self.cooldown * self.cooldown_factor
-                cooldown_ratio = min(1.0, self.dash_timer / effective_cooldown)
+                cooldown = self.cooldown
+                cooldown_timer = self.dash_timer
             else:
-                # For other artifacts, use the value from the artifacts dict
-                cooldown_value = self.artifacts[artifact_name]
-                max_cooldown = 15.0  # Default max cooldown
-                cooldown_ratio = max(0, min(1.0, 1.0 - (cooldown_value / max_cooldown)))
+                cooldown = getattr(self, "cooldown", 10)
+                cooldown_timer = self.artifacts[artifact_name]
 
-            # Determine if artifact is ready
-            ready = cooldown_ratio >= 1.0
-            text_color = arcade.color.YELLOW if ready else arcade.color.DARK_GRAY
+            percent = min(max(cooldown_timer / cooldown, 0), 1)
+            ready = percent >= 1.0
 
-            # Draw artifact name
+            # Text color
+            text_color = arcade.color.YELLOW if ready else arcade.color.GRAY
+            fill_color = arcade.color.YELLOW
+
+            # Draw name
             arcade.draw_text(
-                text,
-                x,
+                artifact_name,
+                start_x,
                 y,
                 text_color,
                 font_size=font_size,
                 font_name=font,
-                anchor_x="left"
             )
 
-            # Draw cooldown bar
-            fill_width = bar_width * cooldown_ratio
-
-            # Background bar
+            # Draw bar background (gray)
+            bar_center_x = start_x + bar_width // 2
+            bar_y = y - font_size - 4
             arcade.draw_rectangle_filled(
-                x + bar_width / 2,
-                y + bar_offset,
+                bar_center_x,
+                bar_y,
                 bar_width,
                 bar_height,
-                arcade.color.DARK_GRAY
+                arcade.color.GRAY,
             )
 
-            # Yellow fill indicating time until ready
-            arcade.draw_rectangle_filled(
-                x + fill_width / 2,
-                y + bar_offset,
-                fill_width,
-                bar_height,
-                arcade.color.YELLOW
-            )
-            
+            # Draw fill (yellow)
+            if percent > 0:
+                fill_width = bar_width * percent
+                arcade.draw_rectangle_filled(
+                    bar_center_x - (bar_width - fill_width) / 2,
+                    bar_y,
+                    fill_width,
+                    bar_height,
+                    fill_color,
+                )
+
+            y -= spacing"""
+
+    def draw_artifacts(self, x=30, y=50):
+        """Draw a cooldown bar for the Dash artifact."""
+        if not self.has_dash_artifact:
+            return
+
+        # Parameters
+        width = 160
+        height = 10
+        font_size = 12
+        label = "Dash"
+
+        # Cooldown fraction
+        fraction = min(self.dash_timer / (self.cooldown * self.cooldown_factor), 1.0)
+        bar_color = arcade.color.YELLOW if fraction >= 1 else arcade.color.GRAY
+
+        # Draw label
+        arcade.draw_text(label, x, y + 12, arcade.color.LIGHT_GRAY, font_size)
+
+        # Draw background bar
+        arcade.draw_lrtb_rectangle_filled(x, x + width, y + height, y, arcade.color.DARK_GRAY)
+
+        # Draw fill
+        fill_width = width * fraction
+        arcade.draw_lrtb_rectangle_filled(x, x + fill_width, y + height, y, bar_color)
+
+
     def draw_orb_status(self, screen_width=800, screen_height=600):
         """Draw active orb effects"""
         x = screen_width - 220
@@ -666,6 +735,7 @@ class Player(arcade.Sprite):
             # For dash, we track cooldown separately with dash_timer
             # Just add it to the artifacts dict for display purposes
             self.artifacts[artifact_name] = 0
+            self.has_dash_artifact = True  # Enable dash ability
 
             # Set the cooldown value if provided
             if cooldown is not None:

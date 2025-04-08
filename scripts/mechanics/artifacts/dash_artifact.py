@@ -9,7 +9,7 @@ class DashArtifact(BaseArtifact):
         self.center_y = y
         self.name = "Dash"
         self.cooldown = 10.0  # seconds
-        self.cooldown_timer = self.cooldown  # Start fully ready!
+        self.cooldown_timer = 10.0  # starts ready
     
     def update_texture(self):
         """Update the texture based on current skin settings"""
@@ -17,9 +17,8 @@ class DashArtifact(BaseArtifact):
         self.scale = skin_manager.get_artifact_scale()
 
     def update(self, delta_time: float = 0):
-        # Update cooldown timer
-        if self.cooldown_timer < self.cooldown:
-            self.cooldown_timer += delta_time
+        # Increase the cooldown timer
+        self.cooldown_timer += delta_time
         
         # Update texture each frame to ensure current skin is used
         self.update_texture()
