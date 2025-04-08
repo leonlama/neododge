@@ -8,7 +8,7 @@ def draw_score(score):
         HUD_MARGIN + 5, 
         SCREEN_HEIGHT - 80, 
         arcade.color.WHITE, 
-        16, 
+        18,  # Increased font size
         font_name="Kenney Pixel"
     )
 
@@ -19,7 +19,7 @@ def draw_pickup_texts(pickup_texts):
             x, 
             y + 20, 
             arcade.color.WHITE, 
-            14, 
+            16,  # Increased font size
             anchor_x="center", 
             font_name="Kenney Pixel"
         )
@@ -31,7 +31,7 @@ def draw_wave_timer(wave_timer, wave_duration):
         SCREEN_WIDTH // 2, 
         SCREEN_HEIGHT - 55, 
         arcade.color.LIGHT_GRAY, 
-        14, 
+        16,  # Increased font size
         anchor_x="center", 
         font_name="Kenney Pixel"
     )
@@ -43,7 +43,7 @@ def draw_wave_message(wave_message, alpha):
         SCREEN_WIDTH / 2,
         SCREEN_HEIGHT / 2,
         fade_color,
-        font_size=24,
+        font_size=26,  # Increased font size
         anchor_x="center",
         font_name="Kenney Pixel"
     )
@@ -55,7 +55,7 @@ def draw_wave_number(current_wave):
         SCREEN_WIDTH // 2,
         SCREEN_HEIGHT - 30,
         color,
-        font_size=18,
+        font_size=20,  # Increased font size
         anchor_x="center",
         font_name="Kenney Pixel"
     )
@@ -66,15 +66,15 @@ def draw_coin_count(player_coins):
         SCREEN_WIDTH - HUD_MARGIN - 10, 
         HUD_MARGIN + 10, 
         arcade.color.GOLD, 
-        16, 
+        18,  # Increased font size
         anchor_x="right", 
         font_name="Kenney Pixel"
     )
 
 def draw_player_health(player):
     """Draw the player's health hearts at top left"""
-    heart_scale = 0.035  # Adjust as needed
-    heart_spacing = 30
+    heart_scale = 0.04  # Slightly increased scale
+    heart_spacing = 32  # Slightly increased spacing
     start_x = HUD_MARGIN + 15
     start_y = SCREEN_HEIGHT - 30
 
@@ -140,7 +140,7 @@ def draw_active_orbs(player):
             effect_groups[base_type] = {"value": value, "time": time_left}
 
     # Display grouped effects
-    spacing = 25
+    spacing = 28  # Increased spacing
     start_x = SCREEN_WIDTH - HUD_MARGIN - 10
     start_y = SCREEN_HEIGHT - 30
 
@@ -168,7 +168,7 @@ def draw_active_orbs(player):
         arcade.draw_text(
             f"{display_text} ({int(data['time'])}s)",
             start_x, y,
-            color, 14, anchor_x="right", font_name="Kenney Pixel"
+            color, 16, anchor_x="right", font_name="Kenney Pixel"  # Increased font size
         )
 
 def draw_game_over(score):

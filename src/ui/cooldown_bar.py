@@ -1,13 +1,15 @@
-import arcade
+﻿import arcade
 from src.core.constants import DASH_COOLDOWN
 
 class CooldownBar:
     def __init__(self, label: str, x: float, y: float, width: float, height: float):
         self.label = label
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+        # Adjust position to be more in the frame (up and right)
+        self.x = x + 50  # Move right
+        self.y = y + 30  # Move up
+        # Make the bar smaller (half length and thickness)
+        self.width = width / 2
+        self.height = height / 2
         self.cooldown = DASH_COOLDOWN  # Default full cooldown (in seconds)
         self.timer = 0.0     # Time since last use
 
@@ -43,9 +45,10 @@ class CooldownBar:
         arcade.draw_text(
             self.label.upper(),  # Convert to uppercase
             self.x,
-            self.y + 12,  # Position above the bar (adjusted for smaller height)
+            self.y + 8,  # Position above the bar (adjusted for smaller height)
             text_color,
-            font_size=10  # Smaller font size
+            font_size=14,  # Match score font size
+            font_name="Kenney Pixel"
         )
 
         # Draw background bar
