@@ -306,16 +306,12 @@ class Player(arcade.Sprite):
         if self.dash_timer >= effective_cooldown:
             self.perform_dash()
             self.dash_timer = 0  # Reset cooldown timer
-
-            # Update artifacts dictionary if it exists
-            if hasattr(self, 'artifacts') and 'Dash' in self.artifacts:
-                self.artifacts['Dash'] = effective_cooldown  # Set to full cooldown
-
             return True
         else:
             remaining = effective_cooldown - self.dash_timer
             print(f"⏱️ Dash on cooldown! ({remaining:.1f}s remaining)")
             return False
+        
     def set_target(self, x, y):
         """
         Set a target position for the player to move towards
@@ -519,17 +515,14 @@ class Player(arcade.Sprite):
             x = start_x + 70 * idx
             text = artifact_name
 
-            # Get cooldown value and max cooldown
-            cooldown_value = self.artifacts[artifact_name]
-
-            # For dash, use the effective cooldown
-            if artifact_name == 'Dash':
-                max_cooldown = self.cooldown * self.cooldown_factor
-                # Invert the ratio for dash (0 = just used, max = ready)
-                cooldown_ratio = max(0, min(1.0, self.dash_timer / max_cooldown))
+            # For dash, use the dash_timer
+            if artifact_name == "Dash":
+                effective_cooldown = self.cooldown * self.cooldown_factor
+                cooldown_ratio = min(1.0, self.dash_timer / effective_cooldown)
             else:
+                # For other artifacts, use the value from the artifacts dict
+                cooldown_value = self.artifacts[artifact_name]
                 max_cooldown = 15.0  # Default max cooldown
-                # For other artifacts, higher value = more cooldown
                 cooldown_ratio = max(0, min(1.0, 1.0 - (cooldown_value / max_cooldown)))
 
             # Determine if artifact is ready
@@ -651,24 +644,43 @@ class Player(arcade.Sprite):
             return True
         return False
 
-    def add_artifact(self, artifact_name, cooldown, artifact_object=None):
+    def add_artifact(self, artifact_name, cooldown=None):
         """
-        Add or reset cooldown for an artifact
+        Add an artifact to the player's inventory
 
         Args:
-            artifact_name: Name of the artifact
-            cooldown: Cooldown time in seconds
-            artifact_object: Optional artifact object to store
+            artifact_name: Name of the artifact to add
+            cooldown: Optional cooldown value for the artifact
         """
-        self.artifacts[artifact_name] = cooldown
-        if artifact_object and artifact_object not in self.artifact_objects:
-            self.artifact_objects.append(artifact_object)
-        event_manager.publish("artifact_added", artifact_name)
+        # Normalize artifact name (capitalize first letter)
+        artifact_name = artifact_name.capitalize()
+
+        # Check if we already have this artifact
+        if artifact_name in self.artifacts:
+            # Don't reset the cooldown if it's already in progress
+            print(f"Already have {artifact_name}!")
+            return False
+
+        # Add the artifact with its cooldown set to 0 (ready to use)
+        if artifact_name == "Dash":
+            # For dash, we track cooldown separately with dash_timer
+            # Just add it to the artifacts dict for display purposes
+            self.artifacts[artifact_name] = 0
+
+            # Set the cooldown value if provided
+            if cooldown is not None:
+                self.cooldown = cooldown
+        else:
+            # For other artifacts, set initial cooldown to 0 (ready to use)
+            self.artifacts[artifact_name] = 0
+
+        print(f"✨ {artifact_name} unlocked!")
+        return True
 
     def _on_artifact_collected(self, artifact_data):
         """Handle artifact collection event"""
-        if isinstance(artifact_data, dict) and "name" in artifact_data and "cooldown" in artifact_data:
-            self.add_artifact(artifact_data["name"], artifact_data["cooldown"])
+        if isinstance(artifact_data, dict) and "name" in artifact_data:
+            self.add_artifact(artifact_data["name"])
 
     def _on_coin_collected(self, amount):
         """Handle coin collection event"""

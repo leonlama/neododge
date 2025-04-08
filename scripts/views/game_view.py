@@ -108,7 +108,15 @@ class NeododgeGame(arcade.View):
         draw_wave_number(self.wave_manager.wave)
 
     def on_update(self, delta_time):
+        # Update player
         self.player.update(delta_time)
+        
+        # Update dash cooldown in artifacts dict for HUD display
+        if "Dash" in self.player.artifacts:
+            # We don't need to update the value in the artifacts dict
+            # since we're using dash_timer directly in draw_artifacts
+            pass
+            
         self.orbs.update()
         self.coins.update()
         self.enemies.update()
@@ -171,7 +179,9 @@ class NeododgeGame(arcade.View):
         if self.dash_artifact and arcade.check_for_collision(self.player, self.dash_artifact):
             # Only add if not already collected
             if not any(isinstance(a, DashArtifact) for a in self.player.artifacts):
-                self.player.add_artifact("dash", 15)  # Add dash artifact with 5 second cooldown
+                if "Dash" not in self.player.artifacts:
+                    self.player.add_artifact("Dash")
+                    self.player.cooldown = 15  # Set dash cooldown to 15 seconds
                 print("✨ Dash unlocked!")
             else:
                 print("⚠️ Dash already unlocked.")
@@ -225,6 +235,7 @@ class NeododgeGame(arcade.View):
         # Handle mouse movement
         if self.right_mouse_down:
             self.player.move_towards_mouse(self, delta_time)
+            
     def apply_skin_toggle(self):
         """Toggle between available skin sets"""
         try:
