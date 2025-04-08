@@ -43,9 +43,9 @@ class CooldownBar:
         arcade.draw_text(
             self.label.upper(),  # Convert to uppercase
             self.x,
-            self.y + 12,  # Position above the bar
+            self.y + 12,  # Position above the bar (adjusted for smaller height)
             text_color,
-            font_size=12
+            font_size=10  # Smaller font size
         )
 
         # Draw background bar

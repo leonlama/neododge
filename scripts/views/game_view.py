@@ -145,9 +145,6 @@ class NeododgeGame(arcade.View):
 
         # Update cooldown bar from player's dash timer
         if self.dash_bar and self.player and self.player.has_dash_artifact:
-            # Debug print
-            print(f"Player dash_timer: {self.player.dash_timer}, cooldown: {self.player.cooldown}")
-
             # First, make sure the cooldown value matches the player's cooldown
             effective_cooldown = self.player.cooldown * self.player.cooldown_factor
             if self.dash_bar.cooldown != effective_cooldown:
@@ -155,10 +152,7 @@ class NeododgeGame(arcade.View):
 
             # Now set the timer directly - this is what makes the bar fill up
             self.dash_bar.timer = self.player.dash_timer
-
-            # Debug print
-            print(f"Bar timer: {self.dash_bar.timer}, cooldown: {self.dash_bar.cooldown}, progress: {self.dash_bar.timer/self.dash_bar.cooldown}")
-
+            
     def _update_timers(self, delta_time):
         """Update game timers."""
         # Wave timer
@@ -261,9 +255,9 @@ class NeododgeGame(arcade.View):
 
             # Create cooldown bar with better dimensions
             if not self.dash_bar:
-                from scripts.utils.ui.cooldown_bar import CooldownBar
+
                 # Use a more appropriate size and position
-                self.dash_bar = CooldownBar("Dash", 30, 50, 160, 10)  # Match player.draw_artifacts dimensions
+                self.dash_bar = CooldownBar("Dash", 30, 50, 80, 6)  # Match player.draw_artifacts dimensions
                 self.dash_bar.set_cooldown(DASH_COOLDOWN)  # Use the constant
                 # Initialize with player's current dash timer instead of resetting
                 self.dash_bar.timer = self.player.dash_timer
