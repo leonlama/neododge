@@ -8,9 +8,12 @@ from src.ui.cooldown_bar import CooldownBar
 from src.ui.hud import (
     draw_score, draw_wave_timer, draw_wave_number, 
     draw_coin_count, draw_player_health, draw_active_orbs,
-    draw_game_over
+    draw_game_over, draw_wave_message
 )
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WAVE_DURATION, COOLDOWN_BAR_WIDTH, COOLDOWN_BAR_HEIGHT, HUD_MARGIN
+from src.managers.wave_manager import WaveManager
+from src.managers.enemy_spawner import EnemySpawner
+from src.managers.orb_spawner import OrbSpawner
 
 class NeododgeGame(arcade.View):
     def __init__(self):
@@ -21,16 +24,18 @@ class NeododgeGame(arcade.View):
         self.enemies = arcade.SpriteList()
         self.pickups = arcade.SpriteList()
         self.bullets = arcade.SpriteList()
-        self.spawn_timer = 0
         self.difficulty = 1
         self.difficulty_timer = 0
         self.game_time = 0
-        self.wave = 1
-        self.wave_timer = WAVE_DURATION
         self.dash_cooldown_bar = None
         self.mouse_pressed = False
         self.mouse_target_x = 0
         self.mouse_target_y = 0
+        
+        # Managers
+        self.wave_manager = None
+        self.enemy_spawner = None
+        self.orb_spawner = None
 
     def setup(self):
         # Create the player
@@ -42,12 +47,9 @@ class NeododgeGame(arcade.View):
         self.enemies.clear()
         self.pickups.clear()
         self.bullets.clear()
-        self.spawn_timer = 0
         self.difficulty = 1
         self.difficulty_timer = 0
         self.game_time = 0
-        self.wave = 1
-        self.wave_timer = WAVE_DURATION
         self.mouse_pressed = False
 
         # Create the dash cooldown bar
@@ -58,6 +60,11 @@ class NeododgeGame(arcade.View):
             COOLDOWN_BAR_WIDTH, 
             COOLDOWN_BAR_HEIGHT
         )
+
+        # Initialize managers
+        self.wave_manager = WaveManager(self)
+        self.enemy_spawner = EnemySpawner(self)
+        self.orb_spawner = OrbSpawner(self)
 
         # Add some test orb effects (using lists instead of tuples)
         self.player.active_orbs = [
@@ -94,10 +101,14 @@ class NeododgeGame(arcade.View):
 
     def draw_hud(self):
         # Draw wave info at top center with green font
-        draw_wave_number(self.wave)
+        draw_wave_number(self.wave_manager.wave)
 
         # Draw wave timer below wave number
-        draw_wave_timer(self.wave_timer, WAVE_DURATION)
+        draw_wave_timer(self.wave_manager.level_timer, WAVE_DURATION)
+
+        # Draw wave message if active
+        if self.wave_manager.wave_message:
+            draw_wave_message(self.wave_manager.wave_message, self.wave_manager.wave_message_alpha)
 
         # Draw player health at top left
         draw_player_health(self.player)
@@ -121,13 +132,12 @@ class NeododgeGame(arcade.View):
         # Update game time
         self.game_time += delta_time
 
-        # Update wave timer
-        self.wave_timer -= delta_time
-        if self.wave_timer <= 0:
-            self.wave += 1
-            self.wave_timer = WAVE_DURATION
-            self.difficulty += 0.2
-            # TODO: Spawn new wave of enemies
+        # Update wave manager
+        self.wave_manager.update(delta_time)
+
+        # Update spawners
+        self.enemy_spawner.update(delta_time)
+        self.orb_spawner.update(delta_time)
 
         # Handle continuous mouse movement
         if self.mouse_pressed:

@@ -25,7 +25,7 @@ def draw_pickup_texts(pickup_texts):
         )
 
 def draw_wave_timer(wave_timer, wave_duration):
-    time_left = max(0, int(wave_timer))
+    time_left = max(0, int(wave_duration - wave_timer))
     arcade.draw_text(
         f"⏱ {time_left}s left", 
         SCREEN_WIDTH // 2, 
@@ -33,18 +33,6 @@ def draw_wave_timer(wave_timer, wave_duration):
         arcade.color.LIGHT_GRAY, 
         16,  # Increased font size
         anchor_x="center", 
-        font_name="Kenney Pixel"
-    )
-
-def draw_wave_message(wave_message, alpha):
-    fade_color = (*arcade.color.LIGHT_GREEN[:3], alpha)
-    arcade.draw_text(
-        wave_message,
-        SCREEN_WIDTH / 2,
-        SCREEN_HEIGHT / 2,
-        fade_color,
-        font_size=26,  # Increased font size
-        anchor_x="center",
         font_name="Kenney Pixel"
     )
 
@@ -200,3 +188,67 @@ def draw_game_over(score):
         anchor_x="center", 
         font_name="Kenney Pixel"
     )
+
+def draw_wave_message(message, animation_state):
+    """
+    Draw an animated wave message that fades in from right and fades out letter by letter
+
+    Args:
+        message: The message to display
+        animation_state: Dictionary containing animation parameters
+            - phase: "fade_in", "hold", or "letter_fade"
+            - timer: Current animation timer
+            - alpha: Overall message alpha (0-255)
+            - letter_positions: List of letter x positions
+            - letter_alphas: List of letter alpha values
+    """
+    if not message or not animation_state:
+        return
+
+    phase = animation_state.get("phase", "fade_in")
+    alpha = animation_state.get("alpha", 255)
+    letter_positions = animation_state.get("letter_positions", [])
+    letter_alphas = animation_state.get("letter_alphas", [])
+
+    # Base color (light green)
+    base_color = arcade.color.LIGHT_GREEN
+
+    if phase == "fade_in":
+        # Fade in the entire message from right
+        fade_color = (*base_color[:3], alpha)
+        arcade.draw_text(
+            message,
+            SCREEN_WIDTH / 2 + (255 - alpha) / 2,  # Slide in from right
+            SCREEN_HEIGHT / 2,
+            fade_color,
+            font_size=26,
+            anchor_x="center",
+            font_name="Kenney Pixel"
+        )
+    elif phase == "hold":
+        # Display the message at full opacity
+        arcade.draw_text(
+            message,
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT / 2,
+            base_color,
+            font_size=26,
+            anchor_x="center",
+            font_name="Kenney Pixel"
+        )
+    elif phase == "letter_fade":
+        # Draw each letter with its own position and alpha
+        for i, (letter, x_pos, alpha) in enumerate(zip(message, letter_positions, letter_alphas)):
+            if alpha <= 0:
+                continue
+
+            letter_color = (*base_color[:3], alpha)
+            arcade.draw_text(
+                letter,
+                x_pos,
+                SCREEN_HEIGHT / 2,
+                letter_color,
+                font_size=26,
+                anchor_x="center",
+                font_name="Kenney Pixel"
+            )
