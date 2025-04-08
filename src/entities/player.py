@@ -48,6 +48,7 @@ class Player(arcade.Sprite):
         self.gold_hearts = 0
         self.shield_active = False
         self.shield_timer = 0.0
+        self.shield = 0
 
         # Heart-related attributes
         self.heart_textures = None  # Will be set by game_view
@@ -81,6 +82,9 @@ class Player(arcade.Sprite):
 
         # Active orb effects
         self.active_orbs = []
+
+        # Initialize active effects dictionary
+        self.active_effects = {}
 
         # Status effects
         self.vision_blur = False
@@ -171,6 +175,9 @@ class Player(arcade.Sprite):
 
         # Update orb effects
         self.update_orb_effects(delta_time)
+        
+        # Update active effects
+        self.update_effects(delta_time)
 
     def update_dash(self, delta_time):
         """Update player dash state"""
@@ -207,6 +214,64 @@ class Player(arcade.Sprite):
                 self.remove_orb_effect(orb_type)
 
         self.active_orbs = updated_orbs
+
+    def apply_effect(self, effect_type, value, duration, is_percentage=True):
+        """Apply an effect to the player."""
+        # Generate a unique key for this effect
+        effect_key = f"{effect_type}_{len(self.active_effects)}"
+
+        # Determine color based on effect type
+        color = arcade.color.WHITE
+        if 'speed' in effect_type:
+            color = arcade.color.YELLOW
+        elif 'shield' in effect_type:
+            color = arcade.color.BLUE
+        elif 'mult' in effect_type:
+            color = arcade.color.GREEN
+        elif 'cooldown' in effect_type:
+            color = arcade.color.PURPLE
+
+        # Add the effect to active effects
+        self.active_effects[effect_key] = {
+            'value': value,
+            'duration': duration,
+            'color': color,
+            'is_percentage': is_percentage
+        }
+
+        # Apply the effect
+        if 'speed' in effect_type:
+            self.speed_multiplier += value / 100 if is_percentage else value
+        elif 'shield' in effect_type:
+            self.shield += value
+        # ... handle other effect types ...
+
+    def update_effects(self, delta_time):
+        """Update active effects and remove expired ones."""
+        effects_to_remove = []
+
+        for effect_key, effect_data in self.active_effects.items():
+            # Reduce duration
+            effect_data['duration'] -= delta_time
+
+            # Check if effect has expired
+            if effect_data['duration'] <= 0:
+                effects_to_remove.append(effect_key)
+
+        # Remove expired effects
+        for effect_key in effects_to_remove:
+            effect_data = self.active_effects[effect_key]
+            effect_type = effect_key.split('_')[0]
+
+            # Revert the effect
+            if 'speed' in effect_type:
+                self.speed_multiplier -= effect_data['value'] / 100 if effect_data['is_percentage'] else effect_data['value']
+            elif 'shield' in effect_type:
+                self.shield -= effect_data['value']
+            # ... handle other effect types ...
+
+            # Remove from active effects
+            del self.active_effects[effect_key]
 
     def set_target(self, x, y):
         """Set a target position for the player to move towards"""

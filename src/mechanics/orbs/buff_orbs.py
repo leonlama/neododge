@@ -18,17 +18,15 @@ class BuffOrb(Orb):
 
     def set_texture(self):
         """Set the texture based on orb type"""
-        # Get texture from skin manager based on orb type
+        # Get texture name based on orb type
         texture_name = self.get_texture_name()
-        self.texture = skin_manager.get_texture(texture_name)
+
+        # Try to get the texture from the skin manager
+        self.texture = skin_manager.get_texture("orbs", texture_name)
 
         # If no texture found, create a default one
         if not self.texture:
-            self.texture = arcade.make_circle_texture(
-                32, 
-                self.color, 
-                soft=True
-            )
+            self.texture = arcade.make_circle_texture(32, self.color)
 
     def get_texture_name(self):
         """Get the texture name based on orb type"""
@@ -40,111 +38,49 @@ class BuffOrb(Orb):
             return "cooldown"
         elif "shield" in self.orb_type:
             return "shield"
+        elif "hitbox" in self.orb_type:
+            return "hitbox"
         else:
             return "speed"  # Default
 
     def apply_effect(self, player):
-        """Apply the buff effect to the player"""
-        # Apply different effects based on orb type
+        """Apply the buff effect to the player."""
         if "speed" in self.orb_type:
             # Extract speed value from orb type (e.g., "speed_10" -> 10% speed increase)
             try:
                 speed_value = int(self.orb_type.split('_')[1])
-                speed_multiplier = 1 + (speed_value / 100)
-                player.base_speed *= speed_multiplier
-
-                # Add effect to player's active effects
-                player.parent_view.add_effect(
-                    "speed", 
-                    speed_multiplier, 
-                    self.effect_duration,
-                    arcade.color.GREEN,
-                    "speed"
-                )
-
-                # Add pickup message
-                if hasattr(player, 'pickup_texts'):
-                    player.pickup_texts.append([
-                        f"+{speed_value}% Speed", 
-                        player.center_x, 
-                        player.center_y, 
-                        2.0
-                    ])
+                player.apply_effect("speed", speed_value, self.effect_duration)
             except:
-                pass
-
+                # Default speed boost if parsing fails
+                player.apply_effect("speed", 20, self.effect_duration)
+                
+        elif "shield" in self.orb_type:
+            player.apply_effect("shield", 1, self.effect_duration, is_percentage=False)
+            
         elif "mult" in self.orb_type:
-            # Extract multiplier value from orb type (e.g., "mult_1_5" -> 1.5x score multiplier)
+            # Extract multiplier value from orb type
             try:
                 mult_parts = self.orb_type.split('_')
-                mult_value = float(f"{mult_parts[1]}.{mult_parts[2]}" if len(mult_parts) > 2 else mult_parts[1])
-                player.score_multiplier *= mult_value
-
-                # Add effect to player's active effects
-                player.parent_view.add_effect(
-                    "multiplier", 
-                    mult_value, 
-                    self.effect_duration,
-                    arcade.color.GOLD,
-                    "multiplier"
-                )
-
-                # Add pickup message
-                if hasattr(player, 'pickup_texts'):
-                    player.pickup_texts.append([
-                        f"{mult_value}x Score", 
-                        player.center_x, 
-                        player.center_y, 
-                        2.0
-                    ])
+                if len(mult_parts) > 2:
+                    # Handle format like "mult_1_5" (1.5x)
+                    mult_value = float(f"{mult_parts[1]}.{mult_parts[2]}")
+                    # Convert to percentage (e.g., 1.5 -> 50%)
+                    percentage = int((mult_value - 1) * 100)
+                else:
+                    # Direct percentage format
+                    percentage = int(mult_parts[1])
+                    
+                player.apply_effect("mult", percentage, self.effect_duration)
             except:
-                pass
-
+                # Default multiplier if parsing fails
+                player.apply_effect("mult", 50, self.effect_duration)
+                
         elif "cooldown" in self.orb_type:
-            # Reduce dash cooldown
-            player.dash_cooldown_max *= 0.75
-
-            # Add effect to player's active effects
-            player.parent_view.add_effect(
-                "cooldown", 
-                0.75, 
-                self.effect_duration,
-                arcade.color.BLUE,
-                "cooldown"
-            )
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "-25% Dash Cooldown", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
-        elif "shield" in self.orb_type:
-            # Add shield effect
-            player.invincible = True
-            player.invincible_timer = self.effect_duration
-
-            # Add effect to player's active effects
-            player.parent_view.add_effect(
-                "shield", 
-                1.0, 
-                self.effect_duration,
-                arcade.color.CYAN,
-                "shield"
-            )
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "Shield Activated", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
+            # 25% cooldown reduction
+            player.apply_effect("cooldown", 25, self.effect_duration)
+            
         # Play buff sound if available
-        if hasattr(player.parent_view, 'buff_sound'):
+        if hasattr(player.parent_view, 'play_buff_sound'):
+            player.parent_view.play_buff_sound()
+        elif hasattr(player.parent_view, 'buff_sound'):
             arcade.play_sound(player.parent_view.buff_sound)

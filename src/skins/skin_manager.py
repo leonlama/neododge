@@ -7,20 +7,12 @@ from src.core.resource_manager import load_texture
 
 class SkinManager:
     """Manages game skins and textures."""
-
     def __init__(self):
         """Initialize the skin manager."""
         self.current_skin = "default"
         self.skins_path = "assets/skins"
         self.textures = {}
-        self.scales = {
-            "player": 0.035,
-            "enemy": 1.0,
-            "bullet": 1.0,
-            "orb": 0.035,
-            "artifact": 0.035,
-            "coin": 1.0
-        }
+        self.scales = {}  # Add scales dictionary to store scaling factors
 
         # Create default textures for fallbacks
         self.create_default_textures()
@@ -193,25 +185,15 @@ class SkinManager:
         self.current_skin = skin_name
         self.textures = {}
 
-        # Set default scales based on skin
-        if skin_name == "mdma":
-            self.scales = {
-                "player": 0.035,
-                "enemy": 0.035,
-                "bullet": 0.5,
-                "orb": 0.035,
-                "artifact": 0.035,
-                "coin": 0.035
-            }
-        else:  # default skin or any other
-            self.scales = {
-                "player": 1.0,
-                "enemy": 1.0,
-                "bullet": 1.0,
-                "orb": 1.0,
-                "artifact": 1.0,
-                "coin": 1.0
-            }
+        # Set default scales
+        self.scales = {
+            "player": 1.0,
+            "enemy": 1.0,
+            "bullet": 1.0,
+            "orb": 1.0,
+            "artifact": 1.0,
+            "coin": 1.0
+        }
 
         # Try to load skin-specific scales from config file
         config_path = os.path.join(self.skins_path, skin_name, "config.json")
@@ -222,21 +204,26 @@ class SkinManager:
                     # Update scales if defined in config
                     if "scales" in config:
                         self.scales.update(config["scales"])
+                        print(f"🎨 Loaded scales from config: {self.scales}")
             except Exception as e:
                 print(f"⚠️ Error loading skin config: {e}")
 
         # Preload textures
         self.preload_textures()
+        print(f"🎨 Skin set to: {skin_name}")
 
     def preload_textures(self):
         """Preload all textures for the current skin."""
-        print("Preloading skin assets...")
+        print(f"🎨 Preloading skin assets for '{self.current_skin}'...")
 
         # Define categories and their items based on your actual asset structure
         categories = {
-            "player": ["default"],
-            "orbs": ["speed", "shield", "cooldown", "hitbox", "multiplier", "vision"],
-            "artifacts": ["dash", "clone", "bullet_time", "magnet", "slow"]
+            "player": ["default", "idle", "dash"],
+            "orbs": ["speed", "shield", "cooldown", "hitbox", "multiplier", "vision", "health"],
+            "artifacts": ["dash", "clone", "bullet_time", "magnet", "slow"],
+            "enemy": ["default"],
+            "bullet": ["default"],
+            "coin": ["default"]
         }
 
         # Preload all textures
@@ -246,33 +233,35 @@ class SkinManager:
 
         # Also preload UI textures from the main assets folder
         try:
-            # Fix: Create direct texture keys for UI elements
-            heart_red_path = "assets/ui/heart_red.png"
-            heart_gold_path = "assets/ui/heart_gold.png"
-            heart_gray_path = "assets/ui/heart_gray.png"
-
-            if os.path.exists(heart_red_path):
-                self.textures["ui/heart_red"] = arcade.load_texture(heart_red_path)
-            else:
-                self.textures["ui/heart_red"] = arcade.make_soft_circle_texture(30, arcade.color.RED)
-
-            if os.path.exists(heart_gold_path):
-                self.textures["ui/heart_gold"] = arcade.load_texture(heart_gold_path)
-            else:
-                self.textures["ui/heart_gold"] = arcade.make_soft_circle_texture(30, arcade.color.GOLD)
-
-            if os.path.exists(heart_gray_path):
-                self.textures["ui/heart_gray"] = arcade.load_texture(heart_gray_path)
-            else:
-                self.textures["ui/heart_gray"] = arcade.make_soft_circle_texture(30, arcade.color.GRAY)
+            # UI elements to preload
+            ui_elements = ["heart_red", "heart_gold", "heart_gray", "shield", "background", "logo"]
+            
+            for element in ui_elements:
+                element_path = f"assets/ui/{element}.png"
+                if os.path.exists(element_path):
+                    self.textures[f"ui/{element}"] = arcade.load_texture(element_path)
+                else:
+                    # Create fallback textures based on element type
+                    if "heart_red" in element:
+                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.RED)
+                    elif "heart_gold" in element:
+                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.GOLD)
+                    elif "heart_gray" in element:
+                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.GRAY)
+                    elif "shield" in element:
+                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.CYAN)
+                    else:
+                        # Default fallback to the default textures
+                        if f"ui/{element}" in self.default_textures:
+                            self.textures[f"ui/{element}"] = self.default_textures[f"ui/{element}"]
         except Exception as e:
             print(f"⚠️ Error loading UI textures: {e}")
-            # Create fallback textures
-            self.textures["ui/heart_red"] = arcade.make_soft_circle_texture(30, arcade.color.RED)
-            self.textures["ui/heart_gold"] = arcade.make_soft_circle_texture(30, arcade.color.GOLD)
-            self.textures["ui/heart_gray"] = arcade.make_soft_circle_texture(30, arcade.color.GRAY)
+            # Use default textures as fallback
+            for key, texture in self.default_textures.items():
+                if key.startswith("ui/") and key not in self.textures:
+                    self.textures[key] = texture
 
-        print("✅ All assets preloaded successfully")
+        print(f"✅ All assets preloaded successfully for skin '{self.current_skin}'")
 
     def get_texture(self, category, name=None, preload=False):
         """Get a texture by category and name.
@@ -322,26 +311,25 @@ class SkinManager:
             print(f"🎨 Creating fallback texture for {category}/{name}")
             texture = None
 
+            # Choose color based on category and name
             if category == "orbs":
                 # Different colors for different orb types
                 if "buff" in name or name in ["speed", "shield", "multiplier"]:
                     color = arcade.color.GREEN
                 else:
                     color = arcade.color.RED
-                texture = arcade.make_circle_texture(32, color, soft=True)
-
             elif category == "artifacts":
-                texture = arcade.make_circle_texture(32, arcade.color.PURPLE, soft=True)
-
+                color = arcade.color.PURPLE
             elif category == "speed" or category == "effects":
-                texture = arcade.make_circle_texture(32, arcade.color.YELLOW, soft=True)
-
+                color = arcade.color.YELLOW
             elif category == "player":
-                texture = arcade.make_circle_texture(32, arcade.color.BLUE, soft=True)
-
+                color = arcade.color.BLUE
             else:
                 # Default fallback
-                texture = arcade.make_circle_texture(32, arcade.color.WHITE, soft=True)
+                color = arcade.color.WHITE
+
+            # Create the texture - remove the 'soft' parameter
+            texture = arcade.make_circle_texture(32, color)
 
             if texture:
                 self.textures[texture_key] = texture
@@ -407,7 +395,17 @@ class SkinManager:
             float: The scale value.
         """
         return self.scales.get("player", 0.035)
+    
+    def get_orb_scale(self):
+        """Get the scale for orb sprites.
 
+        Returns:
+            float: The scale value.
+        """
+        scale = self.scales.get("orb", 1.0)
+        print(f"🔍 Getting orb scale: {scale} for skin: {self.current_skin}")
+        return scale
+        
     def get_enemy_scale(self):
         """Get the scale for enemy sprites.
 
@@ -415,38 +413,6 @@ class SkinManager:
             float: The scale value.
         """
         return self.scales.get("enemy", 1.0)
-
-    def get_bullet_scale(self):
-        """Get the scale for bullet sprites.
-
-        Returns:
-            float: The scale value.
-        """
-        return self.scales.get("bullet", 1.0)
-
-    def get_orb_scale(self):
-        """Get the scale for orb sprites.
-
-        Returns:
-            float: The scale value.
-        """
-        return self.scales.get("orb", 0.035)
-
-    def get_artifact_scale(self):
-        """Get the scale for artifact sprites.
-
-        Returns:
-            float: The scale value.
-        """
-        return self.scales.get("artifact", 0.035)
-
-    def get_coin_scale(self):
-        """Get the scale for coin sprites.
-
-        Returns:
-            float: The scale value.
-        """
-        return self.scales.get("coin", 1.0)
 
 # Global instance (singleton)
 skin_manager = SkinManager()

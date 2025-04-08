@@ -15,18 +15,18 @@ class DashArtifact(arcade.Sprite):
         """
         super().__init__()
 
-        # Set up texture
-        try:
-            self.texture = skin_manager.get_texture("artifacts", "dash")
-            self.scale = skin_manager.get_artifact_scale()
-        except:
-            # Fallback to a simple shape if texture can't be loaded
-            self.texture = arcade.make_soft_circle_texture(30, arcade.color.BLUE)
-            self.scale = 1.0
-
         # Set position
         self.center_x = position_x
         self.center_y = position_y
+
+        # Set texture
+        self.texture = skin_manager.get_texture("artifacts", "dash")
+        if not self.texture:
+            # Create a fallback texture without the 'soft' parameter
+            self.texture = arcade.make_circle_texture(32, arcade.color.PURPLE)
+
+        # Set scale
+        self.scale = skin_manager.get_artifact_scale()
 
         # Set up cooldown
         self.cooldown = 5.0

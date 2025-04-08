@@ -18,9 +18,26 @@ class Orb(arcade.Sprite):
         self.is_buff = is_buff
         self.alpha = 255
 
-        # Set up texture
-        self.set_texture()
-        
+        # Set up texture using skin manager
+        try:
+            # Use skin manager to get the texture
+            category = "orbs"
+            self.texture = skin_manager.get_texture(category, orb_type)
+
+            # Get the scale from skin manager
+            self.base_scale = skin_manager.get_orb_scale()
+            self.scale = self.base_scale
+        except Exception as e:
+            print(f"⚠️ Error loading orb texture '{orb_type}': {e}")
+            # Fallback to a simple shape
+            if is_buff:
+                color = arcade.color.GREEN
+            else:
+                color = arcade.color.RED
+            self.texture = arcade.make_circle_texture(30, color)
+            self.base_scale = 1.0
+            self.scale = 1.0
+
         # Movement properties
         self.velocity = (random.uniform(-1, 1), random.uniform(-1, 1))
         self.speed = random.uniform(20, 40)
@@ -81,20 +98,16 @@ class Orb(arcade.Sprite):
             self.pulse_direction = 1
 
         # Apply pulse scale
-        try:
-            base_scale = skin_manager.get_orb_scale()
-        except:
-            base_scale = self.scale
-        self.scale = base_scale * self.pulse_scale
+        self.scale = self.base_scale * self.pulse_scale
 
         # Fade out when nearing end of lifetime
         if self.lifetime < self.fade_time:
-            # Calculate alpha, ensuring it stays within valid range
+            # Ensure alpha is between 0 and 255
             alpha_value = max(0, min(255, int(255 * (self.lifetime / self.fade_time))))
             self.alpha = alpha_value
 
-        # Remove when lifetime is over
-        if self.lifetime <= 0:
+        # Remove when lifetime is over or very close to it
+        if self.lifetime <= 0.01:  # Small buffer to prevent negative values
             self.remove_from_sprite_lists()
 
     def apply_effect(self, player):

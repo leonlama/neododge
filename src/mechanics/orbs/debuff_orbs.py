@@ -18,17 +18,15 @@ class DebuffOrb(Orb):
 
     def set_texture(self):
         """Set the texture based on orb type"""
-        # Get texture from skin manager based on orb type
+        # Get texture name based on orb type
         texture_name = self.get_texture_name()
-        self.texture = skin_manager.get_texture(texture_name)
+
+        # Try to get the texture from the skin manager
+        self.texture = skin_manager.get_texture("orbs", texture_name)
 
         # If no texture found, create a default one
         if not self.texture:
-            self.texture = arcade.make_circle_texture(
-                32, 
-                self.color, 
-                soft=True
-            )
+            self.texture = arcade.make_circle_texture(32, self.color)
 
     def get_texture_name(self):
         """Get the texture name based on orb type"""
@@ -46,126 +44,39 @@ class DebuffOrb(Orb):
             return "speed"  # Default
 
     def apply_effect(self, player):
-        """Apply the debuff effect to the player"""
-        if self.orb_type == "slow":
-            # Check if player has speed attribute
-            if hasattr(player, 'speed'):
-                player.speed *= 0.7  # Reduce speed by 30%
-            elif hasattr(player, 'speed_multiplier'):
-                player.speed_multiplier *= 0.7
-            else:
-                # Fallback - create a speed multiplier attribute
-                player.speed_multiplier = 0.7
-
-            # Set a timer for the effect if possible
-            if hasattr(player, 'effect_timers'):
-                player.effect_timers['slow'] = 5.0  # 5 seconds
-            print("🐢 Player slowed!")
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "-30% Speed", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
-        elif self.orb_type == "mult_down_0_5":
-            if hasattr(player, 'score_multiplier'):
-                player.score_multiplier = 0.5
-            elif hasattr(player, 'multiplier'):
-                player.multiplier = 0.5
-
-            # Set a timer for the effect if possible
-            if hasattr(player, 'effect_timers'):
-                player.effect_timers['multiplier'] = 30.0  # 30 seconds
-            print("💥 Score x0.5 for 30s")
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "0.5x Score", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
-        elif self.orb_type == "mult_down_0_25":
-            if hasattr(player, 'score_multiplier'):
-                player.score_multiplier = 0.25
-            elif hasattr(player, 'multiplier'):
-                player.multiplier = 0.25
-
-            # Set a timer for the effect if possible
-            if hasattr(player, 'effect_timers'):
-                player.effect_timers['multiplier'] = 30.0  # 30 seconds
-            print("💥 Score x0.25 for 30s")
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "0.25x Score", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
-        elif self.orb_type == "cooldown_up":
-            if hasattr(player, 'cooldown_multiplier'):
-                player.cooldown_multiplier = 1.5  # Increase cooldown by 50%
-            elif hasattr(player, 'dash_cooldown'):
-                player.dash_cooldown *= 1.5
-            print("🔁 Cooldown increased!")
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "+50% Dash Cooldown", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
-        elif self.orb_type == "vision_blur":
-            player.vision_blur = True
-
-            # Set a timer for the effect if possible
-            if hasattr(player, 'effect_timers'):
-                player.effect_timers['vision_blur'] = 10.0  # 10 seconds
-            print("👁️ Vision blurred!")
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "Vision Blurred", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
-        elif self.orb_type == "big_hitbox":
-            # Store original scale if not already stored
-            if not hasattr(player, 'original_scale'):
-                player.original_scale = player.scale
-
-            # Increase hitbox size
-            player.scale = player.original_scale * 1.5
-
-            # Set a timer for the effect if possible
-            if hasattr(player, 'effect_timers'):
-                player.effect_timers['big_hitbox'] = 15.0  # 15 seconds
-            print("⬛ Hitbox increased!")
-
-            # Add pickup message
-            if hasattr(player, 'pickup_texts'):
-                player.pickup_texts.append([
-                    "+50% Hitbox Size", 
-                    player.center_x, 
-                    player.center_y, 
-                    2.0
-                ])
-
+        """Apply the debuff effect to the player."""
+        if "slow" in self.orb_type:
+            player.apply_effect("speed", -30, self.effect_duration)  # 30% speed reduction
+            
+        elif "mult_down" in self.orb_type:
+            # Extract multiplier value from orb type
+            try:
+                mult_parts = self.orb_type.split('_')
+                if len(mult_parts) > 2:
+                    # Handle format like "mult_down_0_5" (0.5x)
+                    mult_value = float(f"{mult_parts[2]}.{mult_parts[3]}")
+                    # Convert to percentage (e.g., 0.5 -> -50%)
+                    percentage = int((mult_value - 1) * 100)
+                else:
+                    # Direct percentage format
+                    percentage = -int(mult_parts[2])
+                    
+                player.apply_effect("mult", percentage, self.effect_duration)
+            except:
+                # Default multiplier if parsing fails
+                player.apply_effect("mult", -50, self.effect_duration)
+                
+        elif "cooldown_up" in self.orb_type:
+            player.apply_effect("cooldown", -50, self.effect_duration)  # 50% cooldown increase
+            
+        elif "vision_blur" in self.orb_type:
+            player.apply_effect("vision", 1, self.effect_duration, is_percentage=False)
+            
+        elif "big_hitbox" in self.orb_type:
+            player.apply_effect("hitbox", 50, self.effect_duration)  # 50% larger hitbox
+            
         # Play debuff sound if available
-        if hasattr(player.parent_view, 'debuff_sound'):
+        if hasattr(player.parent_view, 'play_debuff_sound'):
+            player.parent_view.play_debuff_sound()
+        elif hasattr(player.parent_view, 'debuff_sound'):
             arcade.play_sound(player.parent_view.debuff_sound)

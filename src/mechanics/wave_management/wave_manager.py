@@ -1,4 +1,5 @@
 import random
+import math
 
 class WaveManager:
     def __init__(self, player):
@@ -6,6 +7,9 @@ class WaveManager:
         self.player = player
         self.wave_history = []
         self.last_message_drawn = ""
+        self.base_enemies = 5
+        self.enemies_per_wave = 2
+        self.max_enemies = 20
 
     def generate_wave(self, wave_number):
         """Generate a wave configuration based on wave number"""
@@ -100,60 +104,95 @@ class WaveManager:
             "message": "Rest Wave - Catch your breath!"
         }
 
-    def spawn_enemies(self, enemy_list, screen_width, screen_height):
-        """Spawn enemies for the current wave"""
-        from src.entities.enemies.enemy import Enemy
-        from src.entities.enemies.chaser import ChaserEnemy
-        #from src.entities.enemies.shooter_enemy import ShooterEnemy
-        
-        # Generate wave configuration
-        wave_config = self.generate_wave(self.wave)
-        
-        # Clear existing enemies
-        enemy_list.clear()
-        
-        # Spawn new enemies based on wave configuration
-        for enemy_type in wave_config["enemy_types"]:
-            # Random position away from player
-            while True:
+    def spawn_enemies(self, enemy_list, screen_width, screen_height, player=None):
+        """Spawn enemies for the current wave.
+
+        Args:
+            enemy_list: The sprite list to add enemies to
+            screen_width: Width of the screen
+            screen_height: Height of the screen
+            player: The player sprite (for targeting)
+        """
+        # Determine number of enemies based on wave
+        num_enemies = self.base_enemies + (self.wave - 1) * self.enemies_per_wave
+
+        # Cap at maximum enemies
+        num_enemies = min(num_enemies, self.max_enemies)
+
+        print(f"🔴 Spawning {num_enemies} enemies for wave {self.wave}")
+
+        # Determine enemy type distribution based on wave
+        # Early waves: mostly wanderers
+        # Mid waves: mix of wanderers and chasers
+        # Later waves: mix of all types with more shooters
+        wanderer_percent = max(20, 100 - self.wave * 10)
+        chaser_percent = min(60, self.wave * 8)
+        shooter_percent = min(40, max(0, self.wave * 5 - 10))
+
+        # Normalize percentages
+        total = wanderer_percent + chaser_percent + shooter_percent
+        wanderer_percent = wanderer_percent / total * 100
+        chaser_percent = chaser_percent / total * 100
+        shooter_percent = shooter_percent / total * 100
+
+        # Spawn enemies
+        for i in range(num_enemies):
+            # Determine enemy type
+            roll = random.uniform(0, 100)
+
+            if roll < wanderer_percent:
+                enemy_type = "wanderer"
+            elif roll < wanderer_percent + chaser_percent:
+                enemy_type = "chaser"
+            else:
+                enemy_type = "shooter"
+
+            # Determine spawn position (away from player)
+            min_distance = 200  # Minimum distance from player
+
+            if player:
+                # Keep trying until we find a position far enough from player
+                for _ in range(10):  # Try up to 10 times
+                    x = random.randint(50, screen_width - 50)
+                    y = random.randint(50, screen_height - 50)
+
+                    # Check distance from player
+                    dx = x - player.center_x
+                    dy = y - player.center_y
+                    distance = math.sqrt(dx*dx + dy*dy)
+
+                    if distance >= min_distance:
+                        break
+            else:
+                # No player, just pick random position
                 x = random.randint(50, screen_width - 50)
                 y = random.randint(50, screen_height - 50)
-                
-                # Make sure enemy doesn't spawn too close to player
-                dx = x - self.player.center_x
-                dy = y - self.player.center_y
-                distance = (dx**2 + dy**2)**0.5
-                
-                if distance > 200:  # Minimum distance from player
-                    break
-            
-            # Create appropriate enemy type
-            if enemy_type == "basic":
-                enemy = Enemy(x, y)
-            elif enemy_type == "chaser":
-                enemy = ChaserEnemy(x, y)
-            elif enemy_type == "shooter":
-                #enemy = ShooterEnemy(x, y)
-                enemy = Enemy(x, y)  # Fallback to basic enemy
-            elif enemy_type == "boss":
-                # For now, use shooter as boss
-                #enemy = ShooterEnemy(x, y)
-                enemy = Enemy(x, y)  # Fallback to basic enemy
-                enemy.scale = 1.5
-                enemy.health = 5
-            else:
-                enemy = Enemy(x, y)
-            
-            # Apply wave parameters
-            enemy.speed *= wave_config["enemy_params"]["speed"]
-            if hasattr(enemy, "health"):
-                enemy.health *= wave_config["enemy_params"]["health"]
-            
-            # Add to enemy list
-            enemy_list.append(enemy)
-        
-        # Return the wave message
-        return wave_config["message"]
+
+            # Create the appropriate enemy type
+            try:
+                if enemy_type == "wanderer":
+                    from src.entities.enemies.wanderer import WandererEnemy
+                    enemy = WandererEnemy(x, y, player)
+                elif enemy_type == "chaser":
+                    from src.entities.enemies.chaser import ChaserEnemy
+                    enemy = ChaserEnemy(x, y, player)
+                elif enemy_type == "shooter":
+                    from src.entities.enemies.shooter import ShooterEnemy
+                    enemy = ShooterEnemy(x, y, player)
+                else:
+                    # Fallback to base enemy
+                    from src.entities.enemies.enemy import Enemy
+                    enemy = Enemy(x, y, player, enemy_type)
+
+                # Add to enemy list
+                enemy_list.append(enemy)
+
+            except ImportError as e:
+                print(f"Error importing enemy class: {e}")
+                # Fallback to base enemy
+                from src.entities.enemies.enemy import Enemy
+                enemy = Enemy(x, y, player)
+                enemy_list.append(enemy)
 
     def update_analytics(self, delta_time):
         """Placeholder for analytics update"""
@@ -189,17 +228,17 @@ class WaveManager:
         y = random.randint(100, screen_height - 100)
 
         if artifact_type == "dash":
-            from src.mechanics.artifacts.dash_artifact import DashArtifact
+            from src.mechanics.artifacts.dash import DashArtifact
             return DashArtifact(x, y)
-        elif artifact_type == "magnet_pulse":
-            from src.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact
-            return MagnetPulseArtifact(x, y)
-        elif artifact_type == "slow_field":
-            from src.mechanics.artifacts.slow_field import SlowFieldArtifact
-            return SlowFieldArtifact(x, y)
-        elif artifact_type == "bullet_time":
-            from src.mechanics.artifacts.bullet_time import BulletTimeArtifact
-            return BulletTimeArtifact(x, y)
-        elif artifact_type == "clone_dash":
-            from src.mechanics.artifacts.clone_dash import CloneDashArtifact
-            return CloneDashArtifact(x, y)
+        # elif artifact_type == "magnet_pulse":
+        #     from src.mechanics.artifacts.magnet_pulse import MagnetPulseArtifact
+        #     return MagnetPulseArtifact(x, y)
+        # elif artifact_type == "slow_field":
+        #     from src.mechanics.artifacts.slow_field import SlowFieldArtifact
+        #     return SlowFieldArtifact(x, y)
+        # elif artifact_type == "bullet_time":
+        #     from src.mechanics.artifacts.bullet_time import BulletTimeArtifact
+        #     return BulletTimeArtifact(x, y)
+        # elif artifact_type == "clone_dash":
+        #     from src.mechanics.artifacts.clone_dash import CloneDashArtifact
+        #     return CloneDashArtifact(x, y)

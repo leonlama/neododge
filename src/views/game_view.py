@@ -5,7 +5,7 @@ from src.entities.player import Player
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
 
-from src.mechanics.artifacts.dash_artifact import DashArtifact
+from src.mechanics.artifacts.dash import DashArtifact
 from src.mechanics.coins.coin import Coin
 from src.mechanics.orbs.buff_orbs import BuffOrb
 from src.mechanics.orbs.debuff_orbs import DebuffOrb
@@ -13,6 +13,7 @@ from src.views.shop_view import ShopView
 
 from src.mechanics.wave_management.wave_manager import WaveManager
 from src.controllers.game_controller import GameController
+from src.ui.improved_hud import draw_hud, draw_wave_message, draw_pickup_texts
 
 class NeododgeGame(arcade.View):
     """Main game view."""
@@ -139,9 +140,26 @@ class NeododgeGame(arcade.View):
         arcade.set_background_color(arcade.color.BLACK)
 
     def on_draw(self):
-        """Draw the game view."""
+        """Render the screen."""
+        # Clear the screen
         self.clear()
 
+        # Draw the game elements
+        self.draw_game_elements()
+
+        # Draw the HUD
+        self.draw_improved_hud()
+
+        # Draw any pickup texts
+        if hasattr(self, 'pickup_texts'):
+            draw_pickup_texts(self.pickup_texts)
+
+        # Draw wave message if active
+        if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
+            draw_wave_message(self.wave_message, int(255 * self.wave_message_alpha))
+
+    def draw_game_elements(self):
+        """Draw all game elements."""
         # Activate the game camera
         self.camera.use()
 
@@ -166,104 +184,35 @@ class NeododgeGame(arcade.View):
         # Activate the GUI camera for HUD elements
         self.gui_camera.use()
 
-        # Draw HUD
-        self.draw_hud()
+    def draw_improved_hud(self):
+        """Draw the improved heads-up display."""
+        # Get wave info
+        wave_number = 1
+        wave_timer = None
+        wave_duration = 30
 
-        # Draw wave message
-        if self.wave_message and self.wave_message_alpha > 0:
-            alpha = int(255 * self.wave_message_alpha)
-            color = (255, 255, 255, alpha)
-            arcade.draw_text(
-                self.wave_message,
-                self.window.width // 2,
-                self.window.height // 2,
-                color,
-                font_size=30,
-                anchor_x="center",
-                anchor_y="center"
-            )
+        if hasattr(self, 'wave_manager'):
+            wave_number = getattr(self.wave_manager, 'wave', 1)
 
-        # Draw pickup texts
-        if hasattr(self, 'pickup_texts'):
-            for text, x, y, _ in self.pickup_texts:
-                arcade.draw_text(text, x, y, arcade.color.WHITE, 14, anchor_x="center")
-    
-    def draw_hud(self):
-        """Draw the heads-up display."""
-        # Draw player health
-        self.player.draw_hearts()
+            # Get wave timer if in a wave
+            if hasattr(self, 'in_wave') and self.in_wave:
+                wave_timer = getattr(self, 'level_timer', 0)
+                wave_duration = getattr(self, 'wave_duration', 30)
 
-        # Draw score
-        arcade.draw_text(
-            f"Score: {int(self.score)}",
-            20,
-            self.window.height - 30,
-            arcade.color.WHITE,
-            font_size=18
+        # Get active effects
+        active_effects = {}
+        if hasattr(self.player, 'active_effects'):
+            active_effects = self.player.active_effects
+
+        # Draw the HUD
+        draw_hud(
+            self.player,
+            self.score,
+            wave_number,
+            wave_timer,
+            wave_duration,
+            active_effects
         )
-
-        # Draw coins
-        arcade.draw_text(
-            f"Coins: {self.player.coins}",
-            20,
-            self.window.height - 60,
-            arcade.color.GOLD,
-            font_size=18
-        )
-
-        # Draw wave information
-        try:
-            wave_info = self.game_controller.get_wave_info()
-            wave_text = f"Wave: {wave_info['wave']}"
-
-            # Add status if in rest period
-            if wave_info['status'] == 'rest':
-                wave_text += f" (Rest: {int(3 - wave_info['wave_timer'])}s)"
-
-            arcade.draw_text(
-                wave_text,
-                self.window.width - 150,
-                self.window.height - 30,
-                arcade.color.WHITE,
-                font_size=18,
-                anchor_x="right"
-            )
-
-            # Draw enemy count
-            arcade.draw_text(
-                f"Enemies: {wave_info['enemy_count']}",
-                self.window.width - 150,
-                self.window.height - 60,
-                arcade.color.WHITE,
-                font_size=18,
-                anchor_x="right"
-            )
-        except Exception as e:
-            # Fallback if wave_info is not available
-            arcade.draw_text(
-                f"Wave: {getattr(self.wave_manager, 'wave', 1)}",
-                self.window.width - 150,
-                self.window.height - 30,
-                arcade.color.WHITE,
-                font_size=18,
-                anchor_x="right"
-            )
-
-            # Draw enemy count
-            arcade.draw_text(
-                f"Enemies: {len(self.enemies)}",
-                self.window.width - 150,
-                self.window.height - 60,
-                arcade.color.WHITE,
-                font_size=18,
-                anchor_x="right"
-            )
-
-        # Draw player status effects
-        self.player.draw_orb_status()
-
-        # Draw artifacts
-        self.player.draw_artifacts()
 
     def add_pickup_text(self, text, x, y):
         """Add floating text for item pickups."""
@@ -272,6 +221,35 @@ class NeododgeGame(arcade.View):
 
         # Add text with position and lifetime
         self.pickup_texts.append([text, x, y, 1.0])  # 1.0 second lifetime
+
+    def update_enemies(self, delta_time):
+        """Update all enemies and their bullets."""
+        # Update each enemy
+        for enemy in self.enemies:
+            enemy.update(delta_time)
+
+            # Handle enemy bullets
+            if hasattr(enemy, 'bullets'):
+                # Check for bullet-player collisions
+                bullet_hit_list = arcade.check_for_collision_with_list(self.player, enemy.bullets)
+                for bullet in bullet_hit_list:
+                    # Remove the bullet
+                    bullet.remove_from_sprite_lists()
+
+                    # Player takes damage
+                    if hasattr(self.player, 'take_damage'):
+                        self.player.take_damage()
+
+                        # Play damage sound
+                        self.play_damage_sound()
+
+                # Update bullets
+                enemy.bullets.update()  # Remove delta_time parameter
+
+                # If bullets need delta_time, update each bullet individually
+                for bullet in enemy.bullets:
+                    if hasattr(bullet, 'update_with_time'):
+                        bullet.update_with_time(delta_time)
 
     def on_update(self, delta_time):
         """Update game state."""
@@ -300,17 +278,7 @@ class NeododgeGame(arcade.View):
             return
 
         # Update enemies
-        for enemy in self.enemies:
-            enemy.update(delta_time)
-
-            # Update enemy bullets without passing delta_time
-            if hasattr(enemy, 'bullets'):
-                enemy.bullets.update()  # Remove delta_time parameter
-
-                # If bullets need delta_time, update each bullet individually
-                for bullet in enemy.bullets:
-                    if hasattr(bullet, 'update_with_time'):
-                        bullet.update_with_time(delta_time)
+        self.update_enemies(delta_time)
 
         # Update orbs
         self.orbs.update()
