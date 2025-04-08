@@ -103,65 +103,131 @@ class NeododgeGame(arcade.View):
         arcade.set_background_color(arcade.color.BLACK)
 
     def on_draw(self):
-        """Render the screen."""
+        """Draw the game view."""
         self.clear()
 
         # Activate the game camera
         self.camera.use()
 
         # Draw game elements
-        self.player.draw()
         self.enemies.draw()
         self.orbs.draw()
         self.coins.draw()
         self.artifacts.draw()
+
+        # Draw player
+        self.player.draw()
 
         # Draw enemy bullets
         for enemy in self.enemies:
             if hasattr(enemy, 'bullets'):
                 enemy.bullets.draw()
 
+        # Draw dash artifact if it exists
+        if self.dash_artifact:
+            self.dash_artifact.draw()
+
         # Activate the GUI camera for HUD elements
         self.gui_camera.use()
 
-        # Draw HUD elements
+        # Draw HUD
         self.draw_hud()
 
-        # Draw wave information
-        wave_info = self.game_controller.get_wave_info()
-        if wave_info["message_alpha"] > 0:
+        # Draw wave message
+        if self.wave_message and self.wave_message_alpha > 0:
+            alpha = int(255 * self.wave_message_alpha)
+            color = (255, 255, 255, alpha)
             arcade.draw_text(
-                wave_info["message"],
+                self.wave_message,
                 self.window.width // 2,
-                self.window.height - 100,
-                arcade.color.WHITE,
-                24,
+                self.window.height // 2,
+                color,
+                font_size=30,
                 anchor_x="center",
                 anchor_y="center"
             )
-
-        # Draw wave timer
-        arcade.draw_text(
-            f"Time: {wave_info['time_remaining']:.1f}",
-            self.window.width - 100,
-            self.window.height - 30,
-            arcade.color.WHITE,
-            18
-        )
-
-        # Draw wave number
-        arcade.draw_text(
-            f"Wave: {wave_info['wave_number']}",
-            20,
-            self.window.height - 30,
-            arcade.color.WHITE,
-            18
-        )
 
         # Draw pickup texts
         if hasattr(self, 'pickup_texts'):
             for text, x, y, _ in self.pickup_texts:
                 arcade.draw_text(text, x, y, arcade.color.WHITE, 14, anchor_x="center")
+    
+    def draw_hud(self):
+        """Draw the heads-up display."""
+        # Draw player health
+        self.player.draw_hearts()
+
+        # Draw score
+        arcade.draw_text(
+            f"Score: {int(self.score)}",
+            20,
+            self.window.height - 30,
+            arcade.color.WHITE,
+            font_size=18
+        )
+
+        # Draw coins
+        arcade.draw_text(
+            f"Coins: {self.player.coins}",
+            20,
+            self.window.height - 60,
+            arcade.color.GOLD,
+            font_size=18
+        )
+
+        # Draw wave information
+        try:
+            wave_info = self.game_controller.get_wave_info()
+            wave_text = f"Wave: {wave_info['wave']}"
+
+            # Add status if in rest period
+            if wave_info['status'] == 'rest':
+                wave_text += f" (Rest: {int(3 - wave_info['wave_timer'])}s)"
+
+            arcade.draw_text(
+                wave_text,
+                self.window.width - 150,
+                self.window.height - 30,
+                arcade.color.WHITE,
+                font_size=18,
+                anchor_x="right"
+            )
+
+            # Draw enemy count
+            arcade.draw_text(
+                f"Enemies: {wave_info['enemy_count']}",
+                self.window.width - 150,
+                self.window.height - 60,
+                arcade.color.WHITE,
+                font_size=18,
+                anchor_x="right"
+            )
+        except Exception as e:
+            # Fallback if wave_info is not available
+            arcade.draw_text(
+                f"Wave: {getattr(self.wave_manager, 'wave', 1)}",
+                self.window.width - 150,
+                self.window.height - 30,
+                arcade.color.WHITE,
+                font_size=18,
+                anchor_x="right"
+            )
+
+            # Draw enemy count
+            arcade.draw_text(
+                f"Enemies: {len(self.enemies)}",
+                self.window.width - 150,
+                self.window.height - 60,
+                arcade.color.WHITE,
+                font_size=18,
+                anchor_x="right"
+            )
+
+        # Draw player status effects
+        self.player.draw_orb_status()
+
+        # Draw artifacts
+        self.player.draw_artifacts()
 
     def add_pickup_text(self, text, x, y):
         """Add floating text for item pickups."""

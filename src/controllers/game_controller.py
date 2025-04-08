@@ -59,6 +59,38 @@ class GameController:
         """Reset the shop shown flag."""
         self.shop_shown = False
 
+    def get_wave_info(self):
+        """Get information about the current wave.
+
+        Returns:
+            dict: A dictionary containing wave information.
+        """
+        wave_manager = getattr(self.game_view, 'wave_manager', None)
+        current_wave = getattr(wave_manager, 'wave', 1) if wave_manager else 1
+
+        # Calculate time remaining in wave
+        time_elapsed = getattr(self.game_view, 'level_timer', 0)
+        wave_duration = getattr(self.game_view, 'wave_duration', 20.0)
+        time_remaining = max(0, wave_duration - (time_elapsed % wave_duration))
+
+        # Get enemy count
+        enemy_count = len(self.enemies) if self.enemies is not None else 0
+
+        # Determine wave status
+        if self.rest_period:
+            status = "rest"
+        else:
+            status = "active"
+
+        return {
+            "wave": current_wave,
+            "status": status,
+            "time_remaining": time_remaining,
+            "enemy_count": enemy_count,
+            "rest_period": self.rest_period,
+            "wave_timer": self.wave_timer
+        }
+
     def update(self, delta_time):
         """Update game state.
 
@@ -138,12 +170,20 @@ class GameController:
                     try:
                         from src.mechanics.coins.coin import Coin
                         coin = Coin(x, y)
-                        if self.coins is not None:
-                            self.coins.append(coin)
+
+                        # Only add to game_view.coins to avoid duplication
                         if hasattr(self.game_view, 'coins'):
                             self.game_view.coins.append(coin)
                     except ImportError:
-                        print("Error: Could not import Coin class")
+                        try:
+                            from src.mechanics.coins.coin import Coin
+                            coin = Coin(x, y)
+
+                            # Only add to game_view.coins to avoid duplication
+                            if hasattr(self.game_view, 'coins'):
+                                self.game_view.coins.append(coin)
+                        except ImportError:
+                            print("Error: Could not import Coin class")
 
                     # Update spawn counter and timer
                     self.game_view.coins_to_spawn -= 1
@@ -162,14 +202,21 @@ class GameController:
                 try:
                     orb_type = random.choice(["buff", "debuff"])
                     if orb_type == "buff":
-                        from src.mechanics.orbs.buff_orbs import BuffOrb
-                        orb = BuffOrb(x, y)
+                        try:
+                            from src.mechanics.orbs.buff_orbs import BuffOrb
+                            orb = BuffOrb(x, y)
+                        except ImportError:
+                            from src.mechanics.orbs.buff_orbs import BuffOrb
+                            orb = BuffOrb(x, y)
                     else:
-                        from src.mechanics.orbs.debuff_orbs import DebuffOrb
-                        orb = DebuffOrb(x, y)
+                        try:
+                            from src.mechanics.orbs.debuff_orbs import DebuffOrb
+                            orb = DebuffOrb(x, y)
+                        except ImportError:
+                            from src.mechanics.orbs.debuff_orbs import DebuffOrb
+                            orb = DebuffOrb(x, y)
 
-                    if self.orbs is not None:
-                        self.orbs.append(orb)
+                    # Only add to game_view.orbs to avoid duplication
                     if hasattr(self.game_view, 'orbs'):
                         self.game_view.orbs.append(orb)
                 except ImportError:
@@ -189,13 +236,16 @@ class GameController:
 
                 # Create the artifact
                 try:
-                    from src.mechanics.artifacts.dash import DashArtifact
-                    dash_artifact = DashArtifact(x, y)
+                    try:
+                        from src.mechanics.artifacts.dash import DashArtifact
+                        dash_artifact = DashArtifact(x, y)
+                    except ImportError:
+                        from src.mechanics.artifacts.dash import DashArtifact
+                        dash_artifact = DashArtifact(x, y)
+
                     self.game_view.dash_artifact = dash_artifact
 
                     # Add to artifacts list if it exists
-                    if self.artifacts is not None:
-                        self.artifacts.append(dash_artifact)
                     if hasattr(self.game_view, 'artifacts'):
                         self.game_view.artifacts.append(dash_artifact)
                 except ImportError:
