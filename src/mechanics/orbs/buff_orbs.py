@@ -1,101 +1,150 @@
 import arcade
+import random
+from src.mechanics.orbs.orb import Orb
+from src.skins.skin_manager import skin_manager
 
-from src.core.constants import MDMA_SKIN_PATH
-from scripts.skins.skin_manager import skin_manager
-from scripts.utils.orb_utils import get_texture_name_from_orb_type
+class BuffOrb(Orb):
+    """Orb that provides positive effects to the player"""
 
-class BuffOrb(arcade.Sprite):
-    def __init__(self, x, y, orb_type="gray"):
-        super().__init__()
-        self.orb_type = orb_type
-        self.age = 0
+    def __init__(self, x, y, orb_type="speed_10"):
+        super().__init__(x, y, orb_type)
 
-        self.color_map = {
-            "gray": arcade.color.GRAY,
-            "red": arcade.color.RED,
-            "gold": arcade.color.GOLD,
-            "speed_10": arcade.color.BLUE_BELL,
-            "speed_20": arcade.color.BLUE_VIOLET,
-            "speed_35": arcade.color.DARK_BLUE,
-            "mult_1_5": arcade.color.ORANGE,
-            "mult_2": arcade.color.YELLOW_ORANGE,
-            "cooldown": arcade.color.PURPLE,
-            "shield": arcade.color.LIGHT_GREEN,
-        }
+        # Set properties specific to buff orbs
+        self.color = arcade.color.GREEN
+        self.effect_duration = random.uniform(5, 10)  # Duration of the buff effect
 
-        self.update_texture()
-        
-        self.center_x = x
-        self.center_y = y
+        # Set texture based on orb type
+        self.set_texture()
 
-        self.message = {
-            "gray": "🩶 Bonus heart slot gained!",
-            "red": "❤️ Heart restored!",
-            "gold": "💛 Golden heart gained!",
-            "speed_10": "⚡ Speed +10%",
-            "speed_20": "⚡ Speed +20%",
-            "speed_35": "⚡ Speed +35%",
-            "mult_1_5": "💥 Score x1.5 for 30s",
-            "mult_2": "💥 Score x2 for 30s",
-            "cooldown": "🔁 Cooldown reduced!",
-            "shield": "🛡️ Shield acquired!",
-        }.get(self.orb_type, "✨ Buff Orb")
+    def set_texture(self):
+        """Set the texture based on orb type"""
+        # Get texture from skin manager based on orb type
+        texture_name = self.get_texture_name()
+        self.texture = skin_manager.get_texture(texture_name)
 
-    def update_texture(self):
-        """Update the texture based on current skin settings"""
-        # Get the texture name for this orb type
-        texture_name = get_texture_name_from_orb_type(self.orb_type)
-        
-        # Get the texture from skin manager with force_reload=True to ensure we get the latest texture
-        self.texture = skin_manager.get_texture("orbs", texture_name, force_reload=True)
-        
-        # If texture is None, use the fallback
-        if self.texture is None:
-            # Create a fallback texture
-            color = self.color_map.get(self.orb_type, arcade.color.WHITE)
-            self.texture = arcade.make_soft_circle_texture(18, color, outer_alpha=255)
-            
-        # Apply the appropriate scale
-        self.scale = skin_manager.get_orb_scale()
+        # If no texture found, create a default one
+        if not self.texture:
+            self.texture = arcade.make_circle_texture(
+                32, 
+                self.color, 
+                soft=True
+            )
 
-    def update(self, delta_time: float = 1 / 60):
-        self.age += delta_time
-        # Update texture each frame to ensure current skin is used
-        self.update_texture()
+    def get_texture_name(self):
+        """Get the texture name based on orb type"""
+        if "speed" in self.orb_type:
+            return "speed"
+        elif "mult" in self.orb_type:
+            return "multiplier"
+        elif "cooldown" in self.orb_type:
+            return "cooldown"
+        elif "shield" in self.orb_type:
+            return "shield"
+        else:
+            return "speed"  # Default
 
     def apply_effect(self, player):
-        """Apply the orb effect to the player"""
-        if self.orb_type == "gray":
-            player.max_slots += 1  # Use max_slots instead of max_hearts
-            self.message = "Max Health Increased!"
-        elif self.orb_type == "red":
-            if player.current_hearts < player.max_slots:
-                player.current_hearts += 1
-                self.message = "Health Restored!"
-            else:
-                self.message = "Health Already Full!"
-        elif self.orb_type == "gold":
-            player.gold_hearts += 1  # Use gold_hearts instead of golden_hearts
-            self.message = "Gold Heart Added!"
-        elif self.orb_type == "speed_10":
-            player.apply_orb_effect("speed", 10.0, 1.1)
-            self.message = "Speed +10%!"
-        elif self.orb_type == "speed_20":
-            player.apply_orb_effect("speed", 10.0, 1.2)
-            self.message = "Speed +20%!"
-        elif self.orb_type == "speed_35":
-            player.apply_orb_effect("speed", 10.0, 1.35)
-            self.message = "Speed +35%!"
-        elif self.orb_type == "mult_1_5":
-            player.apply_orb_effect("multiplier", 30.0, 1.5)
-            self.message = "Score x1.5!"
-        elif self.orb_type == "mult_2":
-            player.apply_orb_effect("multiplier", 30.0, 2.0)
-            self.message = "Score x2!"
-        elif self.orb_type == "cooldown":
-            player.apply_orb_effect("cooldown", 10.0, 0.8)
-            self.message = "Cooldown -20%!"
-        elif self.orb_type == "shield":
-            player.shield = True
-            self.message = "Shield Active!"
+        """Apply the buff effect to the player"""
+        # Apply different effects based on orb type
+        if "speed" in self.orb_type:
+            # Extract speed value from orb type (e.g., "speed_10" -> 10% speed increase)
+            try:
+                speed_value = int(self.orb_type.split('_')[1])
+                speed_multiplier = 1 + (speed_value / 100)
+                player.base_speed *= speed_multiplier
 
+                # Add effect to player's active effects
+                player.parent_view.add_effect(
+                    "speed", 
+                    speed_multiplier, 
+                    self.effect_duration,
+                    arcade.color.GREEN,
+                    "speed"
+                )
+
+                # Add pickup message
+                if hasattr(player, 'pickup_texts'):
+                    player.pickup_texts.append([
+                        f"+{speed_value}% Speed", 
+                        player.center_x, 
+                        player.center_y, 
+                        2.0
+                    ])
+            except:
+                pass
+
+        elif "mult" in self.orb_type:
+            # Extract multiplier value from orb type (e.g., "mult_1_5" -> 1.5x score multiplier)
+            try:
+                mult_parts = self.orb_type.split('_')
+                mult_value = float(f"{mult_parts[1]}.{mult_parts[2]}" if len(mult_parts) > 2 else mult_parts[1])
+                player.score_multiplier *= mult_value
+
+                # Add effect to player's active effects
+                player.parent_view.add_effect(
+                    "multiplier", 
+                    mult_value, 
+                    self.effect_duration,
+                    arcade.color.GOLD,
+                    "multiplier"
+                )
+
+                # Add pickup message
+                if hasattr(player, 'pickup_texts'):
+                    player.pickup_texts.append([
+                        f"{mult_value}x Score", 
+                        player.center_x, 
+                        player.center_y, 
+                        2.0
+                    ])
+            except:
+                pass
+
+        elif "cooldown" in self.orb_type:
+            # Reduce dash cooldown
+            player.dash_cooldown_max *= 0.75
+
+            # Add effect to player's active effects
+            player.parent_view.add_effect(
+                "cooldown", 
+                0.75, 
+                self.effect_duration,
+                arcade.color.BLUE,
+                "cooldown"
+            )
+
+            # Add pickup message
+            if hasattr(player, 'pickup_texts'):
+                player.pickup_texts.append([
+                    "-25% Dash Cooldown", 
+                    player.center_x, 
+                    player.center_y, 
+                    2.0
+                ])
+
+        elif "shield" in self.orb_type:
+            # Add shield effect
+            player.invincible = True
+            player.invincible_timer = self.effect_duration
+
+            # Add effect to player's active effects
+            player.parent_view.add_effect(
+                "shield", 
+                1.0, 
+                self.effect_duration,
+                arcade.color.CYAN,
+                "shield"
+            )
+
+            # Add pickup message
+            if hasattr(player, 'pickup_texts'):
+                player.pickup_texts.append([
+                    "Shield Activated", 
+                    player.center_x, 
+                    player.center_y, 
+                    2.0
+                ])
+
+        # Play buff sound if available
+        if hasattr(player.parent_view, 'buff_sound'):
+            arcade.play_sound(player.parent_view.buff_sound)

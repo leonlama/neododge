@@ -1,67 +1,77 @@
 import arcade
 import math
 import random
-from scripts.mechanics.bullet import Bullet
+from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
-ENEMY_SPEED = 100
-WANDER_SPEED = 80
+class BaseEnemy(arcade.Sprite):
+    """Base class for all enemies in the game"""
 
-class Enemy(arcade.Sprite):
-    def __init__(self, start_x, start_y, target_sprite, behavior="chaser"):
+    def __init__(self, x=None, y=None):
         super().__init__()
-        self.texture = arcade.make_soft_square_texture(32, arcade.color.RED, outer_alpha=255)
-        self.center_x = start_x
-        self.center_y = start_y
-        self.target_sprite = target_sprite
-        self.behavior = behavior
-        self.bullets = arcade.SpriteList()
 
-        # Wanderer direction
-        self.direction = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
+        # Set position (random if not specified)
+        self.center_x = x if x is not None else random.randint(50, SCREEN_WIDTH - 50)
+        self.center_y = y if y is not None else random.randint(50, SCREEN_HEIGHT - 50)
 
-        # Shooter cooldown
-        self.bullet_timer = 0
+        # Set properties
+        self.speed = random.uniform(50, 100)
+        self.health = 1
+        self.damage = 1
+        self.score_value = 10
+        self.scale = 0.5
 
-    def update(self, delta_time: float = 1 / 60):
-        if self.behavior == "chaser":
-            self._follow_player(delta_time)
-        elif self.behavior == "wander":
-            self._wander(delta_time)
-        elif self.behavior == "shooter":
-            self._shoot(delta_time)
+        # Set default texture
+        self.texture = arcade.make_soft_square_texture(
+            32, 
+            arcade.color.RED, 
+            outer_alpha=255
+        )
 
-        self.bullets.update()
+    def update(self, delta_time=1/60):
+        """Update the enemy's position and behavior"""
+        # Basic movement - to be overridden by subclasses
+        pass
 
-    def _follow_player(self, dt):
-        dx = self.target_sprite.center_x - self.center_x
-        dy = self.target_sprite.center_y - self.center_y
-        distance = math.hypot(dx, dy)
+    def take_damage(self, amount=1):
+        """Take damage and check if enemy is defeated"""
+        self.health -= amount
 
-        if distance > 1:
-            self.center_x += (dx / distance) * ENEMY_SPEED * dt
-            self.center_y += (dy / distance) * ENEMY_SPEED * dt
+        # Flash effect
+        self.alpha = 128
 
-    def _wander(self, dt):
-        dx, dy = self.direction
-        self.center_x += dx * WANDER_SPEED * dt
-        self.center_y += dy * WANDER_SPEED * dt
+        # Check if enemy is defeated
+        if self.health <= 0:
+            self.on_death()
+            return True
 
-        # Bounce off screen edges
-        if self.left < 0 or self.right > 800:
-            self.direction = (-self.direction[0], self.direction[1])
-        if self.bottom < 0 or self.top > 600:
-            self.direction = (self.direction[0], -self.direction[1])
+        return False
 
-    def _shoot(self, dt):
-        self.bullet_timer += dt
-        if self.bullet_timer >= 1.5:
-            self.bullet_timer = 0
-            bullet = Bullet(
-                self.center_x,
-                self.center_y,
-                self.target_sprite.center_x,
-                self.target_sprite.center_y,
-                source=self
-            )
-            self.bullets.append(bullet)
+    def on_death(self):
+        """Handle enemy death"""
+        # Remove from sprite list
+        self.remove_from_sprite_lists()
 
+        # Spawn particles or other effects
+        self.spawn_death_particles()
+
+    def spawn_death_particles(self):
+        """Spawn particles when enemy dies"""
+        # This would be implemented in the game view
+        pass
+
+    def move_towards_player(self, player, delta_time):
+        """Move towards the player"""
+        if player:
+            # Calculate direction vector
+            dx = player.center_x - self.center_x
+            dy = player.center_y - self.center_y
+            distance = math.sqrt(dx*dx + dy*dy)
+
+            if distance > 0:
+                # Normalize direction vector
+                dx = dx / distance
+                dy = dy / distance
+
+                # Move towards player
+                self.center_x += dx * self.speed * delta_time
+                self.center_y += dy * self.speed * delta_time

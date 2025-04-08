@@ -1,50 +1,50 @@
 import random
-from scripts.mechanics.orbs.buff_orbs import BuffOrb
-from scripts.mechanics.orbs.debuff_orbs import DebuffOrb
-from scripts.skins.skin_manager import skin_manager
-from scripts.utils.orb_utils import get_texture_name_from_orb_type
+from src.mechanics.orbs.buff_orbs import BuffOrb
+from src.mechanics.orbs.debuff_orbs import DebuffOrb
 
-# Define all orb types you want to use
-BUFF_ORBS = [
-    "gray",
-    "red",
-    "gold",
-    "speed_10",
-    "speed_20",
-    "speed_35",
-    "mult_1_5",
-    "mult_2",
-    "cooldown",
-    "shield",
-]
+# Define orb pools with weights
+BUFF_ORBS = {
+    "speed_10": 30,
+    "speed_20": 20,
+    "speed_35": 10,
+    "mult_1_5": 25,
+    "mult_2": 15,
+    "cooldown": 20,
+    "shield": 10
+}
 
-DEBUFF_ORBS = [
-    "slow",
-    "mult_down_0_5",
-    "mult_down_0_25",
-    "cooldown_up",
-    #"inverse_move",
-    "vision",
-    "hitbox"
-]
+DEBUFF_ORBS = {
+    "slow": 30,
+    "mult_down_0_5": 25,
+    "mult_down_0_25": 15,
+    "cooldown_up": 20,
+    "vision_blur": 15,
+    "big_hitbox": 15
+}
 
+def get_random_orb(x, y, buff_chance=0.7):
+    """Generate a random orb at the given position
 
-def get_random_orb(x: float, y: float):
-    """Return a randomly selected BuffOrb (80%) or DebuffOrb (20%)."""
-    is_debuff = random.choices([False, True], weights=[4, 1])[0]
+    Args:
+        x (float): X position
+        y (float): Y position
+        buff_chance (float): Probability of generating a buff orb (0.0 to 1.0)
 
-    if is_debuff:
-        orb_type = random.choice(DEBUFF_ORBS)
-        orb = DebuffOrb(x, y, orb_type=orb_type)
-        texture_name = get_texture_name_from_orb_type(orb_type)
-        orb.texture = skin_manager.get_texture("orbs", texture_name)
-        orb.scale = skin_manager.get_orb_scale()
-        return orb
+    Returns:
+        Orb: A randomly generated orb
+    """
+    # Determine if it's a buff or debuff orb
+    is_buff = random.random() < buff_chance
+
+    if is_buff:
+        # Select a random buff orb type based on weights
+        orb_types = list(BUFF_ORBS.keys())
+        weights = list(BUFF_ORBS.values())
+        orb_type = random.choices(orb_types, weights=weights, k=1)[0]
+        return BuffOrb(x, y, orb_type)
     else:
-        orb_type = random.choice(BUFF_ORBS)
-        orb = BuffOrb(x, y, orb_type=orb_type)
-        texture_name = get_texture_name_from_orb_type(orb_type)
-        orb.texture = skin_manager.get_texture("orbs", texture_name)
-        orb.scale = skin_manager.get_orb_scale()
-        return orb
-
+        # Select a random debuff orb type based on weights
+        orb_types = list(DEBUFF_ORBS.keys())
+        weights = list(DEBUFF_ORBS.values())
+        orb_type = random.choices(orb_types, weights=weights, k=1)[0]
+        return DebuffOrb(x, y, orb_type)
