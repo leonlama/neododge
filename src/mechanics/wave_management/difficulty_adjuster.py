@@ -58,7 +58,7 @@ class DifficultyAdjuster:
         if player_profile["playstyle"]["aggression"] > 0.7:
             # Aggressive players get more defensive enemies
             return {"chaser": 0.2, "wander": 0.2, "shooter": 0.4, "bomber": 0.2}
-        elif player_profile["playstyle"]["caution"] > 0.7:
+        elif player_profile["playstyle"].get("caution", 0) > 0.7:
             # Cautious players get more aggressive enemies
             return {"chaser": 0.4, "wander": 0.2, "shooter": 0.2, "bomber": 0.2}
         else:
@@ -82,7 +82,9 @@ class DifficultyAdjuster:
         distribution = {"buff": 0.8, "debuff": 0.2}
 
         # If player has preferences, slightly adjust toward less-used types
-        if player_profile["preferences"]["orb_preference"]:
+        preferences = player_profile.get("preferences", {})
+        orb_pref = preferences.get("orb_preference", None)
+        if orb_pref:
             # Implementation would adjust based on usage patterns
             pass
 
