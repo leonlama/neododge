@@ -17,19 +17,21 @@ class BuffOrb(Orb):
         self.set_texture()
 
     def set_texture(self):
-        """Set the texture based on orb type"""
-        # Get texture name based on orb type
+        """Set the texture based on orb type."""
+        # Get texture from skin manager based on orb type
         texture_name = self.get_texture_name()
-
-        # Try to get the texture from the skin manager
         self.texture = skin_manager.get_texture("orbs", texture_name)
 
         # If no texture found, create a default one
         if not self.texture:
-            self.texture = arcade.make_circle_texture(32, self.color)
+            self.texture = arcade.make_circle_texture(
+                32, 
+                self.color, 
+                soft=True
+            )
 
     def get_texture_name(self):
-        """Get the texture name based on orb type"""
+        """Get the texture name based on orb type."""
         if "speed" in self.orb_type:
             return "speed"
         elif "mult" in self.orb_type:
@@ -38,8 +40,6 @@ class BuffOrb(Orb):
             return "cooldown"
         elif "shield" in self.orb_type:
             return "shield"
-        elif "hitbox" in self.orb_type:
-            return "hitbox"
         else:
             return "speed"  # Default
 

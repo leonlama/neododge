@@ -1,5 +1,6 @@
 import random
 import math
+from src.audio.sound_manager import sound_manager
 
 class WaveManager:
     def __init__(self, player):
@@ -10,6 +11,82 @@ class WaveManager:
         self.base_enemies = 5
         self.enemies_per_wave = 2
         self.max_enemies = 20
+        
+        # Wave timing
+        self.in_wave = False
+        self.wave_timer = 0
+        self.wave_duration = 30.0  # 30 seconds per wave
+        self.between_wave_timer = 0
+        self.between_wave_duration = 5.0  # 5 seconds between waves
+        
+        # Callbacks
+        self.on_wave_start = None
+        self.on_wave_end = None
+        self.on_spawn_enemies = None
+        self.on_clear_enemies = None
+
+    def update(self, delta_time):
+        """Update the wave manager.
+
+        Args:
+            delta_time: Time since last update
+        """
+        # Update wave timer
+        if self.in_wave:
+            self.wave_timer += delta_time
+
+            # Check if wave is over
+            if self.wave_timer >= self.wave_duration:
+                print(f"🌊 Wave {self.wave} completed!")
+                self.end_wave()
+
+                # Start next wave after delay
+                self.between_wave_timer = 0
+                self.in_wave = False
+
+                # Increment wave counter
+                self.wave += 1
+
+                # Trigger wave end event
+                if self.on_wave_end:
+                    self.on_wave_end(self.wave - 1)  # Pass the completed wave number
+        else:
+            # Between waves
+            self.between_wave_timer += delta_time
+
+            # Check if it's time for next wave
+            if self.between_wave_timer >= self.between_wave_duration:
+                self.start_wave()
+
+                # Trigger wave start event
+                if self.on_wave_start:
+                    self.on_wave_start(self.wave)
+
+    def start_wave(self):
+        """Start a new wave."""
+        print(f"🌊 Starting wave {self.wave}")
+        self.in_wave = True
+        self.wave_timer = 0
+
+        # Spawn enemies for this wave
+        if self.on_spawn_enemies:
+            self.on_spawn_enemies()
+
+        # Play wave start sound
+        try:
+            sound_manager.play_sound("ui", "wave")
+        except:
+            pass
+
+    def end_wave(self):
+        """End the current wave."""
+        # Clear any remaining enemies
+        if self.on_clear_enemies:
+            self.on_clear_enemies()
+
+        # Reset wave timer
+        self.wave_timer = 0
+        self.in_wave = False
 
     def generate_wave(self, wave_number):
         """Generate a wave configuration based on wave number"""

@@ -65,6 +65,8 @@ class Player(arcade.Sprite):
         # Player invincibility
         self.invincible = False
         self.invincible_timer = 0
+        self.invincibility_timer = 0
+        self.blink_timer = 0
 
         # Player currency
         self.coins = 0
@@ -157,11 +159,22 @@ class Player(arcade.Sprite):
             if self.speed_buff_timer <= 0:
                 self.speed_multiplier = 1.0
 
-        # Update invincibility timer
+        # Update invincibility
         if self.invincible:
-            self.invincible_timer -= delta_time
-            if self.invincible_timer <= 0:
+            self.invincibility_timer += delta_time
+
+            # Blink effect - toggle visibility every 0.1 seconds
+            self.blink_timer = getattr(self, 'blink_timer', 0) + delta_time
+            if self.blink_timer >= 0.1:  # Toggle every 0.1 seconds
+                self.blink_timer = 0
+                self.alpha = 255 if self.alpha == 128 else 128
+
+            # Check if invincibility is over
+            if self.invincibility_timer >= self.invincible_timer:
                 self.invincible = False
+                self.invincibility_timer = 0
+                self.alpha = 255  # Restore full opacity
+                self.damage_sound_cooldown = False  # Reset sound cooldown
 
         # Update shield timer
         if self.shield_active:
@@ -311,26 +324,42 @@ class Player(arcade.Sprite):
         """Try to perform a dash if conditions are met"""
         self.perform_dash()
 
-    def take_damage(self, amount=1.0):
-        """Handle player taking damage."""
-        if self.invincible or self.shield_active:
-            # If player has a shield, remove it instead of taking damage
-            if self.shield_active:
-                self.shield_active = False
-                self.shield_timer = 0
-                return True  # Damage was blocked
-            return False  # No damage taken
+    def take_damage(self, amount=1):
+        """Take damage and handle invincibility."""
+        # Don't take damage if invincible or shield is active
+        if self.invincible:
+            return False
+            
+        # If player has a shield, remove it instead of taking damage
+        if self.shield_active:
+            self.shield_active = False
+            self.shield_timer = 0
+            return True  # Damage was blocked
 
-        # Reduce health
-        self.health -= 1
-        self.current_hearts = self.health  # Keep current_hearts in sync
-
-        # Make player invincible briefly
+        # Apply damage
+        self.health -= amount
+        
+        # Set invincibility
         self.invincible = True
         self.invincible_timer = 1.0
+        self.alpha = 128  # Start with reduced alpha
+        
+        # Set damage sound cooldown
+        self.damage_sound_cooldown = True
+        
+        # Play damage sound if available
+        try:
+            from src.audio.sound_manager import sound_manager
+            sound_manager.play_sound("player", "damage")
+        except:
+            pass
 
-        # Return whether player is still alive
-        return self.health > 0
+        # Check if player is dead
+        if self.health <= 0:
+            self.on_death()
+            return False
+            
+        return True  # Player is still alive
 
     def on_death(self):
         """Handle player death"""
@@ -485,9 +514,13 @@ class Player(arcade.Sprite):
 
     def draw(self):
         """Draw the player and effects"""
-        # Draw player with alpha if invincible
-        alpha = 128 if self.invincible else 255
-        self.alpha = alpha
+        # Set alpha for invincibility blinking
+        if self.invincible:
+            self.alpha = 128
+        else:
+            self.alpha = 255
+            
+        # Draw player with current alpha
         super().draw()
 
         # Draw shield if active

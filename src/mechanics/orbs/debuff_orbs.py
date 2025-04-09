@@ -17,21 +17,23 @@ class DebuffOrb(Orb):
         self.set_texture()
 
     def set_texture(self):
-        """Set the texture based on orb type"""
-        # Get texture name based on orb type
+        """Set the texture based on orb type."""
+        # Get texture from skin manager based on orb type
         texture_name = self.get_texture_name()
-
-        # Try to get the texture from the skin manager
         self.texture = skin_manager.get_texture("orbs", texture_name)
 
         # If no texture found, create a default one
         if not self.texture:
-            self.texture = arcade.make_circle_texture(32, self.color)
+            self.texture = arcade.make_circle_texture(
+                32, 
+                self.color, 
+                soft=True
+            )
 
     def get_texture_name(self):
-        """Get the texture name based on orb type"""
+        """Get the texture name based on orb type."""
         if "slow" in self.orb_type:
-            return "speed"  # Use speed texture for slow orbs
+            return "slow"
         elif "mult_down" in self.orb_type:
             return "multiplier"
         elif "cooldown_up" in self.orb_type:
@@ -41,7 +43,7 @@ class DebuffOrb(Orb):
         elif "big_hitbox" in self.orb_type:
             return "hitbox"
         else:
-            return "speed"  # Default
+            return "slow"  # Default
 
     def apply_effect(self, player):
         """Apply the debuff effect to the player."""

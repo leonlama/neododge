@@ -205,10 +205,16 @@ class Enemy(arcade.Sprite):
         self.health -= amount
 
         # Play hit sound
-        sound_manager.play_sound("enemy", "hit")
+        try:
+            sound_manager.play_sound("enemy", "hit")
+        except Exception as e:
+            print(f"Error playing enemy hit sound: {e}")
 
         if self.health <= 0:
             # Play death sound
-            sound_manager.play_sound("enemy", "death")
+            try:
+                sound_manager.play_sound("enemy", "death")
+            except Exception as e:
+                print(f"Error playing enemy death sound: {e}")
             return True
         return False

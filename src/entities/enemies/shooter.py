@@ -110,6 +110,5 @@ class ShooterEnemy(Enemy):
         # Play sound
         try:
             sound_manager.play_sound("enemy", "shoot")
-        except:
-            # Fallback if sound manager isn't available
-            pass
+        except Exception as e:
+            print(f"Error playing enemy shoot sound: {e}")

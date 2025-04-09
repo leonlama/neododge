@@ -5,6 +5,9 @@ import os
 import json
 from src.core.resource_manager import load_texture
 
+# Import skin paths from constants
+from src.core.constants import DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
+
 class SkinManager:
     """Manages game skins and textures."""
     def __init__(self):
@@ -172,19 +175,64 @@ class SkinManager:
         return list(self.skin_data.keys())
 
     def load_skin(self, skin_name):
-        """Load a skin by name.
+        """Load a skin by name."""
+        if skin_name == "default":
+            skin_path = DEFAULT_SKIN_PATH
+        elif skin_name == "mdma":
+            skin_path = MDMA_SKIN_PATH
+        else:
+            print(f"⚠️ Unknown skin: {skin_name}, using default")
+            skin_path = DEFAULT_SKIN_PATH
 
-        Args:
-            skin_name: Name of the skin to load.
-        """
-        # Default to "default" if the requested skin doesn't exist
-        if skin_name not in self.skin_data:
-            print(f"⚠️ Skin '{skin_name}' not found, using default")
-            skin_name = "default"
+        print(f"🎨 Loading skin: {skin_name} from {skin_path}")
 
-        self.current_skin = skin_name
+        # Load textures
         self.textures = {}
 
+        # Load player textures
+        self._load_texture(skin_path, "player", "player")
+
+        # Load enemy textures
+        self._load_texture(skin_path, "enemies", "wanderer")
+        self._load_texture(skin_path, "enemies", "chaser")
+        self._load_texture(skin_path, "enemies", "shooter")
+
+        # Load orb textures
+        self._load_texture(skin_path, "orbs", "speed")
+        self._load_texture(skin_path, "orbs", "shield")
+        self._load_texture(skin_path, "orbs", "multiplier")
+        self._load_texture(skin_path, "orbs", "cooldown")
+        self._load_texture(skin_path, "orbs", "slow")
+        self._load_texture(skin_path, "orbs", "vision")
+        self._load_texture(skin_path, "orbs", "hitbox")
+
+        # Load projectile textures
+        self._load_texture(skin_path, "projectiles", "enemy_bullet")
+
+        # Load scales from config
+        self._load_scales(skin_path)
+
+        self.current_skin = skin_name
+        print(f"🎨 Loaded skin: {skin_name}")
+
+    def _load_texture(self, skin_path, category, name):
+        """Load a texture from the skin."""
+        # Try different file extensions
+        extensions = [".png", ".jpg", ".jpeg"]
+
+        for ext in extensions:
+            texture_path = f"{skin_path}/{category}/{name}{ext}"
+            if os.path.exists(texture_path):
+                texture = arcade.load_texture(texture_path)
+                texture_key = f"{category}/{name}"
+                self.textures[texture_key] = texture
+                print(f"  ✓ Loaded texture: {texture_key}")
+                return
+
+        print(f"  ✗ Texture not found: {category}/{name}")
+
+    def _load_scales(self, skin_path):
+        """Load scales from skin config."""
         # Set default scales
         self.scales = {
             "player": 1.0,
@@ -196,7 +244,7 @@ class SkinManager:
         }
 
         # Try to load skin-specific scales from config file
-        config_path = os.path.join(self.skins_path, skin_name, "config.json")
+        config_path = os.path.join(skin_path, "config.json")
         if os.path.exists(config_path):
             try:
                 with open(config_path, "r") as f:
@@ -208,133 +256,18 @@ class SkinManager:
             except Exception as e:
                 print(f"⚠️ Error loading skin config: {e}")
 
-        # Preload textures
-        self.preload_textures()
-        print(f"🎨 Skin set to: {skin_name}")
-
-    def preload_textures(self):
-        """Preload all textures for the current skin."""
-        print(f"🎨 Preloading skin assets for '{self.current_skin}'...")
-
-        # Define categories and their items based on your actual asset structure
-        categories = {
-            "player": ["default", "idle", "dash"],
-            "orbs": ["speed", "shield", "cooldown", "hitbox", "multiplier", "vision", "health"],
-            "artifacts": ["dash", "clone", "bullet_time", "magnet", "slow"],
-            "enemy": ["default"],
-            "bullet": ["default"],
-            "coin": ["default"]
-        }
-
-        # Preload all textures
-        for category, items in categories.items():
-            for item in items:
-                self.get_texture(category, item, preload=True)
-
-        # Also preload UI textures from the main assets folder
-        try:
-            # UI elements to preload
-            ui_elements = ["heart_red", "heart_gold", "heart_gray", "shield", "background", "logo"]
-            
-            for element in ui_elements:
-                element_path = f"assets/ui/{element}.png"
-                if os.path.exists(element_path):
-                    self.textures[f"ui/{element}"] = arcade.load_texture(element_path)
-                else:
-                    # Create fallback textures based on element type
-                    if "heart_red" in element:
-                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.RED)
-                    elif "heart_gold" in element:
-                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.GOLD)
-                    elif "heart_gray" in element:
-                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.GRAY)
-                    elif "shield" in element:
-                        self.textures[f"ui/{element}"] = arcade.make_soft_circle_texture(30, arcade.color.CYAN)
-                    else:
-                        # Default fallback to the default textures
-                        if f"ui/{element}" in self.default_textures:
-                            self.textures[f"ui/{element}"] = self.default_textures[f"ui/{element}"]
-        except Exception as e:
-            print(f"⚠️ Error loading UI textures: {e}")
-            # Use default textures as fallback
-            for key, texture in self.default_textures.items():
-                if key.startswith("ui/") and key not in self.textures:
-                    self.textures[key] = texture
-
-        print(f"✅ All assets preloaded successfully for skin '{self.current_skin}'")
-
-    def get_texture(self, category, name=None, preload=False):
-        """Get a texture by category and name.
-
-        Args:
-            category: Category of the texture (player, orbs, etc.).
-            name: Name of the texture. If None, uses 'default'.
-            preload: Whether this is being called during preloading.
-
-        Returns:
-            arcade.Texture: The requested texture.
-        """
-        # If name is not provided, use 'default'
+    def get_texture(self, category, name=None):
+        """Get a texture by category and name."""
         if name is None:
-            name = 'default'
+            # Legacy support for old format
+            texture_key = category
+        else:
+            texture_key = f"{category}/{name}"
 
-        # Check if texture is already loaded
-        texture_key = f"{category}/{name}"
         if texture_key in self.textures:
             return self.textures[texture_key]
 
-        # Try to load from current skin
-        try:
-            texture_path = os.path.join(self.skins_path, self.current_skin, category, f"{name}.png")
-            if os.path.exists(texture_path):
-                texture = arcade.load_texture(texture_path)
-                self.textures[texture_key] = texture
-                return texture
-        except Exception as e:
-            if not preload:
-                print(f"⚠️ Error loading texture '{name}' from '{texture_path}': {e}")
-
-        # Try to load from default skin if not already using default
-        if self.current_skin != "default":
-            try:
-                default_path = os.path.join(self.skins_path, "default", category, f"{name}.png")
-                if os.path.exists(default_path):
-                    texture = arcade.load_texture(default_path)
-                    self.textures[texture_key] = texture
-                    return texture
-            except Exception as e2:
-                if not preload:
-                    print(f"⚠️ Error loading default texture '{name}' from '{default_path}': {e2}")
-
-        # Create fallback textures based on category
-        if not preload:
-            print(f"🎨 Creating fallback texture for {category}/{name}")
-            texture = None
-
-            # Choose color based on category and name
-            if category == "orbs":
-                # Different colors for different orb types
-                if "buff" in name or name in ["speed", "shield", "multiplier"]:
-                    color = arcade.color.GREEN
-                else:
-                    color = arcade.color.RED
-            elif category == "artifacts":
-                color = arcade.color.PURPLE
-            elif category == "speed" or category == "effects":
-                color = arcade.color.YELLOW
-            elif category == "player":
-                color = arcade.color.BLUE
-            else:
-                # Default fallback
-                color = arcade.color.WHITE
-
-            # Create the texture - remove the 'soft' parameter
-            texture = arcade.make_circle_texture(32, color)
-
-            if texture:
-                self.textures[texture_key] = texture
-                return texture
-
+        print(f"⚠️ Texture not found: {texture_key}")
         return None
 
     def get_default_texture(self, category, name):

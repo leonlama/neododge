@@ -4,6 +4,7 @@ from src.controllers.game_controller import GameController
 from src.entities.player import Player
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
+from src.audio.sound_manager import sound_manager
 
 from src.mechanics.artifacts.dash import DashArtifact
 from src.mechanics.coins.coin import Coin
@@ -63,10 +64,8 @@ class NeododgeGame(arcade.View):
         self.coins = arcade.SpriteList()
         self.artifacts = arcade.SpriteList()
 
-        # Initialize wave manager
-        self.wave_manager = WaveManager(self.player)
-        self.wave_manager.wave = 1
-        self.wave_manager.spawn_enemies(self.enemies, self.window.width, self.window.height)
+        # Set up wave manager
+        self.setup_wave_manager()
 
         # Initialize dash artifact (but don't spawn it yet)
         self.dash_artifact = None
@@ -96,44 +95,109 @@ class NeododgeGame(arcade.View):
         # Initialize game controller
         self.game_controller = GameController(self, self.window.width, self.window.height)
 
-        # Load sound effects with reduced volume
-        try:
-            self.coin_sound = arcade.load_sound("assets/audio/coin.flac")
-            self.damage_sound = arcade.load_sound("assets/audio/damage.wav")
-            self.buff_sound = arcade.load_sound("assets/audio/buff.wav")
-            self.debuff_sound = arcade.load_sound("assets/audio/debuff.wav")
+        # Load sounds using sound manager
+        self.setup_sounds()
 
-            # Set volume to 50%
-            self.coin_sound_player = None
-            self.damage_sound_player = None
-            self.buff_sound_player = None
-            self.debuff_sound_player = None
-        except Exception as e:
-            print(f"Error loading sounds: {e}")
-            self.coin_sound = None
-            self.damage_sound = None
-            self.buff_sound = None
-            self.debuff_sound = None
+    def setup_wave_manager(self):
+        """Set up the wave manager."""
+        from src.mechanics.wave_management.wave_manager import WaveManager
+
+        # Create wave manager
+        self.wave_manager = WaveManager(self.player)
+
+        # Set callbacks
+        self.wave_manager.on_spawn_enemies = self.spawn_enemies
+        self.wave_manager.on_clear_enemies = self.clear_enemies
+        self.wave_manager.on_wave_start = self.on_wave_start
+        self.wave_manager.on_wave_end = self.on_wave_end
+
+        # Start first wave
+        self.wave_manager.start_wave()
+
+    def spawn_enemies(self):
+        """Spawn enemies for the current wave."""
+        # Clear existing enemies
+        self.enemies.clear()
+
+        # Spawn new enemies
+        message = self.wave_manager.spawn_enemies(
+            self.enemies, 
+            self.window.width, 
+            self.window.height,
+            self.player
+        )
+
+        # Show wave message
+        self.wave_message = message
+        self.wave_message_alpha = 1.0
+
+    def clear_enemies(self):
+        """Clear all enemies."""
+        self.enemies.clear()
+
+    def on_wave_start(self, wave_number):
+        """Called when a wave starts."""
+        print(f"Wave {wave_number} started!")
+
+        # Show wave message
+        self.wave_message = f"Wave {wave_number}"
+        self.wave_message_alpha = 1.0
+
+        # Spawn some coins and orbs
+        self.spawn_coins(5)
+        self.spawn_orbs(2)
+
+    def on_wave_end(self, wave_number):
+        """Called when a wave ends."""
+        print(f"Wave {wave_number} completed!")
+
+        # Show wave complete message
+        self.wave_message = f"Wave {wave_number} Complete!"
+        self.wave_message_alpha = 1.0
+
+    def setup_sounds(self):
+        """Set up game sounds."""
+        # We'll use the sound manager instead of loading sounds directly
+        pass
 
     def play_coin_sound(self):
         """Play the coin pickup sound."""
-        if self.coin_sound:
-            self.coin_sound_player = arcade.play_sound(self.coin_sound, volume=0.3)
+        try:
+            sound_manager.play_sound("coin", "collect")
+        except Exception as e:
+            print(f"Error playing coin sound: {e}")
 
     def play_damage_sound(self):
         """Play the damage sound."""
-        if self.damage_sound:
-            self.damage_sound_player = arcade.play_sound(self.damage_sound, volume=0.3)
+        # Check if player has damage sound cooldown
+        if hasattr(self.player, 'damage_sound_cooldown') and self.player.damage_sound_cooldown:
+            return
+
+        try:
+            # Use a very low volume for damage sound
+            if hasattr(self, 'damage_sound') and self.damage_sound:
+                arcade.play_sound(self.damage_sound, volume=0.05)  # Very low volume
+            else:
+                sound_manager.play_sound("player", "damage")
+
+            # Set cooldown
+            self.player.damage_sound_cooldown = True
+        except Exception as e:
+            print(f"Error playing damage sound: {e}")
 
     def play_buff_sound(self):
         """Play the buff pickup sound."""
-        if self.buff_sound:
-            self.buff_sound_player = arcade.play_sound(self.buff_sound, volume=0.3)
+        try:
+            sound_manager.play_sound("orb", "buff")
+        except Exception as e:
+            print(f"Error playing buff sound: {e}")
 
     def play_debuff_sound(self):
         """Play the debuff pickup sound."""
-        if self.debuff_sound:
-            self.debuff_sound_player = arcade.play_sound(self.debuff_sound, volume=0.3)
+        try:
+            sound_manager.play_sound("orb", "debuff")
+        except Exception as e:
+            print(f"Error playing debuff sound: {e}")
 
     def on_show(self):
         """Called when this view becomes active"""
@@ -256,6 +320,9 @@ class NeododgeGame(arcade.View):
         # Update player
         self.player.update(delta_time)
 
+        # Update wave manager
+        self.wave_manager.update(delta_time)
+
         # If right mouse is held down, continuously update target
         if self.right_mouse_down and self.player:
             self.player.set_target(self.mouse_x, self.mouse_y)
@@ -360,11 +427,36 @@ class NeododgeGame(arcade.View):
                     # Move text upward
                     self.pickup_texts[i] = [text, x, y + 1, lifetime]
 
+        # Update wave message alpha
+        if hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
+            self.wave_message_alpha -= delta_time * 0.5  # Fade out over 2 seconds
+
         # Check for collisions
         self.check_collisions()
 
         # Update score
         self.score += delta_time * 10
+
+    def spawn_coins(self, count):
+        """Spawn a number of coins."""
+        self.coins_to_spawn = count
+        self.coin_spawn_timer = 0.5  # Start spawning soon
+
+    def spawn_orbs(self, count):
+        """Spawn a number of orbs."""
+        for _ in range(count):
+            # Spawn an orb at a random position
+            x = random.randint(50, arcade.get_window().width - 50)
+            y = random.randint(50, arcade.get_window().height - 50)
+
+            # Create a random orb
+            orb_type = random.choice(["buff", "debuff"])
+            if orb_type == "buff":
+                orb = BuffOrb(x, y)
+            else:
+                orb = DebuffOrb(x, y)
+
+            self.orbs.append(orb)
 
     def check_collisions(self):
         """Check for collisions between game objects."""
@@ -401,12 +493,12 @@ class NeododgeGame(arcade.View):
                 # Add to score
                 self.score += 10
 
-                # Play coin sound
-                self.play_coin_sound()
+            # Play coin sound
+            self.play_coin_sound()
 
-                # Add pickup text
-                if hasattr(self, 'add_pickup_text'):
-                    self.add_pickup_text("Coin collected!", self.player.center_x, self.player.center_y)
+            # Add pickup text
+            if hasattr(self, 'add_pickup_text'):
+                self.add_pickup_text("Coin collected!", self.player.center_x, self.player.center_y)
 
         # Player-Orb collisions
         orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)

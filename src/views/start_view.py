@@ -17,7 +17,7 @@ class StartView(arcade.View):
         )
 
         # Load start sound
-        self.start_sound = load_sound("assets/audio/start_click.wav")
+        self.start_sound = load_sound("assets/audio/ui/start_click.wav")
         
         # Initialize music variables
         self.background_music = None
@@ -54,7 +54,7 @@ class StartView(arcade.View):
         arcade.set_background_color(arcade.color.BLACK)
         # Play background music
         if not self.background_music:
-            bgm_path = "assets/audio/themev1.mp3"
+            bgm_path = "assets/audio/ui/themev1.mp3"
             bgm_source = pyglet.media.load(bgm_path)
             self.music_player = pyglet.media.Player()
             self.music_player.queue(bgm_source)
