@@ -419,25 +419,29 @@ class Player(arcade.Sprite):
         if not self.heart_textures:
             return  # Skip if textures aren't set
 
-        heart_scale = 0.035  # Adjust as needed
+        from src.core.constants import SCREEN_HEIGHT
+        
+        heart_size = 32
+        spacing = 26  # Slightly overlap
+        base_x = 35  # Moved more to the right
+        base_y = SCREEN_HEIGHT - 40  # Push to top left
 
-        for i in range(self.max_slots):
-            # Determine which heart texture to use
-            if i < self.health:  # Use health directly
-                if i >= self.max_health:  # Extra hearts (from powerups)
-                    texture = self.heart_textures.get("gold")
-                else:  # Regular hearts
-                    texture = self.heart_textures.get("red")
-            else:  # Empty heart slots
-                texture = self.heart_textures.get("gray")
-
+        # Draw filled hearts
+        for i in range(int(self.health)):
+            x = base_x + i * spacing
+            if i >= self.max_health:  # Extra hearts (from powerups)
+                texture = self.heart_textures.get("gold")
+            else:  # Regular hearts
+                texture = self.heart_textures.get("red")
             if texture:
-                # Draw the heart
-                heart_width = texture.width * heart_scale
-                heart_height = texture.height * heart_scale
-                x = self.heart_start_x + i * self.heart_spacing
-                y = self.heart_y
-                arcade.draw_texture_rectangle(x, y, heart_width, heart_height, texture)
+                arcade.draw_texture_rectangle(x, base_y, heart_size, heart_size, texture)
+
+        # Draw empty slots
+        for i in range(self.max_slots - int(self.health)):
+            x = base_x + (i + int(self.health)) * spacing
+            texture = self.heart_textures.get("gray")
+            if texture:
+                arcade.draw_texture_rectangle(x, base_y, heart_size, heart_size, texture)
 
     def draw(self):
         """Draw the player and effects"""

@@ -30,24 +30,18 @@ def draw_player_health(player, heart_textures=None, screen_width=800, screen_hei
     start_x = 20 + heart_size // 2  # Left margin
     start_y = screen_height - 30  # Top margin
 
+    # Draw hearts up to MAX_HEARTS
     for i in range(MAX_HEARTS):
         x = start_x + i * (heart_size + heart_spacing)
         y = start_y
 
-        # Draw filled or empty heart
-        if i < player.current_hearts:
+        if i < player.max_slots:
+            texture = heart_red if i < player.current_hearts else heart_gray
             arcade.draw_scaled_texture_rectangle(
                 center_x=x,
                 center_y=y,
-                texture=heart_red,
-                scale=heart_size / 30.0  # Scale based on texture size
-            )
-        else:
-            arcade.draw_scaled_texture_rectangle(
-                center_x=x,
-                center_y=y,
-                texture=heart_gray,
-                scale=heart_size / 30.0  # Scale based on texture size
+                texture=texture,
+                scale=heart_size / 30.0
             )
 
 def draw_score(score):
