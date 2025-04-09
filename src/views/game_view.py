@@ -49,14 +49,14 @@ class NeododgeGame(arcade.View):
         self.player.parent_view = self
         
         # Load heart textures
-        heart_textures = {
-            "red": skin_manager.get_texture("ui", "heart_red", "assets/ui/heart_red.png"),
-            "gray": skin_manager.get_texture("ui", "heart_gray", "assets/ui/heart_gray.png"),
-            "gold": skin_manager.get_texture("ui", "heart_gold", "assets/ui/heart_gold.png")
+        self.heart_textures = {
+            "red": arcade.load_texture("assets/ui/heart_red.png"),
+            "gray": arcade.load_texture("assets/ui/heart_gray.png"),
+            "gold": arcade.load_texture("assets/ui/heart_gold.png")
         }
         
         # Pass heart textures to player
-        self.player.heart_textures = heart_textures
+        self.player.heart_textures = self.heart_textures
 
         # Initialize sprite lists
         self.enemies = arcade.SpriteList()
