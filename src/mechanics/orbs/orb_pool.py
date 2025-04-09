@@ -35,46 +35,108 @@ class Orb(arcade.Sprite):
         self.scale = get_scale('orb')
 
 def get_random_orb(x, y, context=None):
-    """
-    Get a random orb based on the current game context.
-
-    Args:
-        x (float): X position for the orb
-        y (float): Y position for the orb
-        context (dict): Game context information (wave, player stats, etc.)
-
-    Returns:
-        Orb: A randomly selected orb instance
-    """
-    # Default context if none provided
+    """Get a random orb based on game context."""
     if context is None:
         context = {}
 
     # Extract context variables with defaults
-    wave = context.get('wave', 1)  # Default to wave 1 if not provided
+    wave_number = context.get('wave', 1)
+    if isinstance(wave_number, dict):
+        # If wave is a dictionary (like a wave configuration), extract the wave number
+        wave_number = wave_number.get('wave_number', 1)
+
     player_health = context.get('player_health', 3)
-    player_speed = context.get('player_speed', 1.0)
+    max_player_health = context.get('max_player_health', 3)
+    score = context.get('score', 0)
 
-    # Base chances for different orb types
-    base_buff_chance = 0.7  # 70% chance for buff orbs
+    # Base chance for buff vs debuff
+    base_buff_chance = 0.7
 
-    # Adjust chances based on wave number
-    if wave is not None:
-        base_buff_chance -= 0.05 * (wave // 5)
+    # Adjust based on wave number (higher waves = more debuffs)
+    if isinstance(wave_number, (int, float)):
+        base_buff_chance -= 0.05 * (wave_number // 5)
 
-    # Adjust chances based on player health
-    if player_health <= 1:
-        base_buff_chance += 0.2  # More likely to get buffs when low health
+    # Adjust based on player health (lower health = more buffs)
+    health_ratio = player_health / max_player_health
+    if health_ratio < 0.3:
+        base_buff_chance += 0.2
+    elif health_ratio < 0.6:
+        base_buff_chance += 0.1
 
-    # Clamp chance to reasonable range
-    base_buff_chance = max(0.3, min(0.9, base_buff_chance))
-
-    # Determine if this will be a buff or debuff orb
+    # Determine if buff or debuff
     is_buff = random.random() < base_buff_chance
 
+    # Get appropriate orb
     if is_buff:
-        orb_type = random.choices(list(BUFF_ORBS), weights=BUFF_ORBS.values(), k=1)[0]
-        return BuffOrb(x, y, orb_type)
+        return get_random_buff_orb(x, y, context)
     else:
-        orb_type = random.choices(list(DEBUFF_ORBS), weights=DEBUFF_ORBS.values(), k=1)[0]
-        return DebuffOrb(x, y, orb_type)
+        return get_random_debuff_orb(x, y, context)
+
+def get_random_buff_orb(x, y, context=None):
+    """Get a random buff orb."""
+    if context is None:
+        context = {}
+
+    # List of possible buff orbs with weights
+    buff_types = {
+        "speed_10": 30,
+        "health": 20,
+        "shield": 15,
+        "score_2x": 25,
+        "invincible": 10
+    }
+
+    # Adjust weights based on context
+    player_health = context.get('player_health', 3)
+    max_player_health = context.get('max_player_health', 3)
+
+    # If player health is low, increase chance of health and shield
+    if player_health / max_player_health < 0.5:
+        buff_types["health"] += 15
+        buff_types["shield"] += 10
+        buff_types["invincible"] += 5
+
+    # Choose a buff type based on weights
+    buff_type = random.choices(
+        list(buff_types.keys()),
+        weights=list(buff_types.values())
+    )[0]
+
+    # Create the orb
+    from src.mechanics.orbs.buff_orbs import BuffOrb
+    return BuffOrb(x, y, buff_type)
+
+def get_random_debuff_orb(x, y, context=None):
+    """Get a random debuff orb."""
+    if context is None:
+        context = {}
+
+    # List of possible debuff orbs with weights
+    debuff_types = {
+        "slow": 35,
+        "reverse": 25,
+        "blind": 20,
+        "confusion": 15,
+        "score_0.5x": 5
+    }
+
+    # Adjust weights based on context
+    wave_number = context.get('wave', 1)
+    if isinstance(wave_number, dict):
+        wave_number = wave_number.get('wave_number', 1)
+
+    # Higher waves get more severe debuffs
+    if isinstance(wave_number, (int, float)) and wave_number > 5:
+        debuff_types["blind"] += 5
+        debuff_types["confusion"] += 5
+        debuff_types["score_0.5x"] += 5
+
+    # Choose a debuff type based on weights
+    debuff_type = random.choices(
+        list(debuff_types.keys()),
+        weights=list(debuff_types.values())
+    )[0]
+
+    # Create the orb
+    from src.mechanics.orbs.debuff_orbs import DebuffOrb
+    return DebuffOrb(x, y, debuff_type)
