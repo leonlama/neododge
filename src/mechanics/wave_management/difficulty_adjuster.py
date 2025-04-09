@@ -94,7 +94,43 @@ class DifficultyAdjuster:
         """Determine if an artifact should spawn"""
         return wave_number % 5 == 0
 
-    def adjust_based_on_performance(self, wave_stats):
-        """Adjust difficulty parameters based on player performance in the last wave"""
-        # Implementation would adjust difficulty based on performance
-        pass
+    def adjust_based_on_performance(self, wave_stats: dict):
+        """
+        Adjust base difficulty based on player performance from the last wave.
+        This method allows adaptive scaling as the player progresses.
+
+        Args:
+            wave_stats (dict): Dictionary with keys like 'damage_taken', 
+                               'time_survived', 'buffs_collected', 'debuffs_collected',
+                               'coins_collected', 'heatmap_entropy'.
+        """
+        # Default to zero if key is missing
+        damage_taken = wave_stats.get("damage_taken", 0)
+        time_survived = wave_stats.get("time_survived", 0)
+        buffs = wave_stats.get("buffs_collected", 0)
+        debuffs = wave_stats.get("debuffs_collected", 0)
+        entropy = wave_stats.get("heatmap_entropy", 0.5)
+
+        # Normalize and weight
+        damage_factor = max(0.0, 1.0 - (damage_taken / 100))  # Less damage = better
+        survival_factor = min(1.0, time_survived / 60.0)  # Cap at 60 seconds
+        buff_efficiency = buffs - debuffs  # More buffs than debuffs = good
+        movement_score = entropy  # Higher entropy = more dynamic play
+
+        # Simple weighted average for performance score
+        performance_score = (
+            (damage_factor * 0.4)
+            + (survival_factor * 0.3)
+            + (max(0.0, min(buff_efficiency / 5.0, 1.0)) * 0.2)
+            + (movement_score * 0.1)
+        )
+
+        # Smooth update of base difficulty
+        old_difficulty = self.base_difficulty
+        self.base_difficulty = (
+            (1.0 - self.learning_rate) * self.base_difficulty
+            + self.learning_rate * performance_score
+        )
+
+        print(f"[AI Tuning] 📊 PerfScore: {performance_score:.2f} | "
+              f"Old Diff: {old_difficulty:.2f} → New Diff: {self.base_difficulty:.2f}")
