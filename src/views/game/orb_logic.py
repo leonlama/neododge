@@ -56,11 +56,12 @@ def spawn_orb(self, x=None, y=None, orb_type=None):
         except Exception as e:
             print(f"Error spawning orb: {e}")
 
-def spawn_orbs(self, count, orb_types=None, min_distance_from_player=100):
+def spawn_orbs(game_view, count, orb_types=None, min_distance_from_player=100):
         """
         Spawn multiple orbs based on wave configuration.
 
         Args:
+            game_view: The game view instance
             count (int): Number of orbs to spawn
             orb_types (dict, optional): Distribution of orb types (e.g., {'buff': 0.7, 'debuff': 0.3})
             min_distance_from_player (float): Minimum distance from player to spawn orbs
@@ -76,12 +77,12 @@ def spawn_orbs(self, count, orb_types=None, min_distance_from_player=100):
         for _ in range(count):
             # Choose a random position
             margin = 50
-            x = random.randint(margin, self.window.width - margin)
-            y = random.randint(margin, self.window.height - margin)
+            x = random.randint(margin, game_view.window.width - margin)
+            y = random.randint(margin, game_view.window.height - margin)
 
             # Ensure minimum distance from player
-            if hasattr(self, 'player'):
-                player_pos = (self.player.center_x, self.player.center_y)
+            if hasattr(game_view, 'player'):
+                player_pos = (game_view.player.center_x, game_view.player.center_y)
                 orb_pos = (x, y)
                 distance = ((player_pos[0] - orb_pos[0])**2 + (player_pos[1] - orb_pos[1])**2)**0.5
 
@@ -102,7 +103,7 @@ def spawn_orbs(self, count, orb_types=None, min_distance_from_player=100):
                 orb_type = random.choice(["slow", "vision", "hitbox"])
 
             # Spawn the orb
-            self.spawn_orb(x, y, orb_type=orb_type)
+            game_view.spawn_orb(x, y, orb_type=orb_type)
 
 def check_orb_collisions(self):
         """Check for collisions between player and orbs."""

@@ -22,7 +22,7 @@ class Player(arcade.Sprite):
         # Initialize target position
         self.target_x = None
         self.target_y = None
-        self.target_speed_factor = 1.0
+        self.target_speed_multiplier = 1.0
 
         # Initialize health and hearts
         self.health = 3
@@ -176,37 +176,41 @@ class Player(arcade.Sprite):
                 else:
                     self.alpha = 255  # Fully visible
 
-        # If we're not moving or don't have a target, do nothing
-        if not self.is_moving or self.target_x is None or self.target_y is None:
-            self.change_x = 0
-            self.change_y = 0
-            return
+        # Set base speed for smooth movement
+        self.base_speed = PLAYER_SPEED
 
-        # Calculate distance to target
-        dx = self.target_x - self.center_x
-        dy = self.target_y - self.center_y
-        distance = math.sqrt(dx*dx + dy*dy)
-
-        # If we're close enough, stop moving
-        if distance < getattr(self, 'move_threshold', 5):
+        # If we have a target, move toward it
+        if self.target_x is not None and self.target_y is not None:
+            dx = self.target_x - self.center_x
+            dy = self.target_y - self.center_y
+            distance = math.hypot(dx, dy)
+            
+            if distance > 1:
+                direction_x = dx / distance
+                direction_y = dy / distance
+                move_speed = self.base_speed * self.speed_multiplier * self.target_speed_multiplier
+                self.center_x += direction_x * move_speed * delta_time
+                self.center_y += direction_y * move_speed * delta_time
+                self.is_moving = True
+                
+                # Set change_x and change_y for animation purposes
+                self.change_x = direction_x * move_speed
+                self.change_y = direction_y * move_speed
+                
+                # Log movement occasionally
+                if random.random() < 0.05:  # 5% chance to log
+                    print(f"🏃 Moving toward ({self.target_x}, {self.target_y}) with velocity ({self.change_x:.2f}, {self.change_y:.2f})")
+            else:
+                # We've reached the target
+                self.change_x = 0
+                self.change_y = 0
+                self.is_moving = False
+                print(f"✅ Arrived at target ({self.target_x}, {self.target_y})")
+        else:
+            # No target, don't move
             self.change_x = 0
             self.change_y = 0
             self.is_moving = False
-            print(f"✅ Arrived at target ({self.target_x}, {self.target_y})")
-            return
-
-        # Normalize direction vector
-        dx /= distance
-        dy /= distance
-
-        # Set velocity based on speed and target_speed_factor
-        actual_speed = getattr(self, 'speed', 5.0) * getattr(self, 'speed_multiplier', 1.0) * self.target_speed_factor
-        self.change_x = dx * actual_speed
-        self.change_y = dy * actual_speed
-
-        # Apply the velocity to move the player
-        self.center_x += self.change_x * delta_time
-        self.center_y += self.change_y * delta_time
 
         # Keep player on screen
         window = arcade.get_window()
@@ -219,10 +223,6 @@ class Player(arcade.Sprite):
             self.bottom = 0
         elif self.top > window.height:
             self.top = window.height
-
-        # Log movement occasionally
-        if random.random() < 0.05:  # 5% chance to log
-            print(f"🏃 Moving toward ({self.target_x}, {self.target_y}) with velocity ({self.change_x:.2f}, {self.change_y:.2f})")
 
         # Update animation if it exists
         if hasattr(self, 'update_animation'):
@@ -262,11 +262,11 @@ class Player(arcade.Sprite):
             "value": value
         })
 
-    def set_target(self, x, y, speed_factor=1.0):
+    def set_target(self, x, y, speed_multiplier=1.0):
         """Set a new movement target"""
         self.target_x = x
         self.target_y = y
-        self.target_speed_factor = speed_factor
+        self.target_speed_multiplier = speed_multiplier
         self.is_moving = True
 
         # Log only when target is set, not every frame

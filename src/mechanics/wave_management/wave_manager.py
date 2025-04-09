@@ -274,12 +274,13 @@ class WaveManager:
 
         # Reset timers
         self.spawn_timer = 0
-
         # Spawn orbs for this wave
         if hasattr(self, 'game_view') and config['orb_count'] > 0:
             try:
-                self.game_view.spawn_orbs(
-                    count=config['orb_count'],
+                from src.views.game.orb_logic import spawn_orbs
+                spawn_orbs(
+                    game_view=self.game_view, 
+                    count=config['orb_count'], 
                     orb_types=config['orb_types']
                 )
             except Exception as e:
