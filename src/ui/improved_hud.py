@@ -4,7 +4,40 @@ from src.skins.skin_manager import skin_manager
 
 def draw_hud(player, score, wave=1, wave_timer=None, heart_textures=None):
     """Draw the full HUD layout with a clean roguelike feel."""
-    player.draw_hearts()
+    # Draw player hearts with correct logic
+    if heart_textures:
+        # Configuration for heart display
+        heart_size = 1  # Scale factor
+        heart_spacing = 18
+        start_x = 20 + heart_size // 2
+        start_y = SCREEN_HEIGHT - 30
+        
+        # Get player heart values
+        max_slots = player.max_slots
+        current_hearts = max(0, player.current_hearts)  # Ensure non-negative
+        gold_hearts = getattr(player, 'gold_hearts', 0)
+        
+        # Draw hearts with correct order: red, gold, then gray
+        for i in range(max_slots):
+            x = start_x + i * (heart_size + heart_spacing)
+            y = start_y
+            
+            if i < current_hearts:
+                texture = heart_textures['red']
+            elif i < current_hearts + gold_hearts:
+                texture = heart_textures['gold']
+            else:
+                texture = heart_textures['gray']
+                
+            arcade.draw_scaled_texture_rectangle(
+                center_x=x,
+                center_y=y,
+                texture=texture,
+                scale=heart_size / 30.0
+            )
+    else:
+        player.draw_hearts()
+        
     draw_score(score)
     draw_wave_info(wave, wave_timer)
     draw_coin_count(getattr(player, 'coins', 0))

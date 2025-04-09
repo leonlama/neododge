@@ -8,8 +8,7 @@ from src.audio.sound_manager import sound_manager
 
 from src.mechanics.artifacts.dash_artifact import DashArtifact
 from src.mechanics.coins.coin import Coin
-from src.mechanics.orbs.buff_orbs import BuffOrb
-from src.mechanics.orbs.debuff_orbs import DebuffOrb
+from src.mechanics.orbs.orb_pool import get_random_orb
 from src.views.shop_view import ShopView
 
 from src.mechanics.wave_management.wave_manager import WaveManager
@@ -504,18 +503,17 @@ class NeododgeGame(arcade.View):
                 x = random.randint(50, arcade.get_window().width - 50)
                 y = random.randint(50, arcade.get_window().height - 50)
 
-                # Create a random orb
-                orb_type = random.choice(["buff", "debuff"])
-                if orb_type == "buff":
-                    orb = BuffOrb(x, y)
-                else:
-                    orb = DebuffOrb(x, y)
-
+                # Create a random orb using the orb pool with context
+                orb = get_random_orb(x, y, context={
+                    "wave": self.wave_manager.current_wave,
+                    "hp": self.player.current_hearts,
+                    "mult": self.player.score_multiplier
+                })
                 self.orbs.append(orb)
 
                 # Reset timer
                 self.orb_spawn_timer = random.uniform(4, 8)
-                print(f"🔮 Spawned a {orb_type} orb!")
+                print(f"🔮 Spawned an orb!")
 
         # Handle artifact spawning
         if hasattr(self, 'artifact_spawn_timer'):
@@ -569,13 +567,12 @@ class NeododgeGame(arcade.View):
             x = random.randint(50, arcade.get_window().width - 50)
             y = random.randint(50, arcade.get_window().height - 50)
 
-            # Create a random orb
-            orb_type = random.choice(["buff", "debuff"])
-            if orb_type == "buff":
-                orb = BuffOrb(x, y)
-            else:
-                orb = DebuffOrb(x, y)
-
+            # Create a random orb using the orb pool with context
+            orb = get_random_orb(x, y, context={
+                "wave": self.wave_manager.current_wave,
+                "hp": self.player.current_hearts,
+                "mult": self.player.score_multiplier
+            })
             self.orbs.append(orb)
 
     def check_collisions(self):
@@ -629,7 +626,12 @@ class NeododgeGame(arcade.View):
                 print(f"Player collided with orb of type: {orb_type}")
 
                 # Determine if it's a buff or debuff orb
-                is_buff = isinstance(orb, BuffOrb) if 'BuffOrb' in globals() else 'buff' in str(orb.__class__).lower()
+                # Import the orb classes if needed
+                from src.mechanics.orbs.buff_orbs import BuffOrb
+                from src.mechanics.orbs.debuff_orbs import DebuffOrb
+                
+                # Determine if it's a buff orb
+                is_buff = isinstance(orb, BuffOrb)
 
                 # Apply the orb effect
                 try:

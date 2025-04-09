@@ -53,8 +53,15 @@ class Orb(arcade.Sprite):
 
     def _set_appearance(self):
         """Set the orb's appearance based on its type"""
-        color = self.properties["color"]
+        if self.orb_type in ["speed", "slow"]:
+            color = arcade.color.LIGHT_BLUE  # SAME for both to trick the player
+        else:
+            color = self.properties["color"]
         self.texture = arcade.make_soft_circle_texture(20, color)
+        
+        # Override the icon for speed/slow to be the same
+        if hasattr(self, 'properties') and 'icon' in self.properties:
+            self.properties['icon'] = "effects/speed" if self.orb_type in ["speed", "slow"] else f"effects/{self.orb_type}"
 
     def update(self):
         """Standard update method required by arcade.Sprite"""

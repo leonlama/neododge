@@ -1,6 +1,8 @@
 ﻿import random
 import arcade
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.mechanics.orbs.buff_orb import BuffOrb
+from src.mechanics.orbs.debuff_orb import DebuffOrb
 
 class OrbSpawner:
     """Handles spawning orbs with appropriate types and frequencies"""
@@ -52,30 +54,37 @@ class OrbSpawner:
 
     def _spawn_orb(self):
         """Spawn a single orb with appropriate type based on current wave"""
-        # TODO: Implement actual orb class
-        # For now, just print what would be spawned
-
         # Get current buff/debuff ratio
         buff_ratio, debuff_ratio = self.game_view.wave_manager.get_orb_ratio()
-
+        
         # Override ratio for No Buffs event
         if self.game_view.wave_manager.special_event == "No Buffs":
             buff_ratio, debuff_ratio = 0.0, 1.0
+        
+        # Adaptive logic: struggling players get more buffs
+        if hasattr(self.game_view.player, 'health') and self.game_view.player.health <= 1:
+            buff_ratio += 0.3
+        
+        # Normalize ratios
+        total = buff_ratio + debuff_ratio
+        is_buff = random.random() < buff_ratio / total
 
-        # Determine if this is a buff or debuff
-        is_buff = random.random() < buff_ratio / (buff_ratio + debuff_ratio)
+        # Confusing orb swap
+        orb_type = None
+        if is_buff:
+            orb_type = random.choices(["speed", "mult_1_5", "cooldown", "shield"], weights=[30, 20, 25, 25])[0]
+        else:
+            orb_type = random.choices(["slow", "mult_down_0_5", "cooldown_up", "vision"], weights=[30, 20, 25, 25])[0]
+
+        # 5% chance to swap visual between slow/speed for confusion
+        if orb_type in ["slow", "speed"] and random.random() < 0.05:
+            orb_type = "speed" if orb_type == "slow" else "slow"
 
         # Generate random position (not too close to edges)
-        margin = 50
+        margin = 60
         x = random.randint(margin, SCREEN_WIDTH - margin)
         y = random.randint(margin, SCREEN_HEIGHT - margin)
-
-        # For now, just print what would be spawned
-        if is_buff:
-            orb_type = random.choice(self.buff_orbs)
-            print(f"Would spawn buff orb: {orb_type} at ({x}, {y})")
-        else:
-            orb_type = random.choice(self.debuff_orbs)
-            print(f"Would spawn debuff orb: {orb_type} at ({x}, {y})")
-
-        # TODO: Create and return actual orb object
+        
+        # Create and add orb to game
+        orb = BuffOrb(x, y, orb_type) if is_buff else DebuffOrb(x, y, orb_type)
+        self.game_view.orbs.append(orb)

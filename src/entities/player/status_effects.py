@@ -218,10 +218,4 @@ class StatusEffectManager:
                 
             y_pos = start_y - (icon_size + spacing) * i
 
-            # Draw icon background
-            arcade.draw_circle_filled(
-                start_x - icon_size/2, 
-                y_pos - icon_size/2,
-                icon_size/2 + 2,  # Slightly larger than icon
-                arcade.color.BLACK
-            )
+            # Black circle background removed as requested

@@ -307,7 +307,7 @@ class Player(arcade.Sprite):
             return True  # Damage was blocked
 
         # Apply damage
-        self.health -= amount
+        self.current_hearts -= amount
         
         # Set invincibility
         self.invincible = True
@@ -325,7 +325,7 @@ class Player(arcade.Sprite):
             pass
 
         # Check if player is dead
-        if self.health <= 0:
+        if self.current_hearts <= 0:
             self.on_death()
             return False
             
@@ -426,20 +426,23 @@ class Player(arcade.Sprite):
         base_x = 35  # Moved more to the right
         base_y = SCREEN_HEIGHT - 40  # Push to top left
 
-        # Draw filled hearts
-        for i in range(int(self.health)):
+        # Ensure current_hearts is not negative
+        current_hearts = max(0, int(self.current_hearts))
+        
+        # Draw hearts for each slot up to max_slots
+        for i in range(self.max_slots):
             x = base_x + i * spacing
-            if i >= self.max_health:  # Extra hearts (from powerups)
-                texture = self.heart_textures.get("gold")
-            else:  # Regular hearts
-                texture = self.heart_textures.get("red")
-            if texture:
-                arcade.draw_texture_rectangle(x, base_y, heart_size, heart_size, texture)
-
-        # Draw empty slots
-        for i in range(self.max_slots - int(self.health)):
-            x = base_x + (i + int(self.health)) * spacing
-            texture = self.heart_textures.get("gray")
+            
+            if i < current_hearts:
+                # Red hearts for current health
+                if i >= self.max_health:  # Extra hearts (from powerups)
+                    texture = self.heart_textures.get("gold")
+                else:  # Regular hearts
+                    texture = self.heart_textures.get("red")
+            else:
+                # Gray hearts for empty slots
+                texture = self.heart_textures.get("gray")
+                
             if texture:
                 arcade.draw_texture_rectangle(x, base_y, heart_size, heart_size, texture)
 

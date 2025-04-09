@@ -34,29 +34,45 @@ class Orb(arcade.Sprite):
         # Set scale using centralized system
         self.scale = get_scale('orb')
 
-def get_random_orb(x, y, buff_chance=0.7):
+def get_random_orb(x, y, context=None):
     """Generate a random orb at the given position
 
     Args:
         x (float): X position
         y (float): Y position
-        buff_chance (float): Probability of generating a buff orb (0.0 to 1.0)
+        context (dict, optional): Dictionary with game context like 'wave', 'hp', 'mult', etc.
 
     Returns:
         Orb: A randomly generated orb
     """
-    # Determine if it's a buff or debuff orb
-    is_buff = random.random() < buff_chance
+    # Default to buff-heavy balance
+    base_buff_chance = 0.65
+
+    if context:
+        wave = context.get("wave", 1)
+        player_hp = context.get("hp", 3)
+        multiplier = context.get("mult", 1.0)
+
+        # More debuffs as waves progress
+        base_buff_chance -= 0.05 * (wave // 5)
+
+        # More buffs when health is low
+        if player_hp <= 1:
+            base_buff_chance += 0.25
+
+        # Confuse the player with more speed/slow orbs when multiplier is high
+        if multiplier > 1.5:
+            BUFF_ORBS["speed_20"] += 10
+            DEBUFF_ORBS["slow"] += 10
+
+        # Clamp chance
+        base_buff_chance = max(0.3, min(0.9, base_buff_chance))
+
+    is_buff = random.random() < base_buff_chance
 
     if is_buff:
-        # Select a random buff orb type based on weights
-        orb_types = list(BUFF_ORBS.keys())
-        weights = list(BUFF_ORBS.values())
-        orb_type = random.choices(orb_types, weights=weights, k=1)[0]
+        orb_type = random.choices(list(BUFF_ORBS), weights=BUFF_ORBS.values(), k=1)[0]
         return BuffOrb(x, y, orb_type)
     else:
-        # Select a random debuff orb type based on weights
-        orb_types = list(DEBUFF_ORBS.keys())
-        weights = list(DEBUFF_ORBS.values())
-        orb_type = random.choices(orb_types, weights=weights, k=1)[0]
+        orb_type = random.choices(list(DEBUFF_ORBS), weights=DEBUFF_ORBS.values(), k=1)[0]
         return DebuffOrb(x, y, orb_type)
