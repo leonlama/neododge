@@ -51,7 +51,10 @@ class DifficultyAdjuster:
         if difficulty > 0.4:
             types.append("shooter")
 
-        if difficulty > 0.7:
+        if difficulty > 0.6:
+            types.append("flight")
+            
+        if difficulty > 0.75:
             types.append("bomber")
 
         # Adjust based on player's playstyle
@@ -134,3 +137,42 @@ class DifficultyAdjuster:
 
         print(f"[AI Tuning] 📊 PerfScore: {performance_score:.2f} | "
               f"Old Diff: {old_difficulty:.2f} → New Diff: {self.base_difficulty:.2f}")
+              
+    def update_player_profile(self, player_profile: dict, wave_stats: dict):
+        """
+        Adjusts the player profile based on recent dodging performance (non-combat).
+        """
+        def smooth(old, new, rate=0.1):
+            return (1 - rate) * old + rate * new
+
+        # Bravery: Do they cut it close?
+        dodge_bravery = wave_stats.get("close_calls", 5) / (wave_stats.get("total_dodges", 10) + 1)
+
+        # Risk: How chaotic is their movement?
+        chaos_tolerance = wave_stats.get("heatmap_entropy", 0.5)
+
+        # Skill: How well do they survive?
+        survival = wave_stats.get("time_survived", 30)
+        hearts_lost = wave_stats.get("hearts_lost", 1)
+        skill_score = min(1.0, (survival / 60) * (1.0 - hearts_lost / 3))
+
+        # Orb preference
+        buffs = wave_stats.get("buffs_collected", 0)
+        debuffs = wave_stats.get("debuffs_collected", 0)
+        orb_pref = buffs / (buffs + debuffs + 1)
+
+        # Update
+        player_profile["playstyle"]["bravery"] = smooth(player_profile["playstyle"].get("bravery", 0.5), dodge_bravery)
+        player_profile["playstyle"]["chaos"] = smooth(player_profile["playstyle"].get("chaos", 0.5), chaos_tolerance)
+        player_profile["skill_level"] = smooth(player_profile.get("skill_level", 0.5), skill_score)
+
+        if "preferences" not in player_profile:
+            player_profile["preferences"] = {}
+        player_profile["preferences"]["orb_preference"] = smooth(
+            player_profile["preferences"].get("orb_preference", 0.5), orb_pref
+        )
+
+        print(f"[🧠 PROFILE] Bravery: {player_profile['playstyle']['bravery']:.2f} | "
+              f"Chaos: {player_profile['playstyle']['chaos']:.2f} | "
+              f"Skill: {player_profile['skill_level']:.2f} | "
+              f"Orbs: {player_profile['preferences']['orb_preference']:.2f}")

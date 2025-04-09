@@ -286,14 +286,16 @@ class WaveManager:
         """Placeholder for analytics update"""
         pass
 
-    def end_wave_analysis(self):
-        """Placeholder for end of wave analysis"""
-        return {
-            "damage_taken": 0,
-            "enemies_defeated": 0,
-            "orbs_collected": 0,
-            "survival_time": 0
-        }
+    def end_wave(self):
+        """End the current wave."""
+        if self.on_clear_enemies:
+            self.on_clear_enemies()
+
+        print(f"Successfully passed wave {self.wave}!") 
+        self.last_message_drawn = f"Successfully passed wave {self.wave}!"
+
+        self.wave_timer = 0
+        self.in_wave = False
 
     def maybe_spawn_artifact(self, current_artifacts, current_dash_artifact, screen_width, screen_height):
         """Determine if an artifact should spawn and which type"""
