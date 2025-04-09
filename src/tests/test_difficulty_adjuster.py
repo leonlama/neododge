@@ -1,44 +1,33 @@
+import pytest
 from src.mechanics.wave_management.difficulty_adjuster import DifficultyAdjuster
 
-def test_adjust_based_on_performance_updates_difficulty():
-    adjuster = DifficultyAdjuster()
-    old_difficulty = adjuster.base_difficulty
+class TestDifficultyAdjuster:
+    def test_difficulty_scaling(self):
+        """Test that difficulty scales with wave number."""
+        adjuster = DifficultyAdjuster()
 
-    wave_stats = {
-        "damage_taken": 10,
-        "time_survived": 55,
-        "buffs_collected": 3,
-        "debuffs_collected": 1,
-        "coins_collected": 10,
-        "heatmap_entropy": 0.7,
-    }
+        # Create a simple player profile
+        player_profile = {"skill_level": 0.5, "playstyle": {"aggression": 0.5}}
 
-    adjuster.adjust_based_on_performance(wave_stats)
+        # Test early wave
+        params_wave1 = adjuster.calculate_parameters(1, player_profile, 0.5)
 
-    assert adjuster.base_difficulty != old_difficulty, "Difficulty should update based on performance."
-    assert 0 <= adjuster.base_difficulty <= 1, "Difficulty must stay between 0 and 1."
+        # Test later wave
+        params_wave10 = adjuster.calculate_parameters(10, player_profile, 0.5)
 
-def test_update_profile_for_dodging_game():
-    adjuster = DifficultyAdjuster()
-    profile = {
-        "playstyle": {"bravery": 0.5, "chaos": 0.5},
-        "skill_level": 0.5,
-        "preferences": {"orb_preference": 0.5}
-    }
+        assert params_wave10["difficulty"] > params_wave1["difficulty"]
+        assert params_wave10["enemy_count"] > params_wave1["enemy_count"]
 
-    wave_stats = {
-        "close_calls": 12,
-        "total_dodges": 20,
-        "time_survived": 50,
-        "hearts_lost": 0,
-        "buffs_collected": 3,
-        "debuffs_collected": 0,
-        "heatmap_entropy": 0.8
-    }
+    def test_player_skill_adjustment(self):
+        """Test that difficulty adjusts based on player skill."""
+        adjuster = DifficultyAdjuster()
 
-    adjuster.update_player_profile(profile, wave_stats)
+        # Low skill player
+        low_skill = {"skill_level": 0.2, "playstyle": {"aggression": 0.5}}
+        params_low = adjuster.calculate_parameters(5, low_skill, 0.5)
 
-    assert 0 <= profile["playstyle"]["bravery"] <= 1
-    assert 0 <= profile["playstyle"]["chaos"] <= 1
-    assert 0 <= profile["skill_level"] <= 1
-    assert 0 <= profile["preferences"]["orb_preference"] <= 1
+        # High skill player
+        high_skill = {"skill_level": 0.8, "playstyle": {"aggression": 0.5}}
+        params_high = adjuster.calculate_parameters(5, high_skill, 0.5)
+
+        assert params_high["difficulty"] > params_low["difficulty"]

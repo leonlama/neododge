@@ -56,6 +56,8 @@ class WaveManager:
     def update(self, delta_time):
         """Update the wave manager."""
         if not self.in_wave:
+            print("Not in wave, starting new wave...")
+            self.start_wave()
             return
 
         # Update wave timer
@@ -63,78 +65,117 @@ class WaveManager:
 
         # Check if wave is complete
         if self.wave_timer >= self.wave_duration:
-            print(f"Wave {self.wave_number} completed (timer: {self.wave_timer:.2f}, duration: {self.wave_duration:.2f})")
+            print(f"Wave {self.wave_number} completed (duration reached)")
             self.end_wave()
-            if self.on_wave_complete:
-                self.on_wave_complete(self.wave_number)
             return
 
         # Update spawn timer
-        if self.enemies_to_spawn > 0:
-            self.spawn_timer += delta_time
-            if self.spawn_timer >= self.spawn_delay:
-                self.spawn_timer = 0
-                self.spawn_enemy()
+        self.spawn_timer += delta_time
+
+        # Spawn enemies if it's time and there are enemies to spawn
+        if self.spawn_timer >= self.spawn_delay and self.enemies_to_spawn > 0:
+            print(f"Spawning enemy ({self.enemies_to_spawn} remaining)")
+            self.spawn_timer = 0
+            self.spawn_enemy()
 
     def start_wave(self):
         """Start a new wave."""
         self.wave_number += 1
-        self.in_wave = True
-        self.wave_timer = 0
-        self.spawn_timer = 0
+
+        # Get player analytics if available
+        if hasattr(self.game_view, 'player_analytics'):
+            self.player_profile = self.game_view.player_analytics.get_player_profile()
+            self.engagement_score = self.game_view.player_analytics.calculate_engagement_score()
 
         # Generate wave configuration
         self.current_wave = self.wave_generator.create_wave(
             self.wave_number, 
-            self.player_profile, 
+            self.player_profile,
             self.engagement_score
         )
 
         # Set wave parameters
-        self.wave_duration = self.current_wave.get("duration", 45.0)
-        self.spawn_delay = self.current_wave.get("spawn_delay", 1.0)
-        self.enemies_to_spawn = self.current_wave.get("enemy_count", 0)
+        self.wave_duration = self.current_wave["duration"]
+        self.spawn_delay = self.current_wave["spawn_delay"]
+        self.enemies_to_spawn = self.current_wave["enemy_count"]
+
+        # Reset timers
+        self.wave_timer = 0
+        self.spawn_timer = 0
+        self.in_wave = True
+
+        # Display wave message if available
+        if "message" in self.current_wave and hasattr(self.game_view, 'show_message'):
+            self.game_view.show_message(self.current_wave["message"])
 
         print(f"Starting Wave {self.wave_number}")
-        print(f"  Type: {self.current_wave.get('type', 'normal')}")
-        print(f"  Enemy Count: {self.enemies_to_spawn}")
-        print(f"  Enemy Types: {self.current_wave.get('enemy_types', [])}")
-        print(f"  Enemy Speed: {self.current_wave.get('enemy_speed', 1.0)}")
-        print(f"  Spawn Delay: {self.spawn_delay}")
-        print(f"  Duration: {self.wave_duration}")
+
+        # Spawn orbs
+        if hasattr(self.game_view, 'spawn_orbs'):
+            self.game_view.spawn_orbs(
+                self.current_wave["orb_count"],
+                self.current_wave["orb_types"]
+            )
+
+        # Spawn artifact if needed
+        if self.current_wave["spawn_artifact"] and hasattr(self.game_view, 'spawn_artifact'):
+            self.game_view.spawn_artifact()
 
         return self.current_wave
 
     def end_wave(self):
         """End the current wave."""
-        # Clear any remaining enemies
+        self.in_wave = False
+
+        # Clear remaining enemies if callback exists
         if self.on_clear_enemies:
             self.on_clear_enemies()
 
-        # Reset wave timer
-        self.wave_timer = 0
-        self.in_wave = False
-
     def spawn_enemy(self):
-        """Spawn an enemy from the current wave."""
-        if self.enemies_to_spawn <= 0 or not self.on_spawn_enemy:
+        """Spawn an enemy based on the current wave configuration."""
+        if not self.enemies_to_spawn or not self.on_spawn_enemy:
+            print(f"Cannot spawn enemy: enemies_to_spawn={self.enemies_to_spawn}, on_spawn_enemy={self.on_spawn_enemy}")
             return
 
         # Get enemy type
-        enemy_types = self.current_wave.get("enemy_types", ["basic"])
-        enemy_index = min(self.current_wave.get("enemy_count", 0) - self.enemies_to_spawn, len(enemy_types) - 1)
-        enemy_type = enemy_types[enemy_index]
+        enemy_index = self.current_wave["enemy_count"] - self.enemies_to_spawn
+        if enemy_index >= len(self.current_wave["enemy_types"]):
+            print(f"Enemy index {enemy_index} out of range for enemy types: {self.current_wave['enemy_types']}")
+            enemy_type = "wander"  # Default
+        else:
+            enemy_type = self.current_wave["enemy_types"][enemy_index]
 
-        # Get enemy parameters
-        enemy_params = {
-            "speed": self.current_wave.get("enemy_speed", 1.0),
-            "health": self.current_wave.get("enemy_health", 1.0)
-        }
+        print(f"Spawning enemy of type: {enemy_type}")
 
-        print(f"Spawning enemy: {enemy_type} with params {enemy_params}")
+        # Get spawn position based on formation
+        formation = self.current_wave.get("formation", "random")
+        screen_width = 800  # Default
+        screen_height = 600  # Default
 
-        # Spawn the enemy
-        self.on_spawn_enemy(enemy_type, enemy_params)
+        if hasattr(self.game_view, 'get_screen_dimensions'):
+            screen_width, screen_height = self.game_view.get_screen_dimensions()
+
+        # Generate positions if not already generated
+        if not hasattr(self, 'spawn_positions') or self.spawn_positions is None:
+            print(f"Generating formation: {formation}")
+            self.spawn_positions = self.wave_generator.formation_generator.generate_formation(
+                formation, 
+                self.current_wave["enemy_count"],
+                screen_width,
+                screen_height
+            )
+
+        position = self.spawn_positions[enemy_index]
+
+        # Call spawn callback with enemy parameters
+        print(f"Calling on_spawn_enemy with: {enemy_type}, {position}")
+        self.on_spawn_enemy(
+            enemy_type=enemy_type,
+            position=position,
+            speed=self.current_wave["enemy_speed"],
+            health=self.current_wave["enemy_health"]
+        )
+
         self.enemies_to_spawn -= 1
 
     def set_player_profile(self, profile):

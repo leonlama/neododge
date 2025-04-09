@@ -239,7 +239,7 @@ class StatusEffectManager:
     def draw_effect_indicators(self, screen_width, screen_height):
         """Draw status effect indicators on screen."""
         # Add debug print
-        print(f"Drawing effects: {[effect['type'] for effect in self.effects.values()]}")
+        #print(f"Drawing effects: {[effect['type'] for effect in self.effects.values()]}")
 
         if not self.effects:
             return

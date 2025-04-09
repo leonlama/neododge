@@ -113,71 +113,98 @@ class NeododgeGame(arcade.View):
     def setup_wave_manager(self):
         """Set up the wave manager."""
         from src.mechanics.wave_management.wave_manager import WaveManager
-        
-        # Initialize the wave manager with a reference to this game view
-        self.wave_manager = WaveManager(self)
-        
-        # Start the first wave
+
+        # Create wave manager
+        self.wave_manager = WaveManager()
+
+        # Set game view reference
+        self.wave_manager.game_view = self
+
+        # Set callbacks
+        self.wave_manager.on_spawn_enemy = self.spawn_enemy
+        self.wave_manager.on_clear_enemies = self.clear_enemies
+
+        print("Wave manager set up with callbacks")
+
+        # Start first wave
         self.wave_manager.start_wave()
 
-    def spawn_enemy(self, enemy_type, params):
-        """Spawn an enemy of the specified type with the given parameters."""
-        # Import enemy classes
-        from src.entities.enemies.enemy import Enemy
-        from src.entities.enemies.chaser import Chaser
-        from src.entities.enemies.shooter import Shooter
-        from src.entities.enemies.wanderer import Wander
-        #from src.entities.enemies.boss import Boss
+    def spawn_enemy(self, enemy_type, position, speed=1.0, health=1.0):
+        """Spawn an enemy with the given parameters."""
+        print(f"Game view spawning enemy: {enemy_type} at {position} with speed={speed}, health={health}")
 
-        # Get screen dimensions
-        screen_width = self.window.width
-        screen_height = self.window.height
+        # Extract position components
+        if isinstance(position, tuple) and len(position) >= 2:
+            x, y = position[0], position[1]
+        else:
+            print(f"Invalid position format: {position}")
+            x, y = random.randint(50, self.width - 50), random.randint(50, self.height - 50)
 
-        # Determine spawn position (outside the screen)
-        side = random.randint(0, 3)  # 0: top, 1: right, 2: bottom, 3: left
-
-        if side == 0:  # Top
-            x = random.randint(0, screen_width)
-            y = screen_height + 50
-        elif side == 1:  # Right
-            x = screen_width + 50
-            y = random.randint(0, screen_height)
-        elif side == 2:  # Bottom
-            x = random.randint(0, screen_width)
-            y = -50
-        else:  # Left
-            x = -50
-            y = random.randint(0, screen_height)
-
-        # Create the enemy based on type
+        # Create enemy based on type
         enemy = None
 
-        if enemy_type == "basic":
-            enemy = Enemy(x, y)
-        elif enemy_type == "chaser":
-            enemy = Chaser(x, y)
-        elif enemy_type == "shooter":
-            enemy = Shooter(x, y)
-        elif enemy_type == "wander":
-            enemy = Wander(x, y)
-        #elif enemy_type == "boss":
-        #    enemy = Boss(x, y)
+        try:
+            if enemy_type == "chaser":
+                from src.entities.enemies.chaser import Chaser
+                enemy = Chaser(x, y)
+            elif enemy_type == "wander":
+                from src.entities.enemies.wanderer import Wanderer
+                enemy = Wanderer(x, y)
+            elif enemy_type == "shooter":
+                from src.entities.enemies.shooter import Shooter
+                enemy = Shooter(x, y)
+            elif enemy_type == "flight":
+                from src.entities.enemies.flight import Flight
+                enemy = Flight(x, y)
+            elif enemy_type == "bomber":
+                from src.entities.enemies.bomber import Bomber
+                enemy = Bomber(x, y)
+            elif enemy_type == "boss":
+                from src.entities.enemies.boss import Boss
+                enemy = Boss(x, y)
+            else:
+                # Default to wander enemy if type not recognized
+                from src.entities.enemies.wanderer import Wanderer
+                enemy = Wanderer(x, y)
+                print(f"Unknown enemy type: {enemy_type}, defaulting to Wanderer")
+        except ImportError as e:
+            print(f"Error importing enemy class: {e}")
+            return
+        except Exception as e:
+            print(f"Error creating enemy: {e}")
+            return
 
-        # Apply parameters
         if enemy:
-            if "speed" in params:
-                enemy.speed = enemy.base_speed * params["speed"]
-            if "health" in params:
-                enemy.health = enemy.base_health * params["health"]
+            # Apply speed and health modifiers
+            enemy.speed *= speed
+            if hasattr(enemy, 'max_health'):
+                enemy.max_health = int(enemy.max_health * health)
+                enemy.health = enemy.max_health
 
-            # Add to enemies list
+            # Add to sprite lists
+            print(f"Adding enemy to sprite lists")
             self.enemies.append(enemy)
-            print(f"Spawned {enemy_type} enemy at ({x}, {y}) with speed {enemy.speed:.2f} and health {enemy.health:.2f}")
+            self.all_sprites.append(enemy)
+
+    def spawn_artifact(self):
+        """Spawn a random artifact."""
+        # Random position
+        x = random.randint(50, self.window.width - 50)
+        y = random.randint(50, self.window.height - 50)
+
+        # Random artifact type
+        artifact_type = random.choice(["damage", "speed", "health", "shield"])
+
+        # Create artifact
+        artifact = Artifact(x, y, artifact_type)
+
+        # Add to sprite lists
+        self.artifacts.append(artifact)
+        self.all_sprites.append(artifact)
 
     def clear_enemies(self):
-        """Clear all enemies."""
-        self.enemies.clear()
-        print("Cleared all enemies")
+        """Clear all enemies from the screen."""
+        self.enemies = arcade.SpriteList()
 
     def on_wave_start(self, wave_number):
         """Called when a wave starts."""
@@ -267,7 +294,7 @@ class NeododgeGame(arcade.View):
 
     def on_draw(self):
         """Render the screen."""
-        print("Starting on_draw method")
+        #print("Starting on_draw method")
         try:
             # Start rendering
             arcade.start_render()
@@ -543,6 +570,15 @@ class NeododgeGame(arcade.View):
         # Update coins
         self.coins.update()
 
+        # Update artifacts
+        self.artifacts.update()
+
+        # Update message timer
+        if hasattr(self, 'message') and self.message:
+            self.message_timer += delta_time
+            if self.message_timer >= self.message_duration:
+                self.message = None
+
         # Update coin animations
         for coin in self.coins:
             if hasattr(coin, 'update_animation'):
@@ -602,9 +638,6 @@ class NeododgeGame(arcade.View):
                 self.artifact_spawn_timer = random.uniform(20, 30)
                 print("✨ Spawned a dash artifact!")
 
-        # Update artifacts
-        self.artifacts.update()
-
         # Update pickup texts
         if hasattr(self, 'pickup_texts'):
             for i in range(len(self.pickup_texts) - 1, -1, -1):
@@ -634,10 +667,30 @@ class NeododgeGame(arcade.View):
         self.coins_to_spawn = count
         self.coin_spawn_timer = 0.5  # Start spawning soon
 
-    def spawn_orbs(self, count):
-        """Spawn a number of orbs."""
-        for _ in range(count):
-            self.spawn_orb()
+    def spawn_orbs(self, orb_count, orb_types=None):
+        """Spawn orbs with the given distribution.
+
+        Args:
+            orb_count: Number of orbs to spawn
+            orb_types: Dictionary of orb types and their weights (optional)
+        """
+        if orb_types is None:
+            # Default distribution if none provided
+            orb_types = {"buff": 0.7, "debuff": 0.3}
+
+        for _ in range(orb_count):
+            # Determine orb type based on distribution
+            orb_type = random.choices(
+                list(orb_types.keys()),
+                weights=list(orb_types.values())
+            )[0]
+
+            # Random position
+            x = random.randint(50, self.window.width - 50)
+            y = random.randint(50, self.window.height - 50)
+
+            # Create orb with type information
+            self.spawn_orb(x, y, orb_type=orb_type)
             
     def spawn_orb(self, x=None, y=None):
         """Spawn an orb at the specified position or a random position."""
@@ -658,7 +711,7 @@ class NeododgeGame(arcade.View):
 
         # Add to orbs list
         self.orbs.append(orb)
-        print(f"Spawned orb at ({x}, {y})")
+        #print(f"Spawned orb at ({x}, {y})")
             
     def check_orb_collisions(self):
         """Check for collisions between player and orbs."""
@@ -786,14 +839,14 @@ class NeododgeGame(arcade.View):
                 self.add_pickup_text("Coin collected!", self.player.center_x, self.player.center_y)
 
         # Player-Orb collisions
-        print(f"Checking orb collisions. Player at ({self.player.center_x}, {self.player.center_y})")
-        print(f"Number of orbs: {len(self.orbs)}")
+        #print(f"Checking orb collisions. Player at ({self.player.center_x}, {self.player.center_y})")
+        #print(f"Number of orbs: {len(self.orbs)}")
 
         # Use a more reliable collision detection method
         for orb in list(self.orbs):  # Use a copy of the list to safely modify during iteration
             distance = ((self.player.center_x - orb.center_x) ** 2 + 
                         (self.player.center_y - orb.center_y) ** 2) ** 0.5
-            print(f"Orb at ({orb.center_x}, {orb.center_y}), Distance: {distance}")
+            #print(f"Orb at ({orb.center_x}, {orb.center_y}), Distance: {distance}")
 
             # Check if player is close enough to collect the orb
             # Use a generous collision radius to make collection easier
@@ -830,7 +883,7 @@ class NeododgeGame(arcade.View):
 
         # The original arcade.check_for_collision_with_list as a backup
         orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
-        print(f"Orb hit list length: {len(orb_hit_list)}")
+        #print(f"Orb hit list length: {len(orb_hit_list)}")
 
         # Process any hits found by arcade's collision detection (unlikely if our custom detection worked)
         for orb in orb_hit_list:
@@ -938,17 +991,23 @@ class NeododgeGame(arcade.View):
 
         # Update buff display
         self.update_buff_display()
-
+        
     def show_shop(self):
         """Show the shop view."""
         shop_view = ShopView(self.player, self)
         self.window.show_view(shop_view)
         
-    def show_message(self, message):
-        """Show a message on screen."""
-        if not hasattr(self, 'pickup_texts'):
-            self.pickup_texts = []
-        self.pickup_texts.append([message, self.player.center_x, self.player.center_y, 1.5])
+    def show_message(self, message, duration=2.0):
+        """Show a message on the screen."""
+        self.message = message
+        self.message_timer = 0
+        self.message_duration = duration
+        
+    def get_screen_dimensions(self):
+        """Get the dimensions of the game screen."""
+        # Use the window dimensions if width/height attributes don't exist
+        window = arcade.get_window()
+        return window.width, window.height
 
     def draw_hud(self):
         """Draw the heads-up display."""
