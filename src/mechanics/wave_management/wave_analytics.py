@@ -3,70 +3,82 @@ import numpy as np
 from collections import deque
 
 class WaveAnalytics:
-    """Tracks and analyzes wave statistics."""
+    """Track statistics for waves to help with balancing"""
 
     def __init__(self):
-        """Initialize the wave analytics."""
         self.wave_stats = {}
 
-    def start_wave_tracking(self, wave_number):
-        """Start tracking statistics for a wave."""
+    def initialize_wave(self, wave_number):
+        """Initialize stats for a new wave"""
         self.wave_stats[wave_number] = {
             "enemies_spawned": 0,
             "enemies_killed": 0,
-            "damage_taken": 0,
-            "coins_collected": 0,
+            "player_damage_taken": 0,
             "orbs_collected": 0,
-            "start_time": 0,
-            "end_time": 0,
-            "duration": 0
+            "coins_collected": 0,
+            "time_to_complete": 0,
+            "player_position_heatmap": [],  # Track where player spends time
         }
 
     def update_wave_stat(self, wave_number, stat_name, value):
-        """Update a specific statistic for a wave."""
-        if wave_number in self.wave_stats:
-            if stat_name in self.wave_stats[wave_number]:
-                self.wave_stats[wave_number][stat_name] += value
-            else:
-                self.wave_stats[wave_number][stat_name] = value
+        """Update a specific stat for a wave"""
+        if wave_number not in self.wave_stats:
+            self.initialize_wave(wave_number)
 
-    def get_wave_stats(self, wave_number):
-        """Get statistics for a specific wave."""
-        return self.wave_stats.get(wave_number, {})
+        if stat_name in self.wave_stats[wave_number]:
+            self.wave_stats[wave_number][stat_name] += value
+        else:
+            self.wave_stats[wave_number][stat_name] = value
 
-    def get_recent_stats(self, num_waves=3):
-        """Get aggregated statistics for the most recent waves."""
-        recent_stats = {
-            "enemies_spawned": 0,
-            "enemies_killed": 0,
-            "damage_taken": 0,
-            "coins_collected": 0,
-            "orbs_collected": 0,
-            "avg_duration": 0
+    def record_player_position(self, wave_number, x, y):
+        """Record player position for heatmap"""
+        if wave_number not in self.wave_stats:
+            self.initialize_wave(wave_number)
+
+        self.wave_stats[wave_number]["player_position_heatmap"].append((x, y))
+
+    def get_wave_summary(self, wave_number):
+        """Get a summary of wave statistics"""
+        if wave_number not in self.wave_stats:
+            return None
+
+        stats = self.wave_stats[wave_number]
+
+        # Calculate derived stats
+        kill_ratio = stats["enemies_killed"] / max(1, stats["enemies_spawned"])
+
+        return {
+            "wave_number": wave_number,
+            "kill_ratio": kill_ratio,
+            "damage_taken": stats["player_damage_taken"],
+            "orbs_collected": stats["orbs_collected"],
+            "coins_collected": stats["coins_collected"],
+            "time_to_complete": stats["time_to_complete"]
         }
 
-        # Get the most recent wave numbers
-        wave_numbers = sorted(self.wave_stats.keys())
-        if len(wave_numbers) > num_waves:
-            wave_numbers = wave_numbers[-num_waves:]
+    def get_difficulty_recommendation(self):
+        """Analyze performance and recommend difficulty adjustments"""
+        if not self.wave_stats:
+            return 0  # No change
 
-        if not wave_numbers:
-            return recent_stats
+        recent_waves = sorted(self.wave_stats.keys())[-3:]  # Last 3 waves
 
-        # Aggregate stats
-        for wave in wave_numbers:
+        # Calculate average kill ratio for recent waves
+        avg_kill_ratio = 0
+        for wave in recent_waves:
             stats = self.wave_stats[wave]
-            recent_stats["enemies_spawned"] += stats.get("enemies_spawned", 0)
-            recent_stats["enemies_killed"] += stats.get("enemies_killed", 0)
-            recent_stats["damage_taken"] += stats.get("damage_taken", 0)
-            recent_stats["coins_collected"] += stats.get("coins_collected", 0)
-            recent_stats["orbs_collected"] += stats.get("orbs_collected", 0)
-            recent_stats["avg_duration"] += stats.get("duration", 0)
+            kill_ratio = stats["enemies_killed"] / max(1, stats["enemies_spawned"])
+            avg_kill_ratio += kill_ratio
 
-        # Calculate averages
-        recent_stats["avg_duration"] /= len(wave_numbers)
+        avg_kill_ratio /= len(recent_waves)
 
-        return recent_stats
+        # Recommend difficulty changes
+        if avg_kill_ratio > 0.9:
+            return 0.05  # Increase difficulty
+        elif avg_kill_ratio < 0.5:
+            return -0.03  # Decrease difficulty
+
+        return 0  # No change
 
 class PlayerAnalytics:
     def __init__(self, player):

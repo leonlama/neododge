@@ -219,21 +219,82 @@ class NeododgeGame(arcade.View):
 
             return enemy
 
-    def spawn_artifact(self):
-        """Spawn a random artifact."""
-        # Random position
-        x = random.randint(50, self.window.width - 50)
-        y = random.randint(50, self.window.height - 50)
+    def spawn_artifact(self, x=None, y=None, artifact_type=None):
+        """
+        Spawn an artifact at the specified position or a random position.
 
-        # Random artifact type
-        artifact_type = random.choice(["damage", "speed", "health", "shield"])
+        Args:
+            x (float, optional): X-coordinate for the artifact. If None, a random position is chosen.
+            y (float, optional): Y-coordinate for the artifact. If None, a random position is chosen.
+            artifact_type (str, optional): Type of artifact to spawn. If None, a random type is chosen.
 
-        # Create artifact
-        artifact = Artifact(x, y, artifact_type)
+        Returns:
+            bool: True if artifact was spawned successfully, False otherwise.
+        """
+        # Import the artifact class
+        try:
+            from src.mechanics.artifacts.base import Artifact
+            from src.mechanics.artifacts.dash_artifact import DashArtifact
+            from src.mechanics.artifacts.bullet_time import BulletTimeArtifact
+            # Import other artifact types as needed
+        except ImportError as e:
+            print(f"Error importing artifact classes: {e}")
+            return False
 
-        # Add to sprite lists
-        self.artifacts.append(artifact)
-        self.all_sprites.append(artifact)
+        # If no position specified, choose a random position
+        if x is None or y is None:
+            margin = 50
+            max_attempts = 10  # Limit attempts to find valid position
+
+            for _ in range(max_attempts):
+                # Generate random position
+                x = random.randint(margin, self.window.width - margin)
+                y = random.randint(margin, self.window.height - margin)
+
+                # Check distance from player
+                if hasattr(self, 'player'):
+                    player_pos = (self.player.center_x, self.player.center_y)
+                    artifact_pos = (x, y)
+                    distance = ((player_pos[0] - artifact_pos[0])**2 + (player_pos[1] - artifact_pos[1])**2)**0.5
+
+                    # If too close to player, try again
+                    if distance < 100:  # Minimum distance
+                        continue
+
+                # Valid position found
+                break
+
+        # If no artifact type specified, choose a random one
+        if artifact_type is None:
+            artifact_types = ["dash", "bullet_time"]  # Add more types as needed
+            artifact_type = random.choice(artifact_types)
+
+        try:
+            # Create the appropriate artifact based on type
+            if artifact_type == "dash":
+                artifact = DashArtifact(x, y)
+            elif artifact_type == "bullet_time":
+                artifact = BulletTimeArtifact(x, y)
+            else:
+                print(f"Unknown artifact type: {artifact_type}")
+                return False
+
+            # Add to sprite lists
+            if not hasattr(self, 'artifacts'):
+                self.artifacts = arcade.SpriteList()
+
+            self.artifacts.append(artifact)
+
+            # Add to all_sprites if it exists
+            if hasattr(self, 'all_sprites'):
+                self.all_sprites.append(artifact)
+
+            print(f"🔮 Spawned a {artifact_type} artifact at ({x}, {y})!")
+            return True
+
+        except Exception as e:
+            print(f"Error spawning artifact: {e}")
+            return False
 
     def clear_enemies(self):
         """Clear all enemies from the screen."""
@@ -571,13 +632,13 @@ class NeododgeGame(arcade.View):
         if (self.left_mouse_down or self.right_mouse_down) and self.player:
             self.player.set_target(self.mouse_x, self.mouse_y)
 
-        # Update wave manager
-        if hasattr(self, 'wave_manager'):
-            self.wave_manager.update(delta_time)
-
         # Update player
         if self.player:
             self.player.update(delta_time)
+
+        # Update wave manager
+        if hasattr(self, 'wave_manager'):
+            self.wave_manager.update(delta_time)
 
         # Update game controller
         if hasattr(self, 'game_controller'):
@@ -621,11 +682,20 @@ class NeododgeGame(arcade.View):
             orb.update()
 
         # Update coins
-        for coin in self.coins:
-            coin.update()
-            # Update coin animations
-            if hasattr(coin, 'update_animation'):
-                coin.update_animation(delta_time)
+        if hasattr(self, 'coins'):
+            self.coins.update()
+            for coin in self.coins:
+                # Update coin animations
+                if hasattr(coin, 'update_animation'):
+                    coin.update_animation(delta_time)
+                if hasattr(coin, 'update_with_time'):
+                    coin.update_with_time(delta_time)
+
+        # Check for coin collection
+        self.check_coin_collection()
+
+        # Spawn more coins if needed
+        self.maybe_spawn_more_coins()
 
         # Update artifacts
         for artifact in self.artifacts:
@@ -718,57 +788,227 @@ class NeododgeGame(arcade.View):
 
         # Update score
         self.score += 1 * getattr(self, 'score_multiplier', 1) * delta_time
+    
+    def check_coin_collection(self):
+        """Check if player has collected any coins."""
+        if not hasattr(self, 'coins') or not self.player:
+            return
 
+        # Get collisions
+        coin_hit_list = arcade.check_for_collision_with_list(self.player, self.coins)
+
+        # Handle each collision
+        for coin in coin_hit_list:
+            # Add to score
+            coin_value = getattr(coin, 'coin_value', 1)
+            self.score += coin_value
+
+            # Play sound
+            self.play_coin_sound()
+
+            # Show message
+            if hasattr(self, 'add_pickup_text'):
+                self.add_pickup_text(f"+{coin_value} Coin!", coin.center_x, coin.center_y)
+
+            # Remove the coin
+            coin.remove_from_sprite_lists()
+
+            # Update analytics
+            if hasattr(self, 'wave_manager') and hasattr(self.wave_manager, 'wave_analytics'):
+                self.wave_manager.wave_analytics.update_wave_stat(self.wave_manager.current_wave, "coins_collected", 1)
+
+    def maybe_spawn_more_coins(self):
+        """Spawn more coins if needed based on wave configuration."""
+        if not hasattr(self, 'wave_manager') or not hasattr(self, 'coins'):
+            return
+
+        # Get current wave config
+        current_config = getattr(self.wave_manager, 'current_config', None)
+        if not current_config:
+            return
+
+        # Check if we need to spawn more coins
+        target_coin_count = current_config.get('coin_count', 0)
+        current_coin_count = len(self.coins)
+
+        # Spawn more coins if we're below target and at a random chance
+        if current_coin_count < target_coin_count and random.random() < 0.01:  # 1% chance per frame
+            self.spawn_coin()
+        
     def spawn_coins(self, count):
         """Spawn a number of coins."""
         self.coins_to_spawn = count
         self.coin_spawn_timer = 0.5  # Start spawning soon
 
-    def spawn_orbs(self, orb_count, orb_types=None):
-        """Spawn orbs with the given distribution.
+        # Spawn a few coins immediately
+        for _ in range(min(5, count)):
+            self.spawn_coin()
+
+    def spawn_coin(self, x=None, y=None, min_distance_from_player=100):
+        """
+        Spawn a coin at the specified position or a random position.
 
         Args:
-            orb_count: Number of orbs to spawn
-            orb_types: Dictionary of orb types and their weights (optional)
-        """
-        if orb_types is None:
-            # Default distribution if none provided
-            orb_types = {"buff": 0.7, "debuff": 0.3}
+            x (float, optional): X-coordinate for the coin. If None, a random position is chosen.
+            y (float, optional): Y-coordinate for the coin. If None, a random position is chosen.
+            min_distance_from_player (float): Minimum distance from player to spawn the coin.
 
-        for _ in range(orb_count):
-            # Determine orb type based on distribution
-            orb_type = random.choices(
+        Returns:
+            bool: True if coin was spawned successfully, False otherwise.
+        """
+        # If no position specified, choose a random position
+        if x is None or y is None:
+            margin = 50
+            max_attempts = 10  # Limit attempts to find valid position
+
+            for _ in range(max_attempts):
+                # Generate random position
+                x = random.randint(margin, self.window.width - margin)
+                y = random.randint(margin, self.window.height - margin)
+
+                # Check distance from player
+                if hasattr(self, 'player'):
+                    player_pos = (self.player.center_x, self.player.center_y)
+                    coin_pos = (x, y)
+                    distance = ((player_pos[0] - coin_pos[0])**2 + (player_pos[1] - coin_pos[1])**2)**0.5
+
+                    # If too close to player, try again
+                    if distance < min_distance_from_player:
+                        continue
+
+                # Valid position found
+                break
+
+        try:
+            # Create the coin sprite
+            from src.mechanics.coins.coin import Coin
+            coin = Coin(x, y)
+
+            # Add to sprite lists
+            if not hasattr(self, 'coins'):
+                self.coins = arcade.SpriteList()
+
+            self.coins.append(coin)
+
+            # Add to all_sprites if it exists
+            if hasattr(self, 'all_sprites'):
+                self.all_sprites.append(coin)
+
+            # Get remaining coins count (without relying on wave_manager.current_config)
+            remaining = 0
+            if hasattr(self, 'wave_manager') and hasattr(self.wave_manager, 'current_config'):
+                total_coins = self.wave_manager.current_config.get('coin_count', 0)
+                remaining = total_coins - len(self.coins)
+
+            print(f"🪙 Spawned a coin at ({x}, {y})!")
+            return True
+
+        except Exception as e:
+            print(f"Error spawning coin: {e}")
+            return False
+
+    def spawn_orbs(self, count, orb_types=None, min_distance_from_player=100):
+        """
+        Spawn multiple orbs based on wave configuration.
+
+        Args:
+            count (int): Number of orbs to spawn
+            orb_types (dict, optional): Distribution of orb types (e.g., {'buff': 0.7, 'debuff': 0.3})
+            min_distance_from_player (float): Minimum distance from player to spawn orbs
+        """
+        if count <= 0:
+            return
+
+        # Default orb type distribution if none provided
+        if orb_types is None:
+            orb_types = {'buff': 0.7, 'debuff': 0.3}
+
+        # Spawn the specified number of orbs
+        for _ in range(count):
+            # Choose a random position
+            margin = 50
+            x = random.randint(margin, self.window.width - margin)
+            y = random.randint(margin, self.window.height - margin)
+
+            # Ensure minimum distance from player
+            if hasattr(self, 'player'):
+                player_pos = (self.player.center_x, self.player.center_y)
+                orb_pos = (x, y)
+                distance = ((player_pos[0] - orb_pos[0])**2 + (player_pos[1] - orb_pos[1])**2)**0.5
+
+                # If too close to player, try again
+                if distance < min_distance_from_player:
+                    continue
+
+            # Determine orb category (buff or debuff)
+            orb_category = random.choices(
                 list(orb_types.keys()),
                 weights=list(orb_types.values())
             )[0]
 
-            # Random position
-            x = random.randint(50, self.window.width - 50)
-            y = random.randint(50, self.window.height - 50)
+            # Choose specific orb type based on category
+            if orb_category == "buff":
+                orb_type = random.choice(["speed", "shield", "multiplier", "cooldown"])
+            else:  # debuff
+                orb_type = random.choice(["slow", "vision", "hitbox"])
 
-            # Create orb with type information
+            # Spawn the orb
             self.spawn_orb(x, y, orb_type=orb_type)
             
-    def spawn_orb(self, x=None, y=None):
-        """Spawn an orb at the specified position or a random position."""
+    def spawn_orb(self, x=None, y=None, orb_type=None):
+        """
+        Spawn an orb at the specified position.
+
+        Args:
+            x (float): X-coordinate for the orb
+            y (float): Y-coordinate for the orb
+            orb_type (str, optional): Type of orb to spawn. If None, a random type will be chosen.
+        """
         if x is None or y is None:
             # Random position within the screen
             x = random.randint(50, self.window.width - 50)
             y = random.randint(50, self.window.height - 50)
 
-        # Create context with current wave number
-        context = {
-            'wave': self.wave_manager.current_wave if hasattr(self, 'wave_manager') else 1,
-            'player_health': self.player.current_hearts,
-            'player_speed': self.player.speed
-        }
+        # If no orb type specified, choose randomly
+        if orb_type is None:
+            # Determine if it's a buff or debuff orb
+            orb_category = random.choices(
+                ["buff", "debuff"], 
+                weights=[0.7, 0.3]  # 70% chance for buff, 30% for debuff
+            )[0]
 
-        # Get a random orb
-        orb = get_random_orb(x, y, context=context)
+            # Choose a specific orb type based on category
+            if orb_category == "buff":
+                orb_types = ["speed", "shield", "multiplier", "cooldown"]
+                orb_type = random.choice(orb_types)
+            else:  # debuff
+                orb_types = ["slow", "vision", "hitbox"]
+                orb_type = random.choice(orb_types)
 
-        # Add to orbs list
-        self.orbs.append(orb)
-        #print(f"Spawned orb at ({x}, {y})")
+        # Create the appropriate orb based on type
+        try:
+            if orb_type in ["speed", "shield", "multiplier", "cooldown"]:
+                from src.mechanics.orbs.buff_orbs import BuffOrb
+                orb = BuffOrb(x, y, orb_type)
+                print(f"🔮 Spawned a buff orb: {orb_type}!")
+            elif orb_type in ["slow", "vision", "hitbox"]:
+                from src.mechanics.orbs.debuff_orbs import DebuffOrb
+                orb = DebuffOrb(x, y, orb_type)
+                print(f"🔮 Spawned a debuff orb: {orb_type}!")
+            else:
+                # Default to a random buff orb if type is unknown
+                from src.mechanics.orbs.buff_orbs import BuffOrb
+                orb = BuffOrb(x, y)
+                print(f"🔮 Spawned a default buff orb!")
+
+            # Add the orb to the appropriate sprite lists
+            if hasattr(self, 'orbs'):
+                self.orbs.append(orb)
+            if hasattr(self, 'all_sprites'):
+                self.all_sprites.append(orb)
+
+        except Exception as e:
+            print(f"Error spawning orb: {e}")
             
     def check_orb_collisions(self):
         """Check for collisions between player and orbs."""

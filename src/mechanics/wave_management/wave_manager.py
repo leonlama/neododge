@@ -5,6 +5,46 @@ from src.mechanics.wave_management.wave_generator import WaveGenerator
 class WaveManager:
     """Manages the creation and progression of waves in the game."""
 
+    # Wave types with their characteristics
+    WAVE_TYPES = {
+        "normal": {
+            "weight": 70,  # Higher weight = more common
+            "enemy_count_multiplier": 1.0,
+            "enemy_speed_multiplier": 1.0,
+            "enemy_health_multiplier": 1.0,
+            "formations": ["random", "circle", "grid", "line", "v_shape"],
+            "orb_count_multiplier": 1.0,
+            "coin_count_multiplier": 1.0
+        },
+        "swarm": {
+            "weight": 15,
+            "enemy_count_multiplier": 2.0,  # Double enemies
+            "enemy_speed_multiplier": 0.8,  # Slightly slower
+            "enemy_health_multiplier": 0.7,  # Weaker enemies
+            "formations": ["random", "circle", "spiral"],
+            "orb_count_multiplier": 0.5,
+            "coin_count_multiplier": 1.5
+        },
+        "elite": {
+            "weight": 10,
+            "enemy_count_multiplier": 0.5,  # Fewer enemies
+            "enemy_speed_multiplier": 1.2,  # Faster
+            "enemy_health_multiplier": 2.0,  # Much stronger
+            "formations": ["v_shape", "line"],
+            "orb_count_multiplier": 1.5,
+            "coin_count_multiplier": 2.0
+        },
+        "boss": {
+            "weight": 5,
+            "enemy_count_multiplier": 0.2,  # Very few enemies
+            "enemy_speed_multiplier": 0.9,
+            "enemy_health_multiplier": 5.0,  # Very strong
+            "formations": ["center"],  # Boss in center
+            "orb_count_multiplier": 2.0,
+            "coin_count_multiplier": 3.0
+        }
+    }
+
     def __init__(self, game_view=None):
         """Initialize the wave manager.
 
@@ -13,14 +53,16 @@ class WaveManager:
         """
         self.game_view = game_view
         self.wave_generator = WaveGenerator()
-        self.current_wave = None
-        self.wave_number = 0
-        self.in_wave = False
+        self.current_wave = 0
         self.wave_timer = 0
-        self.wave_duration = 0
+        self.wave_duration = 45  # Default duration
+        self.in_wave = False
+        self.difficulty = 0.3  # Starting difficulty
+        self.difficulty_increment = 0.05  # Increase per wave
         self.spawn_timer = 0
         self.spawn_delay = 1.0
         self.enemies_to_spawn = 0
+        self.current_config = None  # Add this line to fix the attribute error
 
         # Callbacks
         self.on_spawn_enemy = None
@@ -36,6 +78,11 @@ class WaveManager:
             "skill_level": 0.5
         }
         self.engagement_score = 0.5
+
+        # Wave progression
+        self.waves_until_boss = random.randint(8, 12)
+        self.wave_history = []
+        self.wave_analytics = None  # Will be initialized if analytics module is available
 
         # Set up callbacks if game_view is provided
         if game_view:
@@ -64,8 +111,9 @@ class WaveManager:
         self.wave_timer += delta_time
 
         # Check if wave is complete
-        if self.wave_timer >= self.wave_duration:
-            print(f"Wave {self.wave_number} completed (duration reached)")
+        current_config = self.wave_history[-1] if self.wave_history else {"duration": self.wave_duration}
+        if self.wave_timer >= current_config["duration"]:
+            print(f"Wave {self.current_wave} completed (duration reached)")
             self.end_wave()
             return
 
@@ -84,50 +132,185 @@ class WaveManager:
                 if hasattr(enemy, 'set_target') and enemy.target is None:
                     enemy.set_target(self.game_view.player)
 
+    def generate_wave_configuration(self):
+        """Generate configuration for the next wave"""
+        self.current_wave += 1
+
+        # Determine wave type
+        wave_type = self._determine_wave_type()
+
+        # Calculate difficulty
+        self.difficulty += self.difficulty_increment
+
+        # Get wave type modifiers
+        type_config = self.WAVE_TYPES[wave_type]
+
+        # Base values that scale with difficulty
+        base_enemy_count = int(4 + self.difficulty * 2)
+        base_enemy_speed = 0.8 + self.difficulty * 0.4
+        base_enemy_health = 0.8 + self.difficulty * 0.4
+        base_orb_count = int(self.difficulty * 5)
+        base_coin_count = int(10 + self.difficulty * 15)
+
+        # Apply wave type multipliers
+        enemy_count = max(1, int(base_enemy_count * type_config["enemy_count_multiplier"]))
+
+        # Generate enemy types based on difficulty
+        enemy_types = self._generate_enemy_types(enemy_count, wave_type)
+
+        # Select formation
+        formation = random.choice(type_config["formations"])
+
+        # Configure wave
+        config = {
+            "type": wave_type,
+            "wave_number": self.current_wave,
+            "difficulty": self.difficulty,
+            "enemy_count": enemy_count,
+            "enemy_types": enemy_types,
+            "enemy_speed": base_enemy_speed * type_config["enemy_speed_multiplier"],
+            "enemy_health": base_enemy_health * type_config["enemy_health_multiplier"],
+            "formation": formation,
+            "spawn_delay": max(0.2, 1.0 - self.difficulty * 0.5),  # Faster spawns at higher difficulty
+            "duration": self.wave_duration,
+            "orb_count": int(base_orb_count * type_config["orb_count_multiplier"]),
+            "orb_types": self._generate_orb_distribution(),
+            "spawn_artifact": random.random() < 0.1 + self.difficulty * 0.05,  # Chance increases with difficulty
+            "coin_count": int(base_coin_count * type_config["coin_count_multiplier"])
+        }
+
+        print(f"Creating wave {self.current_wave}")
+        print(f"Wave type: {wave_type}")
+        print(f"Wave configuration: {config}")
+
+        return config
+
+    def _determine_wave_type(self):
+        """Determine the type of the next wave"""
+        # Check if it's time for a boss wave
+        if self.current_wave % self.waves_until_boss == 0:
+            return "boss"
+
+        # Otherwise, weighted random selection
+        weights = [self.WAVE_TYPES[t]["weight"] for t in self.WAVE_TYPES]
+        wave_types = list(self.WAVE_TYPES.keys())
+
+        # Adjust weights based on wave history to avoid repetition
+        if self.wave_history:
+            last_wave_type = self.wave_history[-1]["type"]
+            # Reduce weight of the last wave type
+            if last_wave_type in wave_types:
+                idx = wave_types.index(last_wave_type)
+                weights[idx] *= 0.5  # 50% less likely to repeat
+
+        return random.choices(wave_types, weights=weights)[0]
+
+    def _generate_enemy_types(self, count, wave_type):
+        """Generate a list of enemy types for the wave"""
+        enemy_pool = []
+
+        # Basic enemies always available
+        enemy_pool.extend(["wander"] * 3)
+        enemy_pool.extend(["chaser"] * 2)
+
+        # Add more advanced enemies as difficulty increases
+        if self.difficulty > 0.4:
+            enemy_pool.extend(["shooter"] * int(self.difficulty * 3))
+
+        if self.difficulty > 0.6:
+            enemy_pool.extend(["tank"] * int(self.difficulty * 2))
+
+        if self.difficulty > 0.8:
+            enemy_pool.extend(["bomber"] * int(self.difficulty))
+
+        # Special handling for boss waves
+        if wave_type == "boss":
+            return ["boss"] + random.choices(enemy_pool, k=count-1)
+
+        # For elite waves, ensure at least one elite enemy
+        if wave_type == "elite" and self.difficulty > 0.5:
+            elite_types = ["elite_chaser", "elite_shooter"]
+            return random.choices(elite_types, k=1) + random.choices(enemy_pool, k=count-1)
+
+        # Otherwise random selection
+        return random.choices(enemy_pool, k=count)
+
+    def _generate_orb_distribution(self):
+        """Generate distribution of orb types"""
+        # As difficulty increases, more debuffs
+        buff_weight = max(0.5, 0.9 - self.difficulty * 0.3)
+        debuff_weight = 1.0 - buff_weight
+
+        return {"buff": buff_weight, "debuff": debuff_weight}
+
     def start_wave(self):
         """Start a new wave."""
-        self.wave_number += 1
+        if self.in_wave:
+            print("Already in a wave, can't start a new one")
+            return
 
-        # Get player analytics if available
-        if hasattr(self.game_view, 'player_analytics'):
-            self.player_profile = self.game_view.player_analytics.get_player_profile()
-            self.engagement_score = self.game_view.player_analytics.calculate_engagement_score()
+        self.in_wave = True
+        self.wave_timer = 0
 
         # Generate wave configuration
-        self.current_wave = self.wave_generator.create_wave(
-            self.wave_number, 
-            self.player_profile,
-            self.engagement_score
-        )
+        config = self.generate_wave_configuration()
+        self.current_config = config  # Store current config
+
+        # Store in history
+        self.wave_history.append(config)
 
         # Set wave parameters
-        self.wave_duration = self.current_wave["duration"]
-        self.spawn_delay = self.current_wave["spawn_delay"]
-        self.enemies_to_spawn = self.current_wave["enemy_count"]
+        self.wave_duration = config["duration"]
+        self.spawn_delay = config["spawn_delay"]
+        self.enemies_to_spawn = config["enemy_count"]
 
         # Reset timers
-        self.wave_timer = 0
         self.spawn_timer = 0
-        self.in_wave = True
+
+        # Spawn orbs for this wave
+        if hasattr(self, 'game_view') and config['orb_count'] > 0:
+            try:
+                self.game_view.spawn_orbs(
+                    count=config['orb_count'],
+                    orb_types=config['orb_types']
+                )
+            except Exception as e:
+                print(f"Error spawning orbs: {e}")
+
+        # Spawn coins for this wave
+        if hasattr(self, 'game_view') and config['coin_count'] > 0:
+            try:
+                if hasattr(self.game_view, 'spawn_coins'):
+                    self.game_view.spawn_coins(config['coin_count'])
+                elif hasattr(self.game_view, 'spawn_coin'):
+                    for _ in range(min(5, config['coin_count'])):  # Spawn up to 5 coins initially
+                        self.game_view.spawn_coin()
+                else:
+                    print("Warning: Game view doesn't have spawn_coin or spawn_coins method")
+            except Exception as e:
+                print(f"Error spawning coins: {e}")
 
         # Display wave message if available
-        if "message" in self.current_wave and hasattr(self.game_view, 'show_message'):
-            self.game_view.show_message(self.current_wave["message"])
+        if hasattr(self.game_view, 'show_message'):
+            self.game_view.show_message(f"Wave {self.current_wave}: {config['type'].capitalize()}")
 
-        print(f"Starting Wave {self.wave_number}")
+        # Spawn artifact if configured
+        if hasattr(self, 'game_view') and config.get('spawn_artifact', False):
+            try:
+                if hasattr(self.game_view, 'spawn_artifact'):
+                    self.game_view.spawn_artifact()
+                else:
+                    print("Warning: Game view doesn't have spawn_artifact method")
+            except Exception as e:
+                print(f"Error spawning artifact: {e}")
 
-        # Spawn orbs
-        if hasattr(self.game_view, 'spawn_orbs'):
-            self.game_view.spawn_orbs(
-                self.current_wave["orb_count"],
-                self.current_wave["orb_types"]
-            )
+        # Call the start wave callback
+        if hasattr(self, 'on_wave_start'):
+            self.on_wave_start(self.current_wave)
 
-        # Spawn artifact if needed
-        if self.current_wave["spawn_artifact"] and hasattr(self.game_view, 'spawn_artifact'):
-            self.game_view.spawn_artifact()
+        print(f"Starting Wave {self.current_wave}")
 
-        return self.current_wave
+        return config
 
     def end_wave(self):
         """End the current wave."""
@@ -137,20 +320,36 @@ class WaveManager:
         if self.on_clear_enemies:
             self.on_clear_enemies()
 
+        # Call the end wave callback
+        if self.on_wave_complete:
+            self.on_wave_complete(self.current_wave)
+
+        print(f"Ended Wave {self.current_wave}")
+
+        # Prepare for next wave
+        self.waves_until_boss -= 1
+        if self.waves_until_boss <= 0:
+            self.waves_until_boss = random.randint(8, 12)
+
     def spawn_enemy(self):
         """Spawn an enemy from the current wave."""
         if self.enemies_to_spawn <= 0:
             return
 
+        # Get current wave config
+        current_config = self.wave_history[-1] if self.wave_history else None
+        if not current_config:
+            return
+
         # Get enemy type for this spawn
-        enemy_index = self.current_wave["enemy_count"] - self.enemies_to_spawn
-        enemy_type = self.current_wave["enemy_types"][min(enemy_index, len(self.current_wave["enemy_types"]) - 1)]
+        enemy_index = current_config["enemy_count"] - self.enemies_to_spawn
+        enemy_type = current_config["enemy_types"][min(enemy_index, len(current_config["enemy_types"]) - 1)]
 
         print(f"Spawning enemy of type: {enemy_type}")
 
         # Generate formation if not already done
         if not hasattr(self, 'spawn_positions') or not self.spawn_positions:
-            self._generate_formation()
+            self._generate_formation(current_config["formation"], current_config["enemy_count"])
 
         # Get position from formation
         position = None
@@ -159,46 +358,46 @@ class WaveManager:
                 position = self.spawn_positions[enemy_index]
             else:
                 # Fallback: generate a random position
-                screen_width, screen_height = self.game_view.get_screen_dimensions()
+                screen_width, screen_height = self.game_view.get_screen_dimensions() if hasattr(self.game_view, 'get_screen_dimensions') else (800, 600)
                 position = (
                     random.randint(50, screen_width - 50),
                     random.randint(50, screen_height - 50)
                 )
         else:
             # Fallback: generate a random position
-            screen_width, screen_height = self.game_view.get_screen_dimensions()
+            screen_width, screen_height = self.game_view.get_screen_dimensions() if hasattr(self.game_view, 'get_screen_dimensions') else (800, 600)
             position = (
                 random.randint(50, screen_width - 50),
                 random.randint(50, screen_height - 50)
             )
 
         # Get enemy modifiers
-        speed = self.current_wave.get("enemy_speed", 1.0)
-        health = self.current_wave.get("enemy_health", 1.0)
+        speed = current_config.get("enemy_speed", 1.0)
+        health = current_config.get("enemy_health", 1.0)
 
         # Spawn the enemy
         print(f"Calling on_spawn_enemy with: {enemy_type}, {position}")
-        self.on_spawn_enemy(
-            enemy_type=enemy_type,
-            position=position,
-            speed=speed,
-            health=health
-        )
+        if self.on_spawn_enemy:
+            self.on_spawn_enemy(
+                enemy_type=enemy_type,
+                position=position,
+                speed=speed,
+                health=health
+            )
 
         # Decrement enemies to spawn
         self.enemies_to_spawn -= 1
 
-    def _generate_formation(self):
-        """Generate spawn positions based on the current wave formation."""
-        formation = self.current_wave.get("formation", "random")
+    def _generate_formation(self, formation_type, enemy_count):
+        """Generate spawn positions based on the formation type."""
         screen_width, screen_height = 800, 600  # Default values
 
         if hasattr(self.game_view, 'get_screen_dimensions'):
             screen_width, screen_height = self.game_view.get_screen_dimensions()
 
         self.spawn_positions = self.wave_generator.formation_generator.generate_formation(
-            formation,
-            self.current_wave["enemy_count"],
+            formation_type,
+            enemy_count,
             screen_width,
             screen_height
         )
