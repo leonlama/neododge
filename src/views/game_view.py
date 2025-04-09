@@ -110,11 +110,27 @@ class NeododgeGame(arcade.View):
         self.setup_sounds()
 
     def setup_wave_manager(self):
-        """Set up the wave manager."""
+        """Set up the wave management system."""
         from src.mechanics.wave_management.wave_manager import WaveManager
+        from src.mechanics.wave_management.difficulty_adjuster import DifficultyAdjuster
+
+        # Initialize player profile if not exists
+        if not hasattr(self, 'player_profile'):
+            self.player_profile = {
+                "playstyle": {"bravery": 0.5, "chaos": 0.5},
+                "skill_level": 0.5,
+                "preferences": {"orb_preference": 0.5}
+            }
 
         # Create wave manager
-        self.wave_manager = WaveManager(self.player)
+        self.wave_manager = WaveManager(self)
+
+        # Create difficulty adjuster
+        self.difficulty_adjuster = DifficultyAdjuster()
+
+        # Set initial wave parameters
+        self.wave_duration = 30.0
+        self.between_wave_duration = 5.0
 
         # Set callbacks
         self.wave_manager.on_spawn_enemies = self.spawn_enemies

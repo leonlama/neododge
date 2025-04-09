@@ -1,146 +1,72 @@
 import random
-from src.mechanics.wave_management.enemy_formation import FormationGenerator
-from src.mechanics.wave_management.difficulty_adjuster import DifficultyAdjuster
 
 class WaveGenerator:
+    """Generates wave configurations based on wave number and player profile."""
+
     def __init__(self):
-        self.formation_generator = FormationGenerator()
-        self.difficulty_adjuster = DifficultyAdjuster()
+        """Initialize the wave generator."""
+        pass
 
     def create_wave(self, wave_number, player_profile, engagement_score):
-        """Create a complete wave configuration"""
-        # Calculate difficulty parameters
-        params = self.difficulty_adjuster.calculate_parameters(wave_number, player_profile, engagement_score)
-        
-        # Determine wave type
-        wave_type = self._determine_wave_type(wave_number, player_profile)
+        """
+        Create a wave configuration based on wave number and player profile.
 
-        if wave_type == "rest":
-            return self._create_rest_wave(wave_number)
-        elif wave_type == "boss":
-            return self._create_boss_wave(wave_number, params)
-        elif wave_type == "swarm":
-            return self._create_swarm_wave(wave_number, params)
-        else:  # "normal"
-            return self._create_normal_wave(wave_number, params, player_profile)
+        Args:
+            wave_number: The current wave number
+            player_profile: Dictionary containing player playstyle data
+            engagement_score: Player engagement score (0.0 to 1.0)
 
-    def _determine_wave_type(self, wave_number, player_profile):
-        """Determine what type of wave to generate"""
-        if wave_number % 6 == 0:
-            return "rest"
-        elif wave_number % 10 == 0:
-            return "boss"
-        elif wave_number % 7 == 0:
-            return "swarm"
-        else:
-            return "normal"
-
-    def _create_rest_wave(self, wave_number):
-        """Create a rest wave with minimal enemies"""
-        return {
-            "type": "rest",
-            "enemies": 2,
-            "enemy_types": ["wander", "wander"],
-            "enemy_params": {"speed": 0.7, "health": 0.8},
-            "orbs": 1,
-            "orb_types": {"buff": 1.0, "debuff": 0.0},
-            "artifact": False,
-            "coins": random.randint(3, 7),
-            "message": "Rest Wave - Catch your breath!"
-        }
-
-    def _create_boss_wave(self, wave_number, params):
-        """Create a boss wave with a powerful enemy"""
-        return {
-            "type": "boss",
-            "enemies": 1,
-            "enemy_types": ["boss"],
-            "enemy_params": {
-                "speed": 0.9, 
-                "health": 5.0,
-                "attack_pattern": random.choice(["circle", "spiral", "targeted"])
-            },
-            "orbs": params["orb_count"],
-            "orb_types": params["orb_types"],
-            "artifact": params["spawn_artifact"],
-            "coins": random.randint(10, 15),
-            "message": f"Boss Wave {wave_number//10} - Good luck!"
-        }
-
-    def _create_swarm_wave(self, wave_number, params):
-        """Create a swarm wave with many weak enemies"""
-        enemy_count = min(40, params["enemy_count"] * 2)
-        return {
-            "type": "swarm",
-            "enemies": enemy_count,
-            "enemy_types": ["wander"] * enemy_count,
-            "enemy_params": {"speed": 1.2, "health": 0.6},
-            "orbs": params["orb_count"],
-            "orb_types": params["orb_types"],
-            "artifact": params["spawn_artifact"],
-            "coins": random.randint(5, 10),
-            "message": "Swarm Wave - They're everywhere!"
-        }
-
-    def _create_normal_wave(self, wave_number, params, player_profile):
-        """Create a standard wave with varied enemies"""
-        enemy_count = params["enemy_count"]
-
-        # Determine enemy types based on distribution
-        enemy_types = []
-        for _ in range(enemy_count):
-            enemy_type = self._weighted_choice(params["enemy_types"])
-            enemy_types.append(enemy_type)
-
-        # Generate enemy formation
-        formation = self.formation_generator.generate_formation(
-            enemy_types,
-            player_profile["playstyle"],
-            params["difficulty"]
-        )
-
-        return {
+        Returns:
+            Dictionary containing wave configuration
+        """
+        # Default configuration
+        config = {
             "type": "normal",
-            "enemies": enemy_count,
-            "enemy_types": enemy_types,
-            "enemy_params": {
-                "speed": params["enemy_speed"],
-                "health": params["enemy_health"]
-            },
-            "formation": formation,
-            "orbs": params["orb_count"],
-            "orb_types": params["orb_types"],
-            "artifact": params["spawn_artifact"],
-            "coins": self._calculate_coins(wave_number, params["difficulty"]),
-            "message": f"Wave {wave_number}"
+            "message": f"Wave {wave_number}",
+            "enemy_count": 5 + (wave_number * 2),
+            "enemy_speed": 1.0 + (wave_number * 0.1),
+            "spawn_delay": max(0.5, 2.0 - (wave_number * 0.1)),
+            "enemy_types": ["basic"],
+            "duration": 30.0
         }
-    
-    def _weighted_choice(self, weights_dict):
-        """Choose a random item based on weights."""
-        if not weights_dict:
-            return "chaser"  # Default
 
-        items = list(weights_dict.keys())
-        weights = list(weights_dict.values())
+        # Every 5th wave is a boss wave
+        if wave_number % 5 == 0:
+            config["type"] = "boss"
+            config["message"] = f"Boss Wave {wave_number}"
+            config["enemy_count"] = 1 + (wave_number // 10)
+            config["enemy_types"] = ["boss"]
+            config["duration"] = 60.0
 
-        # Normalize weights if they don't sum to 1
-        total = sum(weights)
-        if total != 1.0:
-            weights = [w/total for w in weights]
+        # Every 3rd wave (not divisible by 5) is a swarm wave
+        elif wave_number % 3 == 0:
+            config["type"] = "swarm"
+            config["message"] = f"Swarm Wave {wave_number}"
+            config["enemy_count"] = 10 + (wave_number * 3)
+            config["enemy_speed"] = 0.8 + (wave_number * 0.05)
+            config["spawn_delay"] = max(0.2, 1.0 - (wave_number * 0.05))
 
-        # Choose a random item based on weights
-        r = random.random()
-        cumulative_weight = 0
-        for i, weight in enumerate(weights):
-            cumulative_weight += weight
-            if r <= cumulative_weight:
-                return items[i]
+        # Adjust based on engagement score
+        if engagement_score < 0.3:
+            # Player is struggling, make it easier
+            config["enemy_count"] = max(3, int(config["enemy_count"] * 0.7))
+            config["enemy_speed"] = max(0.8, config["enemy_speed"] * 0.8)
+            config["spawn_delay"] = min(3.0, config["spawn_delay"] * 1.5)
+        elif engagement_score > 0.7:
+            # Player is doing well, make it harder
+            config["enemy_count"] = int(config["enemy_count"] * 1.3)
+            config["enemy_speed"] = config["enemy_speed"] * 1.2
+            config["spawn_delay"] = max(0.3, config["spawn_delay"] * 0.8)
 
-        # Fallback
-        return items[-1]
-        
-    def _calculate_coins(self, wave_number, difficulty):
-        """Calculate number of coins based on wave number and difficulty"""
-        base_coins = 3 + (wave_number // 3)
-        difficulty_bonus = int(difficulty * 5)
-        return random.randint(base_coins, base_coins + difficulty_bonus)
+        # Add some randomness
+        config["enemy_count"] += random.randint(-2, 2)
+        config["enemy_speed"] += random.uniform(-0.1, 0.1)
+
+        # Ensure values are within reasonable bounds
+        config["enemy_count"] = max(1, config["enemy_count"])
+        config["enemy_speed"] = max(0.5, min(5.0, config["enemy_speed"]))
+        config["spawn_delay"] = max(0.1, min(5.0, config["spawn_delay"]))
+
+        print(f"[WAVE GENERATOR] Created {config['type']} wave with {config['enemy_count']} enemies")
+
+        return config

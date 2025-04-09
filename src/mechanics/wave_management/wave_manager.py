@@ -6,8 +6,8 @@ class WaveManager:
     def __init__(self, game_view):
         """Initialize the wave manager."""
         self.game_view = game_view
-        self.wave = 1  # Current wave number
-        self.current_wave = 1  # Alias for wave number for consistency
+        self.wave = 0
+        self.current_wave = 0  # Alias for wave number for consistency
         self.player = game_view.player if hasattr(game_view, 'player') else None
         self.wave_history = []
         self.last_message_drawn = ""
@@ -18,6 +18,7 @@ class WaveManager:
         # Wave timing
         self.in_wave = False
         self.wave_timer = 0
+        self.enemy_spawn_timer = 0
         self.wave_duration = 30.0  # 30 seconds per wave
         self.between_wave_timer = 0
         self.between_wave_duration = 5.0  # 5 seconds between waves
@@ -25,6 +26,10 @@ class WaveManager:
         # Wave message
         self.wave_message = ""
         self.wave_message_alpha = 0.0
+        
+        # Initialize wave generator
+        from src.mechanics.wave_management.wave_generator import WaveGenerator
+        self.wave_generator = WaveGenerator()
         
         # Callbacks
         self.on_wave_start = None
@@ -79,17 +84,86 @@ class WaveManager:
                 if self.on_wave_start:
                     self.on_wave_start(self.wave)
 
+    def _calculate_engagement_score(self):
+        """
+        Calculate player engagement score based on recent performance.
+        Higher score = more engaged player who can handle more challenge.
+        """
+        # Default engagement if we don't have enough data
+        if not hasattr(self, 'wave_analytics') or not hasattr(self.game_view, 'player'):
+            return 0.5
+
+        # Get basic stats
+        player = self.game_view.player
+        health_percent = getattr(player, 'health', 3) / getattr(player, 'max_health', 3)
+
+        # Get recent performance metrics
+        recent_score = getattr(self.game_view, 'score', 0)
+        recent_deaths = getattr(player, 'deaths', 0)
+
+        # Calculate engagement (0.0 to 1.0)
+        # High engagement = player is doing well and can handle more challenge
+        # Low engagement = player is struggling and needs easier content
+
+        # Health factor (lower health = lower engagement)
+        health_factor = health_percent
+
+        # Score factor (higher score = higher engagement)
+        score_factor = min(1.0, recent_score / 1000)
+
+        # Death penalty (more deaths = lower engagement)
+        death_penalty = max(0.0, 1.0 - (recent_deaths * 0.2))
+
+        # Combine factors (adjust weights as needed)
+        engagement = (health_factor * 0.4) + (score_factor * 0.4) + (death_penalty * 0.2)
+
+        # Ensure result is between 0.0 and 1.0
+        engagement = max(0.1, min(1.0, engagement))
+
+        print(f"[ENGAGEMENT] Score: {engagement:.2f} (Health: {health_factor:.2f}, Score: {score_factor:.2f}, Deaths: {death_penalty:.2f})")
+
+        return engagement
+
     def start_wave(self, wave_number=None):
-        """Start a new wave."""
+        """Start a new wave of enemies."""
         if wave_number is not None:
             self.wave = wave_number
+        else:
+            self.wave += 1
             
         # Update current_wave alias
         self.current_wave = self.wave
-            
-        print(f"🌊 Starting wave {self.wave}")
-        self.in_wave = True
+        
+        # Get player profile from game state
+        player_profile = getattr(self.game_view, 'player_profile', {"playstyle": {}, "skill_level": 0.5})
+
+        # Calculate engagement score based on recent performance
+        engagement_score = self._calculate_engagement_score()
+
+        # Generate wave configuration
+        wave_config = self.wave_generator.create_wave(self.wave, player_profile, engagement_score)
+
+        # Store wave configuration
+        self.current_wave_config = wave_config
+
+        # Set wave parameters from configuration
+        self.wave_message = wave_config.get("message", f"Wave {self.wave}")
+        self.wave_message_alpha = 1.0
+        self.enemy_count = wave_config.get("enemy_count", 5)
+        self.enemy_speed = wave_config.get("enemy_speed", 1.0)
+        self.spawn_delay = wave_config.get("spawn_delay", 1.0)
+        self.wave_duration = wave_config.get("duration", 30.0)
+        self.enemy_types = wave_config.get("enemy_types", ["basic"])
+
+        # Reset wave timers
         self.wave_timer = 0
+        self.enemy_spawn_timer = 0
+        self.in_wave = True
+
+        # Start tracking wave statistics
+        self.wave_analytics.start_wave_tracking(self.wave)
+
+        print(f"Starting Wave {self.wave} with {self.enemy_count} enemies at speed {self.enemy_speed:.1f}")
 
         # Spawn enemies for this wave
         if self.on_spawn_enemies:
@@ -103,6 +177,12 @@ class WaveManager:
 
     def end_wave(self):
         """End the current wave."""
+        # Get wave statistics
+        wave_stats = self.wave_analytics.get_wave_stats(self.wave)
+
+        # Update player profile
+        self.difficulty_adjuster.update_player_profile(self.game_view.player_profile, wave_stats)
+        
         # Clear any remaining enemies
         if self.on_clear_enemies:
             self.on_clear_enemies()
