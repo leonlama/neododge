@@ -1,5 +1,6 @@
 import arcade
 from src.core.scaling import get_scale
+from src.skins.skin_manager import skin_manager
 
 class Orb(arcade.Sprite):
     """Base class for all orbs in the game."""
@@ -53,15 +54,18 @@ class Orb(arcade.Sprite):
 
     def _set_appearance(self):
         """Set the orb's appearance based on its type"""
-        if self.orb_type in ["speed", "slow"]:
-            color = arcade.color.LIGHT_BLUE  # SAME for both to trick the player
-        else:
-            color = self.properties["color"]
-        self.texture = arcade.make_soft_circle_texture(20, color)
+        # Load texture from skin manager instead of creating colored circles
+        texture_name = f"orb_{self.orb_type}"
+        self.texture = skin_manager.get_texture("orbs", texture_name)
         
-        # Override the icon for speed/slow to be the same
-        if hasattr(self, 'properties') and 'icon' in self.properties:
-            self.properties['icon'] = "effects/speed" if self.orb_type in ["speed", "slow"] else f"effects/{self.orb_type}"
+        # Fallback if texture not found
+        if not self.texture:
+            self.texture = arcade.make_soft_circle_texture(20, arcade.color.WHITE)
+        
+        # Set icon path for status effects
+        if hasattr(self, 'properties'):
+            if 'icon' not in self.properties:
+                self.properties['icon'] = f"effects/{self.orb_type}"
 
     def update(self):
         """Standard update method required by arcade.Sprite"""
@@ -89,7 +93,7 @@ class Orb(arcade.Sprite):
                 "duration": self.effect_duration,
                 "value": self._get_effect_value(),
                 "color": self.properties["color"],
-                "icon": f"effects/{self.orb_type}"  # Fixed path to ensure it's not None
+                "icon": self.properties.get('icon', f"effects/{self.orb_type}")
             }
             success = player.status_effects.add_effect(self.orb_type, self.effect_duration, effect_data)
             print(f"Effect added successfully: {success}")

@@ -11,7 +11,7 @@ class BuffOrb(Orb):
         super().__init__(x, y, orb_type)
 
         # Set properties specific to buff orbs
-        self.color = arcade.color.GREEN
+        # Removed color tinting to show textures as they are in the PNGs
         self.effect_duration = random.uniform(5, 10)  # Duration of the buff effect
 
         # Set texture based on orb type
@@ -29,9 +29,10 @@ class BuffOrb(Orb):
         # If no texture found, create a default one
         if not self.texture:
             # Use make_soft_circle_texture instead of make_circle_texture with soft=True
+            # Using a neutral color for fallback to avoid visual tinting
             self.texture = arcade.make_soft_circle_texture(
                 32, 
-                self.color
+                arcade.color.WHITE
             )
 
     def get_texture_name(self):

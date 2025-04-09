@@ -11,7 +11,6 @@ class DebuffOrb(Orb):
         super().__init__(x, y, orb_type)
 
         # Set properties specific to debuff orbs
-        self.color = arcade.color.RED
         self.effect_duration = random.uniform(3, 7)  # Duration of the debuff effect
 
         # Set texture based on orb type
@@ -31,7 +30,7 @@ class DebuffOrb(Orb):
             # Use make_soft_circle_texture instead of make_circle_texture with soft=True
             self.texture = arcade.make_soft_circle_texture(
                 32, 
-                self.color
+                arcade.color.RED
             )
 
     def get_texture_name(self):
