@@ -9,10 +9,21 @@ class Player(arcade.Sprite):
     """Player character class"""
 
     def __init__(self, x=0, y=0):
+        """Initialize the player."""
         super().__init__()
 
         # Set up player texture
-        self.texture = skin_manager.get_texture('player', 'default')
+        try:
+            self.texture = skin_manager.get_texture("player", "default")
+            if not self.texture:
+                # Fallback to a simple shape if texture can't be loaded
+                self.texture = arcade.make_circle_texture(64, arcade.color.WHITE)
+                print("⚠️ Using fallback player texture")
+        except Exception as e:
+            print(f"⚠️ Error loading player texture: {e}")
+            self.texture = arcade.make_circle_texture(64, arcade.color.WHITE)
+        
+        # Set scale
         self.scale = skin_manager.get_player_scale()
         
         # Set initial position
@@ -25,6 +36,7 @@ class Player(arcade.Sprite):
         self.target_x = None
         self.target_y = None
         self.speed = PLAYER_SPEED
+        self.base_speed = PLAYER_SPEED
         self.speed_multiplier = 1.0
         self.speed_buff_timer = 0.0
         self.inverse_move = False
@@ -35,6 +47,7 @@ class Player(arcade.Sprite):
         # Player dash
         self.can_dash = True
         self.dash_cooldown = 0.0
+        self.base_dash_cooldown = PLAYER_DASH_COOLDOWN
         self.dash_speed = PLAYER_DASH_SPEED
         self.dash_duration = 0.15
         self.dash_timer = 0.0
@@ -47,6 +60,7 @@ class Player(arcade.Sprite):
         self.health = 3
         self.gold_hearts = 0
         self.shield_active = False
+        self.has_shield = False
         self.shield_timer = 0.0
         self.shield = 0
 
@@ -85,8 +99,8 @@ class Player(arcade.Sprite):
         # Active orb effects
         self.active_orbs = []
 
-        # Initialize active effects dictionary
-        self.active_effects = {}
+        # Add active effects tracking
+        self.active_effects = {}  # Dictionary to store all active effects
 
         # Status effects
         self.vision_blur = False
@@ -191,6 +205,24 @@ class Player(arcade.Sprite):
         
         # Update active effects
         self.update_effects(delta_time)
+        
+        # Update active effects timers
+        for effect_type, effect_data in self.active_effects.items():
+            if effect_data['active']:
+                effect_data['timer'] -= delta_time
+                if effect_data['timer'] <= 0:
+                    effect_data['active'] = False
+                    effect_data['value'] = 0
+
+                    # Remove the effect
+                    if effect_type == 'speed':
+                        self.speed = self.base_speed
+                    elif effect_type == 'shield':
+                        self.has_shield = False
+                    elif effect_type == 'multiplier':
+                        self.score_multiplier = 1.0
+                    elif effect_type == 'cooldown':
+                        self.dash_cooldown = self.base_dash_cooldown
 
     def update_dash(self, delta_time):
         """Update player dash state"""
@@ -260,31 +292,34 @@ class Player(arcade.Sprite):
         # ... handle other effect types ...
 
     def update_effects(self, delta_time):
-        """Update active effects and remove expired ones."""
-        effects_to_remove = []
+        """Update active effects timers."""
+        for effect_type, effect_data in self.active_effects.items():
+            if effect_data.get('active', False):
+                # Try to get timer, fallback to duration if timer doesn't exist
+                if 'timer' in effect_data:
+                    effect_data['timer'] -= delta_time
+                    remaining_time = effect_data['timer']
+                elif 'duration' in effect_data:
+                    effect_data['duration'] -= delta_time
+                    remaining_time = effect_data['duration']
+                else:
+                    # If neither exists, set a default and continue
+                    effect_data['timer'] = 0
+                    remaining_time = 0
 
-        for effect_key, effect_data in self.active_effects.items():
-            # Reduce duration
-            effect_data['duration'] -= delta_time
+                if remaining_time <= 0:
+                    effect_data['active'] = False
+                    effect_data['value'] = 0
 
-            # Check if effect has expired
-            if effect_data['duration'] <= 0:
-                effects_to_remove.append(effect_key)
-
-        # Remove expired effects
-        for effect_key in effects_to_remove:
-            effect_data = self.active_effects[effect_key]
-            effect_type = effect_key.split('_')[0]
-
-            # Revert the effect
-            if 'speed' in effect_type:
-                self.speed_multiplier -= effect_data['value'] / 100 if effect_data['is_percentage'] else effect_data['value']
-            elif 'shield' in effect_type:
-                self.shield -= effect_data['value']
-            # ... handle other effect types ...
-
-            # Remove from active effects
-            del self.active_effects[effect_key]
+                    # Remove the effect
+                    if effect_type == 'speed':
+                        self.speed = self.base_speed
+                    elif effect_type == 'shield':
+                        self.has_shield = False
+                    elif effect_type == 'multiplier':
+                        self.score_multiplier = 1.0
+                    elif effect_type == 'cooldown':
+                        self.dash_cooldown = self.base_dash_cooldown
 
     def set_target(self, x, y):
         """Set a target position for the player to move towards"""
@@ -403,7 +438,7 @@ class Player(arcade.Sprite):
         """Reset speed bonus to default value."""
         self.speed_bonus = 1.0
 
-    def apply_buff(self, buff_type, value, duration=None):
+    def apply_buff(self, buff_type, value, duration):
         """Apply a buff to the player.
 
         Args:
@@ -429,6 +464,31 @@ class Player(arcade.Sprite):
             if duration:
                 # Reset after duration
                 arcade.schedule(lambda dt: setattr(self, 'score_multiplier', 1.0), duration)
+        
+        # Update active effects
+        effect_type = None
+        if 'speed' in buff_type:
+            effect_type = 'speed'
+            effect_value = (value - 1) * 100  # Convert to percentage
+        elif 'shield' in buff_type:
+            effect_type = 'shield'
+            effect_value = 100  # Shield is binary
+        elif 'mult' in buff_type:
+            effect_type = 'multiplier'
+            effect_value = (value - 1) * 100  # Convert to percentage increase
+        elif 'cooldown' in buff_type:
+            effect_type = 'cooldown'
+            effect_value = (1 - value) * 100  # Convert to percentage reduction
+
+        if effect_type:
+            # Add a new effect entry
+            effect_id = f"{effect_type}_{len(self.active_effects)}"
+            self.active_effects[effect_id] = {
+                'active': True,
+                'value': effect_value,
+                'timer': duration,
+                'type': effect_type  # Store the base type for aggregation
+            }
 
     def add_orb_effect(self, orb_type, duration):
         """Add an orb effect to the player"""

@@ -47,13 +47,21 @@ class NeododgeGame(arcade.View):
         self.player = Player(self.window.width // 2, self.window.height // 2)
         self.player.window = self.window
         self.player.parent_view = self
-        
-        # Load heart textures
-        self.heart_textures = {
-            "red": arcade.load_texture("assets/ui/heart_red.png"),
-            "gray": arcade.load_texture("assets/ui/heart_gray.png"),
-            "gold": arcade.load_texture("assets/ui/heart_gold.png")
-        }
+        # Load heart textures directly
+        try:
+            self.heart_textures = {
+                "red": arcade.load_texture("assets/ui/heart_red.png"),
+                "gray": arcade.load_texture("assets/ui/heart_gray.png"),
+                "gold": arcade.load_texture("assets/ui/heart_gold.png")
+            }
+        except Exception as e:
+            print(f"Error loading heart textures: {e}")
+            # Create fallback textures
+            self.heart_textures = {
+                "red": arcade.make_soft_circle_texture(30, arcade.color.RED),
+                "gray": arcade.make_soft_circle_texture(30, arcade.color.GRAY),
+                "gold": arcade.make_soft_circle_texture(30, arcade.color.GOLD)
+            }
         
         # Pass heart textures to player
         self.player.heart_textures = self.heart_textures
@@ -66,6 +74,17 @@ class NeododgeGame(arcade.View):
 
         # Set up wave manager
         self.setup_wave_manager()
+
+        # Create wave manager
+        from src.mechanics.wave_management.wave_manager import WaveManager
+        self.wave_manager = WaveManager(self)
+
+        # Ensure wave manager has required attributes
+        if not hasattr(self.wave_manager, 'current_wave'):
+            self.wave_manager.current_wave = getattr(self.wave_manager, 'wave', 1)
+
+        if not hasattr(self.wave_manager, 'wave_timer'):
+            self.wave_manager.wave_timer = 0
 
         # Initialize dash artifact (but don't spawn it yet)
         self.dash_artifact = None
@@ -205,22 +224,62 @@ class NeododgeGame(arcade.View):
 
     def on_draw(self):
         """Render the screen."""
-        # Clear the screen
+        # Start rendering
         self.clear()
 
-        # Draw the game elements
-        self.draw_game_elements()
+        # Draw background
+        if hasattr(self, 'background') and self.background:
+            self.background.draw()
 
-        # Draw the HUD
-        self.draw_improved_hud()
+        # Draw game elements
+        try:
+            # Draw player
+            if hasattr(self, 'player') and self.player:
+                self.player.draw()
 
-        # Draw any pickup texts
-        if hasattr(self, 'pickup_texts'):
-            draw_pickup_texts(self.pickup_texts)
+            # Draw enemies
+            if hasattr(self, 'enemies'):
+                self.enemies.draw()
 
-        # Draw wave message if active
-        if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
-            draw_wave_message(self.wave_message, int(255 * self.wave_message_alpha))
+            # Draw orbs
+            if hasattr(self, 'orbs'):
+                self.orbs.draw()
+
+            # Draw coins
+            if hasattr(self, 'coins'):
+                self.coins.draw()
+
+            # Draw artifacts
+            if hasattr(self, 'artifacts'):
+                self.artifacts.draw()
+
+            # Draw enemy bullets
+            for enemy in self.enemies:
+                if hasattr(enemy, 'bullets'):
+                    enemy.bullets.draw()
+
+            # Draw HUD
+            try:
+                self.draw_improved_hud()
+            except Exception as e:
+                print(f"Error drawing HUD: {e}")
+                # Fallback to simple HUD
+                self.draw_simple_hud()
+
+            # Draw any pickup texts
+            if hasattr(self, 'pickup_texts'):
+                draw_pickup_texts(self.pickup_texts)
+
+            # Draw wave message if active
+            if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
+                draw_wave_message(self.wave_message, int(255 * self.wave_message_alpha))
+
+            # Draw debug info if enabled
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                self.draw_debug_info()
+
+        except Exception as e:
+            print(f"Error in on_draw: {e}")
 
     def draw_game_elements(self):
         """Draw all game elements."""
@@ -247,36 +306,90 @@ class NeododgeGame(arcade.View):
 
         # Activate the GUI camera for HUD elements
         self.gui_camera.use()
-
+        
     def draw_improved_hud(self):
-        """Draw the improved heads-up display."""
-        # Get wave info
-        wave_number = 1
-        wave_timer = None
-        wave_duration = 30
+        """Draw the improved HUD."""
+        from src.ui.improved_hud import draw_hud
 
-        if hasattr(self, 'wave_manager'):
-            wave_number = getattr(self.wave_manager, 'wave', 1)
+        # Ensure heart textures exist
+        if not hasattr(self, 'heart_textures') or not self.heart_textures.get('red') or not self.heart_textures.get('gray'):
+            # Create fallback textures
+            self.heart_textures = {
+                "red": arcade.make_soft_circle_texture(30, arcade.color.RED),
+                "gray": arcade.make_soft_circle_texture(30, arcade.color.GRAY)
+            }
 
-            # Get wave timer if in a wave
-            if hasattr(self, 'in_wave') and self.in_wave:
-                wave_timer = getattr(self, 'level_timer', 0)
-                wave_duration = getattr(self, 'wave_duration', 30)
+        # Get the current wave number
+        wave_number = getattr(self.wave_manager, 'wave', 1)
 
-        # Get active effects
-        active_effects = {}
-        if hasattr(self.player, 'active_effects'):
-            active_effects = self.player.active_effects
+        # Get the wave timer
+        wave_timer = getattr(self.wave_manager, 'wave_timer', 0)
 
-        # Draw the HUD
-        draw_hud(
-            self.player,
-            self.score,
-            wave_number,
-            wave_timer,
-            wave_duration,
-            active_effects
+        try:
+            # Draw HUD
+            draw_hud(
+                self.player,
+                self.score,
+                wave_number,
+                wave_timer,
+                self.heart_textures
+            )
+        except Exception as e:
+            print(f"Error drawing HUD: {e}")
+            # Fallback to simple HUD
+            self.draw_simple_hud()
+
+    def draw_simple_hud(self):
+        """Draw a simple HUD as fallback."""
+        # Draw score
+        arcade.draw_text(
+            f"Score: {int(self.score)}",
+            20, 
+            self.window.height - 40,
+            arcade.color.WHITE,
+            16
         )
+
+        # Draw wave number
+        if hasattr(self, 'wave_manager'):
+            wave = getattr(self.wave_manager, 'wave', 1)
+            arcade.draw_text(
+                f"Wave: {wave}",
+                self.window.width // 2,
+                self.window.height - 40,
+                arcade.color.WHITE,
+                16,
+                anchor_x="center"
+            )
+            
+        # Draw health
+        if hasattr(self, 'player'):
+            hearts = getattr(self.player, 'current_hearts', 3)
+            max_hearts = getattr(self.player, 'max_hearts', 3)
+
+            arcade.draw_text(
+                f"Health: {hearts}/{max_hearts}",
+                self.window.width - 150,
+                self.window.height - 40,
+                arcade.color.WHITE,
+                16
+            )
+
+    def add_effect(self, effect_type, value, duration, color, icon_name=None):
+        """Add an effect to the player."""
+        # Apply the effect to the player
+        if hasattr(self.player, 'apply_buff'):
+            self.player.apply_buff(effect_type, value, duration)
+
+        # Add a visual indicator
+        if hasattr(self, 'effect_indicators'):
+            self.effect_indicators.append({
+                'type': effect_type,
+                'value': value,
+                'duration': duration,
+                'color': color,
+                'icon': icon_name
+            })
 
     def add_pickup_text(self, text, x, y):
         """Add floating text for item pickups."""

@@ -24,10 +24,10 @@ class BuffOrb(Orb):
 
         # If no texture found, create a default one
         if not self.texture:
-            self.texture = arcade.make_circle_texture(
+            # Use make_soft_circle_texture instead of make_circle_texture with soft=True
+            self.texture = arcade.make_soft_circle_texture(
                 32, 
-                self.color, 
-                soft=True
+                self.color
             )
 
     def get_texture_name(self):

@@ -3,9 +3,12 @@ import math
 from src.audio.sound_manager import sound_manager
 
 class WaveManager:
-    def __init__(self, player):
-        self.wave = 1
-        self.player = player
+    def __init__(self, game_view):
+        """Initialize the wave manager."""
+        self.game_view = game_view
+        self.wave = 1  # Current wave number
+        self.current_wave = 1  # Alias for wave number for consistency
+        self.player = game_view.player if hasattr(game_view, 'player') else None
         self.wave_history = []
         self.last_message_drawn = ""
         self.base_enemies = 5
@@ -46,6 +49,8 @@ class WaveManager:
 
                 # Increment wave counter
                 self.wave += 1
+                # Keep current_wave in sync with wave
+                self.current_wave = self.wave
 
                 # Trigger wave end event
                 if self.on_wave_end:
@@ -62,8 +67,14 @@ class WaveManager:
                 if self.on_wave_start:
                     self.on_wave_start(self.wave)
 
-    def start_wave(self):
+    def start_wave(self, wave_number=None):
         """Start a new wave."""
+        if wave_number is not None:
+            self.wave = wave_number
+            
+        # Update current_wave alias
+        self.current_wave = self.wave
+            
         print(f"🌊 Starting wave {self.wave}")
         self.in_wave = True
         self.wave_timer = 0

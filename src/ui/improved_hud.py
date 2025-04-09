@@ -2,175 +2,165 @@ import arcade
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
 
-def draw_hud(player, score, wave_number, wave_timer=None, wave_duration=30, active_effects=None):
-    """Draw the complete HUD with all elements"""
-    # Draw player health (top left)
-    draw_player_health(player)
+def draw_hud(player, score, wave=1, wave_timer=None, heart_textures=None):
+    """Draw the HUD with the specified layout."""
+    from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
-    # Draw score (below health)
+    # Draw hearts at top left
+    draw_player_health(player, heart_textures, SCREEN_WIDTH, SCREEN_HEIGHT)
+
+    # Draw score below hearts
     draw_score(score)
 
-    # Draw wave info (top middle)
-    draw_wave_info(wave_number, wave_timer, wave_duration)
+    # Draw wave info at top middle
+    draw_wave_info(wave, wave_timer)
 
-    # Draw active effects (top right)
-    draw_active_effects(active_effects or {})
+    # Draw active effects at top right
+    if hasattr(player, 'active_effects'):
+        draw_active_effects(player.active_effects)
 
-    # Draw coin count (bottom right)
-    draw_coin_count(player.coins if hasattr(player, 'coins') else 0)
+    # Draw coin count at bottom right
+    coins = getattr(player, 'coins', 0)
+    draw_coin_count(coins)
 
-def draw_player_health(player):
-    """Draw player health hearts in the top left corner"""
-    if not player or not hasattr(player, 'current_hearts') or not hasattr(player, 'max_slots'):
-        return
+def draw_player_health(player, heart_textures=None, screen_width=800, screen_height=600):
+    """Draw player health hearts at top left."""
+    from src.core.constants import MAX_HEARTS
 
-    # Position for the first heart
-    start_x = 30
-    y = SCREEN_HEIGHT - 40
-    scale = 0.035  # Scale for heart sprites
-    spacing = 25   # Spacing between hearts
+    # Use provided textures or create fallbacks
+    if not heart_textures or not heart_textures.get('red') or not heart_textures.get('gray'):
+        heart_red = arcade.make_soft_circle_texture(30, arcade.color.RED)
+        heart_gray = arcade.make_soft_circle_texture(30, arcade.color.GRAY)
+    else:
+        heart_red = heart_textures['red']
+        heart_gray = heart_textures['gray']
 
-    # Get heart textures
-    heart_textures = {}
-    heart_textures["gray"] = skin_manager.textures.get("ui/heart_gray")
-    heart_textures["red"] = skin_manager.textures.get("ui/heart_red")
-    heart_textures["gold"] = skin_manager.textures.get("ui/heart_gold")
+    # Draw hearts
+    heart_size = 20  # Smaller heart size
+    heart_spacing = 5  # Smaller spacing
+    start_x = 20 + heart_size // 2  # Left margin
+    start_y = screen_height - 30  # Top margin
 
-    # Draw heart containers (gray hearts)
-    for i in range(player.max_slots):
-        x = start_x + i * spacing
-        arcade.draw_scaled_texture_rectangle(
-            x, y, 
-            heart_textures["gray"],
-            scale
-        )
+    for i in range(MAX_HEARTS):
+        x = start_x + i * (heart_size + heart_spacing)
+        y = start_y
 
-    # Draw filled hearts (red hearts)
-    full_hearts = int(player.current_hearts)
-    for i in range(full_hearts):
-        x = start_x + i * spacing
-        arcade.draw_scaled_texture_rectangle(
-            x, y, 
-            heart_textures["red"],
-            scale
-        )
-
-    # Draw partial heart if needed
-    if player.current_hearts % 1 > 0:
-        # Calculate the fraction of the last heart
-        fraction = player.current_hearts % 1
-        x = start_x + full_hearts * spacing
-
-        # Draw a partial heart
-        arcade.draw_scaled_texture_rectangle(
-            x, y, 
-            heart_textures["red"],
-            scale * fraction, scale
-        )
-
-    # Draw gold hearts if player has any
-    if hasattr(player, 'gold_hearts') and player.gold_hearts > 0:
-        # Position gold hearts after regular hearts
-        gold_start_x = start_x + (player.max_slots + 0.5) * spacing
-
-        for i in range(player.gold_hearts):
-            x = gold_start_x + i * spacing
+        # Draw filled or empty heart
+        if i < player.current_hearts:
             arcade.draw_scaled_texture_rectangle(
-                x, y, 
-                heart_textures["gold"],
-                scale
+                center_x=x,
+                center_y=y,
+                texture=heart_red,
+                scale=heart_size / 30.0  # Scale based on texture size
+            )
+        else:
+            arcade.draw_scaled_texture_rectangle(
+                center_x=x,
+                center_y=y,
+                texture=heart_gray,
+                scale=heart_size / 30.0  # Scale based on texture size
             )
 
 def draw_score(score):
-    """Draw the player's score"""
+    """Draw score at specified position."""
+    from src.core.constants import SCREEN_HEIGHT
+
     arcade.draw_text(
         f"Score: {int(score)}",
-        30, SCREEN_HEIGHT - 70,
+        20, SCREEN_HEIGHT - 60,  # Position below hearts
         arcade.color.WHITE,
         16,
-        font_name="Kenney Pixel"
+        anchor_x="left"
     )
 
-def draw_wave_info(wave_number, wave_timer=None, wave_duration=30):
-    """Draw wave number and timer in the top middle"""
+def draw_wave_info(wave, wave_timer):
+    """Draw wave info at top middle."""
+    from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+
     # Draw wave number
     arcade.draw_text(
-        f"Wave {wave_number}",
-        SCREEN_WIDTH // 2,
-        SCREEN_HEIGHT - 35,
-        arcade.color.LIGHT_GREEN,
-        18,
-        anchor_x="center",
-        font_name="Kenney Pixel"
+        f"Wave {wave}",
+        SCREEN_WIDTH // 2, SCREEN_HEIGHT - 30,
+        arcade.color.GREEN,
+        24,
+        anchor_x="center"
     )
 
-    # Draw wave timer if provided
+    # Draw wave timer if available
     if wave_timer is not None:
-        time_left = max(0, int(wave_duration - wave_timer))
         arcade.draw_text(
-            f"{time_left}s left",
-            SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - 65,
-            arcade.color.LIGHT_GRAY,
-            14,
-            anchor_x="center",
-            font_name="Kenney Pixel"
+            f"{int(wave_timer)}s",
+            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60,
+            arcade.color.WHITE,
+            16,
+            anchor_x="center"
         )
 
 def draw_active_effects(active_effects):
-    """Draw active effects in the top right corner"""
-    if not active_effects:
-        return
+    """Draw active effects at top right, combining similar effects."""
+    from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
-    # Starting position
-    x = SCREEN_WIDTH - 20
-    y = SCREEN_HEIGHT - 40
-    spacing = 25  # Spacing between effects
+    # Aggregate effects by type
+    aggregated_effects = {}
 
-    # Combine similar effects (e.g., multiple speed boosts)
-    combined_effects = {}
-    for effect_name, effect_data in active_effects.items():
-        base_type = effect_name.split('_')[0]  # Extract base type (speed, shield, etc.)
+    for effect_id, effect_data in active_effects.items():
+        if effect_data.get('active', False):
+            # Get the base effect type
+            effect_type = effect_data.get('type', effect_id.split('_')[0])
 
-        if base_type not in combined_effects:
-            combined_effects[base_type] = {
-                'value': 0,
-                'color': effect_data.get('color', arcade.color.WHITE),
-                'is_percentage': effect_data.get('is_percentage', False)
-            }
+            if effect_type not in aggregated_effects:
+                aggregated_effects[effect_type] = 0
 
-        # Add the effect value
-        combined_effects[base_type]['value'] += effect_data.get('value', 0)
+            # Add the effect value
+            aggregated_effects[effect_type] += effect_data.get('value', 0)
 
-    # Draw each combined effect
-    for i, (effect_type, effect_data) in enumerate(combined_effects.items()):
-        effect_y = y - i * spacing
-
-        # Format the effect text
-        if effect_data['is_percentage']:
-            effect_text = f"{effect_type.capitalize()} +{effect_data['value']}%"
+    # Draw aggregated effects
+    y_offset = 0
+    for effect_type, total_value in aggregated_effects.items():
+        # Determine color based on effect type
+        if effect_type == 'speed':
+            color = arcade.color.YELLOW
+            display_name = "Speed"
+        elif effect_type == 'shield':
+            color = arcade.color.BLUE
+            display_name = "Shield"
+        elif effect_type == 'multiplier':
+            color = arcade.color.GREEN
+            display_name = "Score Mult"
+        elif effect_type == 'cooldown':
+            color = arcade.color.PURPLE
+            display_name = "Dash CD"
         else:
-            effect_text = f"{effect_type.capitalize()} +{effect_data['value']}"
+            color = arcade.color.WHITE
+            display_name = effect_type.replace('_', ' ').title()
 
+        # Format effect text
+        if total_value > 0:
+            text = f"{display_name}: +{int(total_value)}%"
+        else:
+            text = f"{display_name}: {int(total_value)}%"
+
+        # Draw effect text
         arcade.draw_text(
-            effect_text,
-            x, effect_y,
-            effect_data['color'],
+            text,
+            SCREEN_WIDTH - 20, SCREEN_HEIGHT - 30 - y_offset,
+            color,
             16,
-            anchor_x="right",
-            font_name="Kenney Pixel"
+            anchor_x="right"
         )
 
+        y_offset += 25
+
 def draw_coin_count(coins):
-    """Draw the player's coin count"""
+    """Draw coin count at bottom right."""
+    from src.core.constants import SCREEN_WIDTH
+
     arcade.draw_text(
         f"Coins: {coins}",
-        SCREEN_WIDTH - 20,
-        30,
+        SCREEN_WIDTH - 20, 30,
         arcade.color.GOLD,
         18,
-        anchor_x="right",
-        font_name="Kenney Pixel"
+        anchor_x="right"
     )
 
 def draw_wave_message(message, alpha=255):

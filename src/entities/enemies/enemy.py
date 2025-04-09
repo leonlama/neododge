@@ -25,29 +25,32 @@ class Enemy(arcade.Sprite):
         # Set target (usually the player)
         self.target = target
 
-        # Set type and behavior
+        # Set enemy type
         self.enemy_type = enemy_type
 
-        # Set up texture using skin manager
+        # Set up texture
         try:
             self.texture = skin_manager.get_texture("enemies", enemy_type)
             if not self.texture:
-                # Create a square texture as fallback
-                if enemy_type == "wanderer":
-                    color = arcade.color.BLUE
-                elif enemy_type == "chaser":
-                    color = arcade.color.RED
-                elif enemy_type == "shooter":
-                    color = arcade.color.PURPLE
-                else:
-                    color = arcade.color.ORANGE
-
-                # Create a square texture
-                self.texture = arcade.make_soft_square_texture(30, color, 255, 5)
+                # Fallback to a simple shape if texture can't be loaded
+                colors = {
+                    "wanderer": arcade.color.BLUE,
+                    "chaser": arcade.color.RED,
+                    "shooter": arcade.color.PURPLE
+                }
+                color = colors.get(enemy_type, arcade.color.WHITE)
+                self.texture = arcade.make_circle_texture(64, color)
+                print(f"⚠️ Using fallback {enemy_type} texture")
         except Exception as e:
-            print(f"⚠️ Error loading enemy texture: {e}")
-            # Fallback to a simple square
-            self.texture = arcade.make_soft_square_texture(30, arcade.color.RED, 255, 5)
+            print(f"⚠️ Error loading {enemy_type} texture: {e}")
+            # Define color here in case it wasn't defined in the try block
+            colors = {
+                "wanderer": arcade.color.BLUE,
+                "chaser": arcade.color.RED,
+                "shooter": arcade.color.PURPLE
+            }
+            color = colors.get(enemy_type, arcade.color.WHITE)
+            self.texture = arcade.make_circle_texture(64, color)
 
         # Set scale
         self.scale = skin_manager.get_enemy_scale()

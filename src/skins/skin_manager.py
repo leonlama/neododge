@@ -29,88 +29,62 @@ class SkinManager:
         print(f"🎨 [INIT] Using skin: {self.current_skin}")
 
     def create_default_textures(self):
-        """Create default textures for fallbacks."""
-        self.default_textures = {
-            # UI elements
-            "ui/background": arcade.make_soft_circle_texture(
-                800, (20, 20, 40), outer_alpha=255, center_alpha=200
-            ),
-            "ui/logo": arcade.make_soft_square_texture(
-                200, (255, 255, 255), center_alpha=255
-            ),
-            "ui/start_button": arcade.make_soft_square_texture(
-                100, (0, 100, 200), center_alpha=200
-            ),
-            "ui/options_button": arcade.make_soft_square_texture(
-                100, (0, 150, 0), center_alpha=200
-            ),
-            "ui/quit_button": arcade.make_soft_square_texture(
-                100, (200, 0, 0), center_alpha=200
-            ),
-            "ui/heart": arcade.make_soft_circle_texture(
-                30, (255, 0, 0), center_alpha=255
-            ),
-            "ui/shield": arcade.make_soft_circle_texture(
-                30, (0, 100, 255), center_alpha=255
-            ),
+        """Create default textures for missing assets."""
+        # Create default player texture if missing
+        if "player/player" not in self.textures:
+            texture = arcade.make_soft_circle_texture(64, arcade.color.WHITE)
+            self.textures["player/player"] = texture
+            print(f"  ✓ Created default texture: player/player")
 
-            # Player textures
-            "player/idle": arcade.make_soft_circle_texture(
-                30, (0, 150, 255), center_alpha=255
-            ),
-            "player/dash": arcade.make_soft_circle_texture(
-                30, (100, 200, 255), center_alpha=255
-            ),
-            "player/default": arcade.make_soft_circle_texture(
-                30, (0, 150, 255), center_alpha=255
-            ),
-
-            # Orb textures
-            "orbs/speed": arcade.make_soft_circle_texture(
-                30, (0, 255, 0), center_alpha=255
-            ),
-            "orbs/shield": arcade.make_soft_circle_texture(
-                30, (0, 200, 255), center_alpha=255
-            ),
-            "orbs/health": arcade.make_soft_circle_texture(
-                30, (255, 0, 0), center_alpha=255
-            ),
-            "orbs/cooldown": arcade.make_soft_circle_texture(
-                30, (255, 255, 0), center_alpha=255
-            ),
-            "orbs/slow": arcade.make_soft_circle_texture(
-                30, (255, 0, 0), center_alpha=255
-            ),
-            "orbs/damage": arcade.make_soft_circle_texture(
-                30, (255, 100, 0), center_alpha=255
-            ),
-            "orbs/vision": arcade.make_soft_circle_texture(
-                30, (100, 0, 100), center_alpha=255
-            ),
-            "orbs/hitbox": arcade.make_soft_circle_texture(
-                30, (255, 100, 100), center_alpha=255
-            ),
-            "orbs/multiplier": arcade.make_soft_circle_texture(
-                30, (255, 255, 0), center_alpha=255
-            ),
-
-            # Artifact textures
-            "artifacts/dash": arcade.make_soft_circle_texture(
-                30, (0, 100, 255), center_alpha=255
-            ),
-            "artifacts/clone": arcade.make_soft_circle_texture(
-                30, (100, 0, 255), center_alpha=255
-            ),
-            "artifacts/bullet_time": arcade.make_soft_circle_texture(
-                30, (255, 255, 0), center_alpha=255
-            ),
-            "artifacts/magnet": arcade.make_soft_circle_texture(
-                30, (255, 100, 0), center_alpha=255
-            ),
-            "artifacts/slow": arcade.make_soft_circle_texture(
-                30, (0, 255, 255), center_alpha=255
-            )
+        # Create default enemy textures if missing
+        enemy_colors = {
+            "wanderer": arcade.color.BLUE,
+            "chaser": arcade.color.RED,
+            "shooter": arcade.color.PURPLE
         }
+
+        for enemy_type, color in enemy_colors.items():
+            texture_key = f"enemies/{enemy_type}"
+            if texture_key not in self.textures:
+                texture = arcade.make_soft_circle_texture(64, color)
+                self.textures[texture_key] = texture
+                print(f"  ✓ Created default texture: {texture_key}")
+
+        # Create default projectile texture if missing
+        if "projectiles/enemy_bullet" not in self.textures:
+            texture = arcade.make_soft_circle_texture(16, arcade.color.YELLOW)
+            self.textures["projectiles/enemy_bullet"] = texture
+            print(f"  ✓ Created default texture: projectiles/enemy_bullet")
+
+        # Create default orb textures if missing
+        orb_types = ["slow", "vision", "hitbox"]
+        orb_colors = {
+            "slow": arcade.color.ORANGE,
+            "vision": arcade.color.PURPLE,
+            "hitbox": arcade.color.PINK
+        }
+
+        for orb_type in orb_types:
+            texture_key = f"orbs/{orb_type}"
+            if texture_key not in self.textures:
+                color = orb_colors.get(orb_type, arcade.color.WHITE)
+                texture = arcade.make_soft_circle_texture(32, color)
+                self.textures[texture_key] = texture
+                print(f"  ✓ Created default texture: {texture_key}")
+
+        # Create default UI textures
+        ui_elements = {
+            "heart_red": arcade.color.RED,
+            "heart_gray": arcade.color.GRAY,
+            "heart_gold": arcade.color.GOLD
+        }
+
+        for ui_element, color in ui_elements.items():
+            texture_key = f"ui/{ui_element}"
+            if texture_key not in self.textures:
+                texture = arcade.make_soft_circle_texture(30, color)
+                self.textures[texture_key] = texture
+                print(f"  ✓ Created default texture: {texture_key}")
 
     def discover_skins(self):
         """Discover available skins in the skins directory.
