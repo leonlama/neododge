@@ -1,10 +1,10 @@
 import arcade
 import math
-from src.mechanics.artifacts.base import Artifact
+from src.mechanics.artifacts.base import BaseArtifact
 from src.skins.skin_manager import skin_manager
 from src.core.scaling import get_scale
 
-class DashArtifact(Artifact):
+class DashArtifact(BaseArtifact):
     """Artifact that allows the player to dash."""
 
     def __init__(self, position_x, position_y):

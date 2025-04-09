@@ -152,11 +152,8 @@ def draw_wave_message(text: str, alpha: float):
 
 def draw_pickup_texts(pickup_texts: list):
     """Draw pickup text notifications."""
+    from src.ui.pickup_text import PickupText  # if not already present
+    
     for text_obj in pickup_texts:
-        if isinstance(text_obj, arcade.Text):
+        if isinstance(text_obj, PickupText):
             text_obj.draw()
-        elif isinstance(text_obj, list):
-            # If somehow a nested list snuck in, draw its items too
-            for inner_text in text_obj:
-                if isinstance(inner_text, arcade.Text):
-                    inner_text.draw()

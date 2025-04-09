@@ -2,7 +2,7 @@ import arcade
 from src.skins.skin_manager import skin_manager
 from src.core.scaling import get_scale
 
-class Artifact(arcade.Sprite):
+class BaseArtifact(arcade.Sprite):
     """Base class for all artifacts in the game"""
 
     def __init__(self, position_x=0, position_y=0, name="Artifact"):

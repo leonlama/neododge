@@ -23,6 +23,8 @@ from src.ui.improved_hud import (
     draw_pickup_texts
 )
 
+from src.ui.pickup_text import PickupText
+
 class NeododgeGame(arcade.View):
     """Main game view."""
 
@@ -114,7 +116,7 @@ class NeododgeGame(arcade.View):
         self.in_wave = True
         self.wave_pause = False
         self.wave_message = ""
-        self.wave_message_alpha -= 5
+        self.wave_message_alpha = 255
         self.message_timer = 0
         self.message_duration = 2.0  # duration (in seconds) the message is shown
 
@@ -473,8 +475,8 @@ class NeododgeGame(arcade.View):
     
             # Draw any pickup texts
             if hasattr(self, 'pickup_texts'):
-                from src.ui.improved_hud import draw_pickup_texts
-                draw_pickup_texts(self.pickup_texts)
+                for text_obj in self.pickup_texts:
+                    text_obj.draw()
     
             # Draw wave message if active
             if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
@@ -636,7 +638,7 @@ class NeododgeGame(arcade.View):
             self.pickup_texts = []
 
         # Add text with position and lifetime
-        self.pickup_texts.append([text, x, y, 1.0])  # 1.0 second lifetime
+        self.pickup_texts.append(PickupText(text, x, y))  # 1.0 second lifetime
 
     def update_enemies(self, delta_time):
         """Update all enemies and their bullets."""
@@ -795,17 +797,14 @@ class NeododgeGame(arcade.View):
                 # Reset timer
                 self.artifact_spawn_timer = random.uniform(20, 30)
                 print("✨ Spawned a dash artifact!")
-
+                
         # Update pickup texts
         if hasattr(self, 'pickup_texts'):
-            for i in range(len(self.pickup_texts) - 1, -1, -1):
-                text, x, y, lifetime = self.pickup_texts[i]
-                lifetime -= delta_time
-                if lifetime <= 0:
-                    self.pickup_texts.pop(i)
-                else:
-                    # Move text upward
-                    self.pickup_texts[i] = [text, x, y + 1, lifetime]
+            for text_obj in self.pickup_texts[:]:
+                if isinstance(text_obj, PickupText):
+                    text_obj.update(delta_time)
+                    if text_obj.alpha <= 0:
+                        self.pickup_texts.remove(text_obj)
 
         # Update wave message alpha
         if hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
@@ -1103,6 +1102,10 @@ class NeododgeGame(arcade.View):
 
                 # Show buff message
                 self.show_message(f"+{int(buff_amount*100)}% {buff_type.capitalize()} Buff!")
+
+            # Add pickup text notification
+            pickup_msg = "Buff collected!" if orb.orb_type in ["speed", "shield", "multiplier", "cooldown"] else "Debuff collected!"
+            self.add_pickup_text(pickup_msg, self.player.center_x, self.player.center_y)
 
             # Remove the orb
             orb.remove_from_sprite_lists()
@@ -1423,7 +1426,7 @@ class NeododgeGame(arcade.View):
             self.pickup_texts = []
 
         # Add the text with position and lifetime
-        self.pickup_texts.append([text, x, y, 1.0])  # 1.0 second lifetime
+        self.pickup_texts.append(PickupText(text, x, y))  # 1.0 second lifetime
 
     def apply_skin_toggle(self):
         """Toggle between available skins"""
@@ -1539,3 +1542,9 @@ class NeododgeGame(arcade.View):
         self.wave_message = text
         self.wave_message_alpha = 255
         self.message_timer = 0  # reset
+        
+    def show_pickup_text(self, text, color=arcade.color.WHITE, x=None, y=None):
+        if x is None or y is None:
+            x, y = self.player.center_x, self.player.center_y + 30
+        text_obj = arcade.Text(text, x, y, color, font_size=12, anchor_x="center")
+        self.pickup_texts.append(text_obj)

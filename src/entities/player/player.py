@@ -387,8 +387,8 @@ class Player(arcade.Sprite):
             pass
 
         # Add visual feedback
-        if hasattr(self, 'parent_view') and hasattr(self.parent_view, 'add_pickup_text'):
-            self.parent_view.add_pickup_text("Coin collected!", self.center_x, self.center_y)
+        #if hasattr(self, 'parent_view') and hasattr(self.parent_view, 'show_pickup_text'):
+           # self.parent_view.show_pickup_text("+1 Coin", arcade.color.GREEN)
 
         return True  # Return True to indicate successful collection
 
