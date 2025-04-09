@@ -3,8 +3,8 @@
     "description": "MDMA-themed skin",
     "scales": {
         "player": 0.035,
-        "enemy": 1,
-        "bullet": 1,
+        "enemy": 0.035,
+        "bullet": 0.035,
         "orb": 0.035,
         "artifact": 0.035,
         "coin": 1
