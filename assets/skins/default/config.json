@@ -2,7 +2,7 @@
     "name": "Default",
     "description": "Default game skin",
     "scales": {
-        "player": 1,
+        "player": 0.035,
         "enemy": 0.035,
         "bullet": 0.035,
         "orb": 0.1,

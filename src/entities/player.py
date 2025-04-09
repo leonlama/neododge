@@ -13,19 +13,22 @@ class Player(arcade.Sprite):
         """Initialize the player."""
         super().__init__()
 
-        # Set up player texture
-        try:
-            self.texture = skin_manager.get_texture("player", "default")
-            if not self.texture:
-                # Fallback to a simple shape if texture can't be loaded
-                self.texture = arcade.make_circle_texture(64, arcade.color.WHITE)
-                print("⚠️ Using fallback player texture")
-        except Exception as e:
-            print(f"⚠️ Error loading player texture: {e}")
+        # Debug what textures are available
+        print(f"🔍 Available textures in skin manager: {list(skin_manager.textures.keys())}")
+
+        # Try to get the player texture
+        player_texture = skin_manager.get_texture("player", "player")
+        if player_texture:
+            self.texture = player_texture
+            print(f"✅ Successfully set player texture")
+        else:
+            # Fallback to a simple shape if texture can't be loaded
             self.texture = arcade.make_circle_texture(64, arcade.color.WHITE)
+            print("⚠️ Using fallback player texture (white circle)")
         
         # Set scale using centralized system
         self.scale = get_scale('player')
+        print(f"🔍 Setting player scale to: {self.scale}")
         
         # Set initial position
         self.center_x = x

@@ -203,14 +203,20 @@ class SkinManager:
         # Try different file extensions
         extensions = [".png", ".jpg", ".jpeg"]
 
+        print(f"🔍 Looking for texture: {category}/{name}")
+
         for ext in extensions:
             texture_path = f"{skin_path}/{category}/{name}{ext}"
+            print(f"  - Checking path: {texture_path}")
             if os.path.exists(texture_path):
-                texture = arcade.load_texture(texture_path)
-                texture_key = f"{category}/{name}"
-                self.textures[texture_key] = texture
-                print(f"  ✓ Loaded texture: {texture_key}")
-                return
+                try:
+                    texture = arcade.load_texture(texture_path)
+                    texture_key = f"{category}/{name}"
+                    self.textures[texture_key] = texture
+                    print(f"  ✓ Loaded texture: {texture_key} (size: {texture.width}x{texture.height})")
+                    return
+                except Exception as e:
+                    print(f"  ✗ Error loading texture: {texture_path} - {e}")
 
         print(f"  ✗ Texture not found: {category}/{name}")
 
