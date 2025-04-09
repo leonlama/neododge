@@ -6,7 +6,7 @@ from src.entities.projectiles.enemy_bullet import EnemyBullet
 from src.audio.sound_manager import sound_manager
 from src.core.scaling import get_scale
 
-class ShooterEnemy(Enemy):
+class Shooter(Enemy):
     """Enemy that moves slowly and shoots at the player."""
 
     def __init__(self, x, y, target=None):

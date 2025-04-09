@@ -294,10 +294,9 @@ class NeododgeGame(arcade.View):
 
     def on_draw(self):
         """Render the screen."""
-        #print("Starting on_draw method")
         try:
             # Start rendering
-            arcade.start_render()
+            self.clear()
             
             # Draw background
             if hasattr(self, 'background') and self.background:
@@ -310,9 +309,26 @@ class NeododgeGame(arcade.View):
             if hasattr(self, 'player') and self.player:
                 self.player.draw()
     
-            # Draw enemies
+            # Draw enemies with debug info
             if hasattr(self, 'enemies'):
                 self.enemies.draw()
+                
+                # Debug: Draw enemy count and positions
+                arcade.draw_text(f"Enemies: {len(self.enemies)}", 10, 40, arcade.color.WHITE, 14)
+                for i, enemy in enumerate(self.enemies):
+                    # Draw a bright outline around each enemy to make them more visible
+                    arcade.draw_circle_outline(
+                        enemy.center_x, enemy.center_y, 
+                        enemy.width / 2 + 5, 
+                        arcade.color.YELLOW, 2
+                    )
+                    
+                    # Draw enemy type and position
+                    arcade.draw_text(
+                        f"{getattr(enemy, 'enemy_type', 'unknown')}",
+                        enemy.center_x, enemy.center_y + 20,
+                        arcade.color.YELLOW, 10, anchor_x="center"
+                    )
     
             # Draw orbs
             if hasattr(self, 'orbs'):
@@ -334,17 +350,20 @@ class NeododgeGame(arcade.View):
             # Use GUI camera for UI elements
             self.gui_camera.use()
     
+            # Draw HUD
+            if hasattr(self, 'draw_hud'):
+                self.draw_hud()
+            else:
+                try:
+                    self.draw_improved_hud()
+                except Exception as e:
+                    print(f"Error drawing HUD: {e}")
+                    # Fallback to simple HUD
+                    self.draw_simple_hud()
+            
             # Draw player status effects
             if hasattr(self, 'player') and self.player:
                 self.player.draw_effects(self.window.width, self.window.height)
-    
-            # Draw HUD
-            try:
-                self.draw_improved_hud()
-            except Exception as e:
-                print(f"Error drawing HUD: {e}")
-                # Fallback to simple HUD
-                self.draw_simple_hud()
             
             # Draw active buffs
             self.draw_buffs()

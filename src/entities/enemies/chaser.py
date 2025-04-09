@@ -4,7 +4,7 @@ import math
 import arcade
 from src.core.scaling import get_scale
 
-class ChaserEnemy(Enemy):
+class Chaser(Enemy):
     """Enemy that chases the player."""
 
     def __init__(self, x, y, target=None):

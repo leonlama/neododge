@@ -1,7 +1,7 @@
 from src.entities.enemies.enemy import Enemy
 import random
 
-class WandererEnemy(Enemy):
+class Wanderer(Enemy):
     """Enemy that moves in straight lines and bounces off walls."""
 
     def __init__(self, x, y, target=None):

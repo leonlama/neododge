@@ -78,6 +78,12 @@ class WaveManager:
             self.spawn_timer = 0
             self.spawn_enemy()
 
+        # Set targets for enemies if game_view has player and enemies
+        if hasattr(self.game_view, 'player') and hasattr(self.game_view, 'enemies'):
+            for enemy in self.game_view.enemies:
+                if hasattr(enemy, 'set_target') and enemy.target is None:
+                    enemy.set_target(self.game_view.player)
+
     def start_wave(self):
         """Start a new wave."""
         self.wave_number += 1
