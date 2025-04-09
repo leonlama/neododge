@@ -141,11 +141,10 @@ class StatusEffectManager:
     def load_icons(self):
         """Load icon textures for status effects."""
         from src.skins.skin_manager import skin_manager
-
         # Try to load icons for each effect type
         effect_types = ["speed", "shield", "multiplier", "slow", "vision", "hitbox"]
         for effect_type in effect_types:
-            texture = skin_manager.get_texture("ui/effects", effect_type)
+            texture = skin_manager.get_texture("ui", f"effects/{effect_type}")
             if texture:
                 self.icon_textures[effect_type] = texture
 
@@ -162,7 +161,7 @@ class StatusEffectManager:
             "remaining": duration,
             "value": effect_data.get("value", 0) if effect_data else 0,
             "color": effect_data.get("color", (255, 255, 255)) if effect_data else (255, 255, 255),
-            "icon": effect_data.get("icon", None) if effect_data else None,
+            "icon": effect_data.get("icon", f"effects/{effect_type}") if effect_data else f"effects/{effect_type}",
             "active": True,
         }
         

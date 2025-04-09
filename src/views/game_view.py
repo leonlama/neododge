@@ -792,13 +792,13 @@ class NeododgeGame(arcade.View):
 
                 # Update player texture
                 if self.player:
-                    self.player.texture = skin_manager.get_texture("player")
+                    self.player.texture = skin_manager.get_texture("player", None)
 
                     # Update heart textures
                     self.player.heart_textures = {
-                        "red": skin_manager.get_texture("ui", "heart_red", "assets/ui/heart_red.png"),
-                        "gray": skin_manager.get_texture("ui", "heart_gray", "assets/ui/heart_gray.png"),
-                        "gold": skin_manager.get_texture("ui", "heart_gold", "assets/ui/heart_gold.png")
+                        "red": skin_manager.get_texture("ui", "heart_red"),
+                        "gray": skin_manager.get_texture("ui", "heart_gray"),
+                        "gold": skin_manager.get_texture("ui", "heart_gold")
                     }
             else:
                 print(f"⚠️ Failed to switch skin")

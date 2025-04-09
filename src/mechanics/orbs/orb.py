@@ -82,7 +82,7 @@ class Orb(arcade.Sprite):
                 "duration": self.effect_duration,
                 "value": self._get_effect_value(),
                 "color": self.properties["color"],
-                "icon": f"ui/effects/{self.orb_type}"
+                "icon": f"effects/{self.orb_type}"  # Fixed path to ensure it's not None
             }
             success = player.status_effects.add_effect(self.orb_type, self.effect_duration, effect_data)
             print(f"Effect added successfully: {success}")

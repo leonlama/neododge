@@ -4,7 +4,12 @@ from src.skins.skin_manager import skin_manager
 
 def draw_hud(player, score, wave=1, wave_timer=None, heart_textures=None):
     """Draw the full HUD layout with a clean roguelike feel."""
-    draw_player_health(player, heart_textures, SCREEN_WIDTH, SCREEN_HEIGHT)
+    # Draw player hearts
+    if hasattr(player, 'draw_hearts'):
+        player.draw_hearts()
+    else:
+        draw_player_health(player, heart_textures, SCREEN_WIDTH, SCREEN_HEIGHT)
+    
     draw_score(score)
     draw_wave_info(wave, wave_timer)
     draw_coin_count(getattr(player, 'coins', 0))
@@ -123,7 +128,29 @@ def draw_active_effects(active_effects):
         y = y_start - idx * spacing
         display_name = effect_type.replace("_", " ").title()
         value_text = f"+{int(data['value'])}%" if data["value"] > 0 else f"{int(data['value'])}%"
-        icon = skin_manager.get_texture("ui", data["icon"])
+        # Make sure we're not passing "ui" twice in the path
+        icon_path = data["icon"]
+        if icon_path.startswith("ui/"):
+            # Extract the part after "ui/"
+            icon_path = icon_path[3:]
+        
+        # Use preloaded textures from status_effects manager
+        effect_type = effect_type.lower()  # Ensure lowercase key match
+        from src.skins.skin_manager import skin_manager
+
+        icon_path = f"effects/{effect_type}"
+
+        # Ensure the texture is loaded
+        if not skin_manager.has_texture("ui", icon_path):
+            texture_path = f"assets/skins/default/ui/{icon_path}.png"
+            try:
+                skin_manager.load_texture("ui", icon_path, texture_path)
+                print(f"✅ Loaded texture: ui/{icon_path}")
+            except FileNotFoundError:
+                print(f"❌ Texture file not found: {texture_path}")
+
+        # Get icon (may still be None)
+        icon = skin_manager.get_texture("ui", icon_path)
 
         # Draw icon
         if icon:
@@ -132,6 +159,8 @@ def draw_active_effects(active_effects):
                 icon,
                 scale=icon_size / icon.width
             )
+        else:
+            print(f"⚠️ Missing icon for {effect_type}, skipping texture draw.")
 
         # Draw text
         arcade.draw_text(
@@ -192,3 +221,6 @@ def draw_pickup_texts(pickup_texts):
             anchor_x="center",
             font_name="Kenney Pixel"
         )
+
+# Print available textures once at game start
+print("✅ Available UI textures:", skin_manager.textures.get("ui", {}).keys())

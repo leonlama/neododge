@@ -86,6 +86,35 @@ class SkinManager:
                 self.textures[texture_key] = texture
                 print(f"  ✓ Created default texture: {texture_key}")
 
+    def load_ui_textures(self):
+        import os
+
+        ui_dir = "assets/skins/default/ui"
+        effects_dir = os.path.join(ui_dir, "effects")
+
+        ui_textures = ["heart_red", "heart_gray", "heart_gold"]
+        effect_textures = ["speed", "shield", "multiplier", "slow", "vision", "hitbox", "cooldown"]
+
+        if "ui" not in self.textures:
+            self.textures["ui"] = {}
+
+        for tex in ui_textures:
+            path = os.path.join(ui_dir, f"{tex}.png")
+            if os.path.exists(path):
+                self.textures["ui"][tex] = arcade.load_texture(path)
+                print(f"✅ Loaded UI texture: {tex}")
+            else:
+                print(f"❌ Missing UI texture: {tex}")
+
+        for tex in effect_textures:
+            path = os.path.join(effects_dir, f"{tex}.png")
+            key = f"effects/{tex}"
+            if os.path.exists(path):
+                self.textures["ui"][key] = arcade.load_texture(path)
+                print(f"✅ Loaded effect icon: {key}")
+            else:
+                print(f"❌ Missing effect icon: {key}")
+
     def discover_skins(self):
         """Discover available skins in the skins directory.
 
@@ -234,19 +263,73 @@ class SkinManager:
         """Get the scale for a specific entity type."""
         return get_scale(entity_type)
 
-    def get_texture(self, category, name=None):
-        """Get a texture by category and name."""
-        if name is None:
-            # Legacy support for old format
+    def get_texture(self, category, name=None, force_reload=False):
+        """Get a texture by category and name.
+        
+        Args:
+            category: Category of the texture (e.g., "ui").
+            name: Name of the texture (e.g., "heart_red" or "effects/speed").
+            force_reload: Whether to force reload the texture from disk.
+            
+        Returns:
+            arcade.Texture: The texture if found, None otherwise.
+        """
+        # Handle the case where name contains a slash (from old format)
+        if name and "/" in name:
+            parts = name.split("/", 1)
+            if len(parts) == 2:
+                subcategory, item_name = parts
+                texture_key = f"{category}/{subcategory}/{item_name}"
+            else:
+                texture_key = f"{category}/{name}"
+        elif name is None:
+            # Legacy support for old format where category contained the full path
             texture_key = category
         else:
             texture_key = f"{category}/{name}"
 
-        if texture_key in self.textures:
+        if texture_key in self.textures and not force_reload:
             return self.textures[texture_key]
 
         print(f"⚠️ Texture not found: {texture_key}")
         return None
+
+    def has_texture(self, category: str, name: str) -> bool:
+        """Check if a texture exists in the specified category.
+        
+        Args:
+            category: Category of the texture (e.g., "ui").
+            name: Name of the texture (e.g., "effects/speed").
+            
+        Returns:
+            bool: True if the texture exists, False otherwise.
+        """
+        texture_key = f"{category}/{name}"
+        return texture_key in self.textures
+
+    def load_texture(self, category: str, name: str, path: str):
+        """Load a texture from a file path and store it in the specified category.
+        
+        Args:
+            category: Category to store the texture in (e.g., "ui").
+            name: Name to give the texture (e.g., "effects/speed").
+            path: File path to the texture.
+            
+        Raises:
+            FileNotFoundError: If the texture file doesn't exist.
+        """
+        import arcade
+        from PIL import Image
+        from pathlib import Path
+
+        texture_key = f"{category}/{name}"
+        
+        # Load the texture file manually
+        if Path(path).exists():
+            texture = arcade.load_texture(path)
+            self.textures[texture_key] = texture
+        else:
+            raise FileNotFoundError(f"Texture not found: {path}")
 
     def get_default_texture(self, category, name):
         """Get a default texture for a category and name.

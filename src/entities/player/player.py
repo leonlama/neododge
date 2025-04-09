@@ -132,6 +132,10 @@ class Player(arcade.Sprite):
             "gray": skin_manager.get_texture("ui", "heart_gray"),
             "gold": skin_manager.get_texture("ui", "heart_gold")
         }
+        
+        print("❤️ Heart textures loaded:")
+        for key, tex in self.heart_textures.items():
+            print(f" - {key}: {'✅' if tex else '❌'}")
 
     def update(self, delta_time):
         """Update the player.
@@ -401,6 +405,15 @@ class Player(arcade.Sprite):
 
     def draw_hearts(self):
         """Draw the player's health as hearts."""
+        # Initialize heart textures if not already set
+        if not hasattr(self, 'heart_textures') or not self.heart_textures:
+            from src.skins.skin_manager import skin_manager
+            self.heart_textures = {
+                "red": skin_manager.get_texture("ui", "heart_red"),
+                "gray": skin_manager.get_texture("ui", "heart_gray"),
+                "gold": skin_manager.get_texture("ui", "heart_gold")
+            }
+            
         if not self.heart_textures:
             return  # Skip if textures aren't set
 
