@@ -93,7 +93,11 @@ class SkinManager:
         effects_dir = os.path.join(ui_dir, "effects")
 
         ui_textures = ["heart_red", "heart_gray", "heart_gold"]
-        effect_textures = ["speed", "shield", "multiplier", "slow", "vision", "hitbox", "cooldown"]
+        effect_textures = []
+        if os.path.exists(effects_dir):
+            for file in os.listdir(effects_dir):
+                if file.endswith(".png"):
+                    effect_textures.append(file.replace(".png", ""))
 
         if "ui" not in self.textures:
             self.textures["ui"] = {}
@@ -109,11 +113,8 @@ class SkinManager:
         for tex in effect_textures:
             path = os.path.join(effects_dir, f"{tex}.png")
             key = f"effects/{tex}"
-            if os.path.exists(path):
-                self.textures["ui"][key] = arcade.load_texture(path)
-                print(f"✅ Loaded effect icon: {key}")
-            else:
-                print(f"❌ Missing effect icon: {key}")
+            self.textures["ui"][key] = arcade.load_texture(path)
+            print(f"✅ Loaded effect icon: {key}")
 
     def discover_skins(self):
         """Discover available skins in the skins directory.

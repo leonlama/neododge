@@ -127,6 +127,23 @@ class HitboxEffect(StatusEffect):
         player.hitbox_multiplier = 1.0
         player.update_hitbox()
 
+# Mapping from orb effect types to icon names
+EFFECT_ICON_MAP = {
+    "speed_10": "speed",
+    "speed_20": "speed",
+    "speed_35": "speed",
+    "mult_1_5": "multiplier",
+    "mult_2": "multiplier",
+    "mult_down_0_5": "multiplier",
+    "mult_down_0_25": "multiplier",
+    "cooldown": "cooldown",
+    "cooldown_up": "cooldown",
+    "shield": "shield",
+    "slow": "speed",
+    "vision_blur": "vision",
+    "big_hitbox": "hitbox"
+}
+
 class StatusEffectManager:
     """Manages player status effects."""
 
@@ -142,7 +159,7 @@ class StatusEffectManager:
         """Load icon textures for status effects."""
         from src.skins.skin_manager import skin_manager
         # Try to load icons for each effect type
-        effect_types = ["speed", "shield", "multiplier", "slow", "vision", "hitbox"]
+        effect_types = ["speed", "shield", "multiplier", "vision", "hitbox", "cooldown"]
         for effect_type in effect_types:
             texture = skin_manager.get_texture("ui", f"effects/{effect_type}")
             if texture:
@@ -154,6 +171,9 @@ class StatusEffectManager:
         
         if effect_data is None:
             effect_data = {}
+        
+        # Map the effect type to the correct icon name
+        icon_name = EFFECT_ICON_MAP.get(effect_type, effect_type)
             
         self.effects[effect_id] = {
             "type": effect_type,
@@ -161,7 +181,7 @@ class StatusEffectManager:
             "remaining": duration,
             "value": effect_data.get("value", 0) if effect_data else 0,
             "color": effect_data.get("color", (255, 255, 255)) if effect_data else (255, 255, 255),
-            "icon": effect_data.get("icon", f"effects/{effect_type}") if effect_data else f"effects/{effect_type}",
+            "icon": effect_data.get("icon", f"effects/{icon_name}") if effect_data else f"effects/{icon_name}",
             "active": True,
         }
         
