@@ -1,6 +1,7 @@
 import random
 import time
 from src.mechanics.wave_management.wave_generator import WaveGenerator
+from src.mechanics.wave_management.orb_spawner import spawn_orbs
 
 class WaveManager:
     """Manages the creation and progression of waves in the game."""
@@ -58,6 +59,7 @@ class WaveManager:
         self.wave_analytics = analytics
         self.game_view = None
         self.current_wave = 0
+        self.wave_number = 0  # Added for compatibility with analytics
         self.wave_timer = 0
         self.wave_duration = 45  # Default duration
         self.in_wave = False
@@ -140,6 +142,7 @@ class WaveManager:
     def generate_wave_configuration(self):
         """Generate configuration for the next wave"""
         self.current_wave += 1
+        self.wave_number = self.current_wave  # Keep wave_number in sync with current_wave
 
         # Determine wave type
         wave_type = self._determine_wave_type()
@@ -277,11 +280,10 @@ class WaveManager:
         # Spawn orbs for this wave
         if hasattr(self, 'game_view') and config['orb_count'] > 0:
             try:
-                from src.views.game.orb_logic import spawn_orbs
                 spawn_orbs(
                     game_view=self.game_view, 
                     count=config['orb_count'], 
-                    orb_types=config['orb_types']
+                    orb_type=config['orb_types']
                 )
             except Exception as e:
                 print(f"Error spawning orbs: {e}")

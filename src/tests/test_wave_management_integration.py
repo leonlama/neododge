@@ -9,7 +9,10 @@ from src.entities.enemies.wanderer import Wanderer
 
 def ensure_window():
     """Ensure an arcade window exists for testing."""
-    if not arcade.get_window():
+    try:
+        if not arcade.get_window():
+            arcade.open_window(800, 600, "Test Window")
+    except:
         arcade.open_window(800, 600, "Test Window")
 
 def test_wave_management_integration():
@@ -36,8 +39,11 @@ def test_wave_management_integration():
         MockChaser.return_value = mock_chaser
         MockWanderer.return_value = mock_wanderer
 
-        # Set up wave manager
-        wave_manager = WaveManager()
+        # Set up wave manager with required arguments
+        wave_generator = MagicMock()
+        on_spawn_enemy = MagicMock()
+        wave_manager = WaveManager(wave_generator, on_spawn_enemy)
+        
         wave_manager.game_view = game_view
         wave_manager.on_spawn_enemy = game_view.spawn_enemy
         wave_manager.on_clear_enemies = game_view.clear_enemies

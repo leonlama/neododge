@@ -29,9 +29,13 @@ def test_wave_manager_initialization():
     """Test that the wave manager initializes correctly."""
     # Create mock game view
     game_view = MockGameView()
-
+    
+    # Create mock wave generator
+    wave_generator = MagicMock()
+    on_spawn_enemy = game_view.spawn_enemy
+    
     # Create wave manager
-    wave_manager = WaveManager()
+    wave_manager = WaveManager(wave_generator, on_spawn_enemy)
     wave_manager.game_view = game_view
 
     # Check initial state
@@ -44,14 +48,31 @@ def test_wave_manager_start_wave():
     # Create mock game view
     game_view = MockGameView()
 
+    # Create mock wave generator
+    wave_generator = MagicMock()
+    on_spawn_enemy = game_view.spawn_enemy
+    
     # Create wave manager
-    wave_manager = WaveManager()
+    wave_manager = WaveManager(wave_generator, on_spawn_enemy)
     wave_manager.game_view = game_view
-    wave_manager.on_spawn_enemy = game_view.spawn_enemy
     wave_manager.on_clear_enemies = game_view.clear_enemies
     
+    # Mock wave generator to return a valid config
+    wave_generator.generate_next_wave.return_value = {
+        "wave_number": 1,
+        "type": "normal",
+        "duration": 30,
+        "enemy_count": 5,
+        "spawn_delay": 1.0,
+        "enemy_speed": 1.0,
+        "enemy_health": 1.0,
+        "formation": "random",
+        "orb_count": 2,
+        "coin_count": 3
+    }
+    
     # Ensure wave_config is set before starting the wave
-    wave_manager.wave_config = wave_manager.wave_generator.generate_next_wave()
+    wave_manager.current_config = wave_generator.generate_next_wave()
 
     # Start a wave
     wave_manager.start_wave()
@@ -60,21 +81,38 @@ def test_wave_manager_start_wave():
     assert wave_manager.current_wave == 1
     assert wave_manager.in_wave
     assert wave_manager.enemies_to_spawn > 0
-    assert isinstance(wave_manager.wave_config, dict)
+    assert isinstance(wave_manager.current_config, dict)
 
 def test_wave_manager_spawn_enemy():
     """Test that the wave manager spawns enemies correctly."""
     # Create mock game view
     game_view = MockGameView()
 
+    # Create mock wave generator
+    wave_generator = MagicMock()
+    on_spawn_enemy = game_view.spawn_enemy
+    
     # Create wave manager
-    wave_manager = WaveManager()
+    wave_manager = WaveManager(wave_generator, on_spawn_enemy)
     wave_manager.game_view = game_view
-    wave_manager.on_spawn_enemy = game_view.spawn_enemy
     wave_manager.on_clear_enemies = game_view.clear_enemies
     
+    # Mock wave generator to return a valid config
+    wave_generator.generate_next_wave.return_value = {
+        "wave_number": 1,
+        "type": "normal",
+        "duration": 30,
+        "enemy_count": 5,
+        "spawn_delay": 1.0,
+        "enemy_speed": 1.0,
+        "enemy_health": 1.0,
+        "formation": "random",
+        "orb_count": 2,
+        "coin_count": 3
+    }
+    
     # Ensure wave_config is set before starting the wave
-    wave_manager.wave_config = wave_manager.wave_generator.generate_next_wave()
+    wave_manager.current_config = wave_generator.generate_next_wave()
 
     # Start a wave
     wave_manager.start_wave()
@@ -101,14 +139,31 @@ def test_wave_manager_update():
     # Create mock game view
     game_view = MockGameView()
 
+    # Create mock wave generator
+    wave_generator = MagicMock()
+    on_spawn_enemy = game_view.spawn_enemy
+    
     # Create wave manager
-    wave_manager = WaveManager()
+    wave_manager = WaveManager(wave_generator, on_spawn_enemy)
     wave_manager.game_view = game_view
-    wave_manager.on_spawn_enemy = game_view.spawn_enemy
     wave_manager.on_clear_enemies = game_view.clear_enemies
     
+    # Mock wave generator to return a valid config
+    wave_generator.generate_next_wave.return_value = {
+        "wave_number": 1,
+        "type": "normal",
+        "duration": 30,
+        "enemy_count": 5,
+        "spawn_delay": 1.0,
+        "enemy_speed": 1.0,
+        "enemy_health": 1.0,
+        "formation": "random",
+        "orb_count": 2,
+        "coin_count": 3
+    }
+    
     # Ensure wave_config is set before starting the wave
-    wave_manager.wave_config = wave_manager.wave_generator.generate_next_wave()
+    wave_manager.current_config = wave_generator.generate_next_wave()
 
     # Start a wave
     wave_manager.start_wave()

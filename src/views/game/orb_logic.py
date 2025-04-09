@@ -52,6 +52,9 @@ def spawn_orb(self, x=None, y=None, orb_type=None):
                 self.orbs.append(orb)
             if hasattr(self, 'all_sprites'):
                 self.all_sprites.append(orb)
+            # Add to scene if using arcade's Scene system
+            if hasattr(self, 'scene') and hasattr(self.scene, 'add_sprite'):
+                self.scene.add_sprite("orbs", orb)
 
         except Exception as e:
             print(f"Error spawning orb: {e}")
@@ -105,38 +108,37 @@ def spawn_orbs(game_view, count, orb_types=None, min_distance_from_player=100):
             # Spawn the orb
             game_view.spawn_orb(x, y, orb_type=orb_type)
 
-def check_orb_collisions(self):
+def check_orb_collisions(game_view):
         """Check for collisions between player and orbs."""
         # Get collisions
-        orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
+        orb_hit_list = arcade.check_for_collision_with_list(game_view.player, game_view.orbs)
 
         # Handle each collision
         for orb in orb_hit_list:
             # Apply orb effect
-            if orb.orb_type == "buff":
-                # Apply buff effect
-                buff_type = orb.buff_type if hasattr(orb, 'buff_type') else random.choice(["speed", "health", "damage"])
-                buff_amount = orb.buff_amount if hasattr(orb, 'buff_amount') else 0.2  # 20% buff
-
-                # Apply the buff
-                self.apply_buff(buff_type, buff_amount)
-
-                # Play buff sound
-                self.play_buff_sound()
-
-                # Show buff message
-                self.show_message(f"+{int(buff_amount*100)}% {buff_type.capitalize()} Buff!")
-
+            game_view.player.apply_orb_effect(orb)
             # Add pickup text notification
             pickup_msg = "Buff collected!" if orb.orb_type in ["speed", "shield", "multiplier", "cooldown"] else "Debuff collected!"
-            self.add_pickup_text(pickup_msg, self.player.center_x, self.player.center_y)
+            game_view.add_pickup_text(pickup_msg, game_view.player.center_x, game_view.player.center_y)
+            
+            # Play sound effect
+            if orb.orb_type in ["speed", "shield", "multiplier", "cooldown"]:
+                if hasattr(game_view, 'play_buff_sound'):
+                    game_view.play_buff_sound()
+                elif hasattr(game_view, 'sound_manager') and hasattr(game_view.sound_manager, 'play_sound'):
+                    game_view.sound_manager.play_sound("buff_pickup")
+            else:
+                if hasattr(game_view, 'play_debuff_sound'):
+                    game_view.play_debuff_sound()
+                elif hasattr(game_view, 'sound_manager') and hasattr(game_view.sound_manager, 'play_sound'):
+                    game_view.sound_manager.play_sound("debuff_pickup")
 
             # Remove the orb
             orb.remove_from_sprite_lists()
 
             # Update analytics
-            if hasattr(self, 'wave_manager') and hasattr(self.wave_manager, 'wave_analytics'):
-                self.wave_manager.wave_analytics.update_wave_stat(self.wave_manager.wave, "orbs_collected", 1)
+            if hasattr(game_view, 'wave_manager') and hasattr(game_view.wave_manager, 'wave_analytics'):
+                game_view.wave_manager.wave_analytics.update_wave_stat(game_view.wave_manager.current_wave, "orbs_collected", 1)
 
 def apply_orb_effect(self, orb):
         """Apply an orb's effect to the player."""

@@ -426,6 +426,11 @@ class Player(arcade.Sprite):
             "value": value
         })
 
+    def apply_orb_effect(self, orb):
+        """Apply an orb effect to the player."""
+        if hasattr(orb, "apply_effect"):
+            orb.apply_effect(self)
+
     def add_orb_effect(self, orb_type, duration):
         """Add an orb effect to the player."""
         print(f"Player.add_orb_effect called with: {orb_type}, {duration}")

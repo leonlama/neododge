@@ -1,10 +1,14 @@
 import pytest
+from unittest.mock import MagicMock
 from src.mechanics.wave_management.wave_generator import WaveGenerator
 
 def test_wave_generator_creates_valid_wave():
     """Test that the wave generator creates a valid wave configuration."""
+    # Create mock analytics
+    mock_analytics = MagicMock()
+    
     # Create wave generator
-    wave_generator = WaveGenerator()
+    wave_generator = WaveGenerator(mock_analytics)
 
     # Generate a wave
     wave = wave_generator.create_wave(1)
@@ -29,8 +33,11 @@ def test_wave_generator_creates_valid_wave():
 
 def test_wave_generator_creates_different_waves():
     """Test that the wave generator creates different waves for different wave numbers."""
+    # Create mock analytics
+    mock_analytics = MagicMock()
+    
     # Create wave generator
-    wave_generator = WaveGenerator()
+    wave_generator = WaveGenerator(mock_analytics)
 
     # Generate two waves
     wave1 = wave_generator.create_wave(1)

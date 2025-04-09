@@ -1,8 +1,9 @@
 ﻿import random
 import arcade
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
-from src.mechanics.orbs.buff_orb import BuffOrb
-from src.mechanics.orbs.debuff_orb import DebuffOrb
+from src.mechanics.orbs.buff_orbs import BuffOrb
+from src.mechanics.orbs.debuff_orbs import DebuffOrb
+from src.mechanics.orbs.orb_pool import get_random_orb
 
 class OrbSpawner:
     """Spawns orbs during waves using adaptive AI-based configuration"""
@@ -44,16 +45,14 @@ class OrbSpawner:
     def _spawn_orb(self):
         """Spawn a single orb using weights defined by wave_config"""
         orb_type = self._choose_orb_type()
-        is_buff = orb_type in ["speed", "mult_1_5", "cooldown", "shield"]
-
+        
         # Generate random screen position with margin
         margin = 60
         x = random.randint(margin, SCREEN_WIDTH - margin)
         y = random.randint(margin, SCREEN_HEIGHT - margin)
-
-        orb = BuffOrb(x, y, orb_type) if is_buff else DebuffOrb(x, y, orb_type)
-        self.game_view.orbs.append(orb)
-        self.game_view.scene.add_sprite("orbs", orb)
+        
+        orbs = spawn_orbs(self.game_view, count=1, orb_type=orb_type, positions=[(x, y)])
+        return orbs[0] if orbs else None
 
     def _choose_orb_type(self):
         """Choose orb type based on current wave's configuration"""
@@ -62,3 +61,22 @@ class OrbSpawner:
         keys = list(self.current_orb_weights.keys())
         weights = list(self.current_orb_weights.values())
         return random.choices(keys, weights=weights, k=1)[0]
+
+def spawn_orbs(game_view, count=1, orb_type=None, positions=None):
+    """Spawn orbs into the game."""
+    from src.mechanics.orbs.orb_pool import get_random_orb
+
+    orbs_spawned = []
+    for i in range(count):
+        if positions and i < len(positions):
+            x, y = positions[i]
+        else:
+            x, y = random.randint(100, 700), random.randint(100, 500)
+
+        orb = get_random_orb(x, y, orb_type)
+        game_view.orbs.append(orb)
+        game_view.scene.add_sprite("orbs", orb)
+        orbs_spawned.append(orb)
+
+    print(f"🔵 Spawned {len(orbs_spawned)} orbs")
+    return orbs_spawned
