@@ -1,7 +1,7 @@
 ﻿import arcade
 import random
 from src.controllers.game_controller import GameController
-from src.entities.player import Player
+from src.entities.player.player import Player
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
 from src.audio.sound_manager import sound_manager
@@ -379,12 +379,11 @@ class NeododgeGame(arcade.View):
                 arcade.color.WHITE,
                 16
             )
-
-    def add_effect(self, effect_type, value, duration, color, icon_name=None):
-        """Add an effect to the player."""
+    def add_effect(self, effect_type, duration=None, value=None, is_percentage=True, color=None, icon_name=None):
+        """Adds an effect with full flexibility."""
         # Apply the effect to the player
-        if hasattr(self.player, 'apply_buff'):
-            self.player.apply_buff(effect_type, value, duration)
+        if hasattr(self.player, 'apply_effect'):
+            self.player.apply_effect(effect_type, value, duration, is_percentage)
 
         # Add a visual indicator
         if hasattr(self, 'effect_indicators'):
@@ -392,6 +391,7 @@ class NeododgeGame(arcade.View):
                 'type': effect_type,
                 'value': value,
                 'duration': duration,
+                'is_percentage': is_percentage,
                 'color': color,
                 'icon': icon_name
             })

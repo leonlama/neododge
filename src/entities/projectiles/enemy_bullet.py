@@ -1,8 +1,9 @@
 import arcade
+from src.entities.projectiles.base import Projectile
 from src.skins.skin_manager import skin_manager
 from src.core.scaling import get_scale
 
-class EnemyBullet(arcade.Sprite):
+class EnemyBullet(Projectile):
     """Bullet fired by shooter enemies."""
 
     def __init__(self, x, y, dx, dy):
@@ -14,17 +15,13 @@ class EnemyBullet(arcade.Sprite):
             dx: X velocity
             dy: Y velocity
         """
-        super().__init__()
+        super().__init__(x, y, dx, dy, damage=1, projectile_type="enemy_bullet")
 
-        # Set position
-        self.center_x = x
-        self.center_y = y
+        # Override scale for bullets specifically
+        self.scale = get_scale('bullet')
 
-        # Set velocity
-        self.change_x = dx
-        self.change_y = dy
-
-        # Set texture
+    def _load_texture(self):
+        """Load the enemy bullet texture"""
         try:
             self.texture = skin_manager.get_texture("projectiles", "enemy_bullet")
             if not self.texture:
@@ -33,19 +30,3 @@ class EnemyBullet(arcade.Sprite):
         except:
             # Fallback if texture loading fails
             self.texture = arcade.make_circle_texture(8, arcade.color.RED)
-
-        # Set scale using centralized system
-        self.scale = get_scale('bullet')
-
-        # Set properties
-        self.damage = 1
-
-    def update(self):
-        """Update bullet position."""
-        self.center_x += self.change_x * (1/60)  # Assuming 60 FPS
-        self.center_y += self.change_y * (1/60)
-
-    def update_with_time(self, delta_time):
-        """Update bullet position with delta time."""
-        self.center_x += self.change_x * delta_time
-        self.center_y += self.change_y * delta_time

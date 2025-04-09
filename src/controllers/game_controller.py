@@ -117,7 +117,8 @@ class GameController:
         if self.orbs is not None:
             for orb in self.orbs:
                 if hasattr(orb, 'update'):
-                    orb.update(delta_time)
+                    orb.update()  # Call the standard update method (no delta_time)
+                    orb.update_with_time(delta_time)  # Call the time-based update method
 
         # Update coins
         if self.coins is not None:

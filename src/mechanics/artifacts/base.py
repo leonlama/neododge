@@ -1,40 +1,51 @@
 import arcade
-import math
 from src.skins.skin_manager import skin_manager
+from src.core.scaling import get_scale
 
-class Artifact:
+class Artifact(arcade.Sprite):
     """Base class for all artifacts in the game"""
 
-    def __init__(self, player, name="Artifact"):
-        self.player = player
+    def __init__(self, position_x=0, position_y=0, name="Artifact"):
+        super().__init__()
+
+        # Position
+        self.center_x = position_x
+        self.center_y = position_y
+
+        # Metadata
         self.name = name
-        self.cooldown = 0
+
+        # Cooldown system
         self.cooldown_max = 5.0  # Default cooldown time in seconds
+        self.cooldown_timer = 0.0
+
+        # Active state
         self.active = False
-        self.active_time = 0
         self.active_duration = 3.0  # Default active duration in seconds
-        self.icon = None
-        self.load_icon()
+        self.active_time = 0.0
 
-    def load_icon(self):
-        """Load the artifact icon"""
-        # Try to get the icon from the skin manager
-        icon_name = self.name.lower().replace(" ", "_")
-        self.icon = skin_manager.get_texture(icon_name)
+        # Load texture
+        self._load_texture()
 
-        # If no icon found, create a default one
-        if not self.icon:
-            self.icon = arcade.make_soft_square_texture(
-                32, 
-                arcade.color.PURPLE, 
-                outer_alpha=255
-            )
+        # Set scale
+        self.scale = get_scale('artifact')
+
+    def _load_texture(self):
+        """Load the artifact texture"""
+        artifact_id = self.name.lower().replace(" ", "_")
+        self.texture = skin_manager.get_texture("artifacts", artifact_id)
+
+        # Fallback texture if not found
+        if not self.texture:
+            self.texture = arcade.make_circle_texture(32, arcade.color.PURPLE)
 
     def update(self, delta_time):
         """Update the artifact state"""
         # Update cooldown
-        if self.cooldown > 0:
-            self.cooldown -= delta_time
+        if self.cooldown_timer > 0:
+            self.cooldown_timer -= delta_time
+            if self.cooldown_timer < 0:
+                self.cooldown_timer = 0
 
         # Update active time
         if self.active:
@@ -42,12 +53,16 @@ class Artifact:
             if self.active_time <= 0:
                 self.deactivate()
 
-    def activate(self):
-        """Activate the artifact if not on cooldown"""
-        if self.cooldown <= 0 and not self.active:
+    def is_ready(self):
+        """Check if the artifact is ready to use"""
+        return self.cooldown_timer <= 0
+
+    def use(self):
+        """Use the artifact"""
+        if self.is_ready():
             self.active = True
             self.active_time = self.active_duration
-            self.cooldown = self.cooldown_max
+            self.cooldown_timer = self.cooldown_max
             return True
         return False
 
@@ -56,49 +71,27 @@ class Artifact:
         self.active = False
         self.active_time = 0
 
-    def draw(self, x, y, scale=1.0):
-        """Draw the artifact icon"""
-        if self.icon:
-            # Draw the icon
-            arcade.draw_scaled_texture_rectangle(
-                x, y, 
-                self.icon,
-                scale
+    def draw_cooldown_overlay(self):
+        """Draw cooldown overlay on the artifact"""
+        if self.cooldown_timer > 0:
+            # Calculate cooldown percentage
+            cooldown_pct = self.cooldown_timer / self.cooldown_max
+
+            # Draw semi-transparent overlay
+            arcade.draw_arc_filled(
+                self.center_x, self.center_y,
+                self.width, self.height,
+                arcade.color.BLACK + (150,),  # Semi-transparent black
+                0, 360 * cooldown_pct,
+                0, 64  # Segments
             )
 
-            # Draw cooldown overlay if on cooldown
-            if self.cooldown > 0:
-                # Calculate cooldown percentage
-                cooldown_pct = self.cooldown / self.cooldown_max
-
-                # Draw semi-transparent overlay
-                arcade.draw_arc_filled(
-                    x, y,
-                    self.icon.width * scale,
-                    self.icon.height * scale,
-                    arcade.color.BLACK + (150,),  # Semi-transparent black
-                    0, 360 * cooldown_pct,
-                    0, 64  # Segments
-                )
-
-                # Draw cooldown text
-                arcade.draw_text(
-                    f"{self.cooldown:.1f}",
-                    x, y,
-                    arcade.color.WHITE,
-                    font_size=12,
-                    anchor_x="center",
-                    anchor_y="center"
-                )
-
-    def get_cooldown_percentage(self):
-        """Get the cooldown percentage (0.0 to 1.0)"""
-        if self.cooldown_max <= 0:
-            return 0
-        return max(0, min(1, self.cooldown / self.cooldown_max))
-
-    def get_active_percentage(self):
-        """Get the active time percentage (0.0 to 1.0)"""
-        if self.active_duration <= 0:
-            return 0
-        return max(0, min(1, self.active_time / self.active_duration))
+            # Draw cooldown text
+            arcade.draw_text(
+                f"{self.cooldown_timer:.1f}",
+                self.center_x, self.center_y,
+                arcade.color.WHITE,
+                font_size=12,
+                anchor_x="center",
+                anchor_y="center"
+            )

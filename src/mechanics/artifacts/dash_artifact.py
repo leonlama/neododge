@@ -4,7 +4,7 @@ from src.mechanics.artifacts.base import Artifact
 from src.skins.skin_manager import skin_manager
 from src.core.scaling import get_scale
 
-class DashArtifact(arcade.Sprite):
+class DashArtifact(Artifact):
     """Artifact that allows the player to dash."""
 
     def __init__(self, position_x, position_y):
@@ -14,24 +14,10 @@ class DashArtifact(arcade.Sprite):
             position_x: X position of the artifact.
             position_y: Y position of the artifact.
         """
-        super().__init__()
+        super().__init__(position_x, position_y, name="Dash")
 
-        # Set position
-        self.center_x = position_x
-        self.center_y = position_y
-
-        # Set texture
-        self.texture = skin_manager.get_texture("artifacts", "dash")
-        if not self.texture:
-            # Create a fallback texture without the 'soft' parameter
-            self.texture = arcade.make_circle_texture(32, arcade.color.PURPLE)
-
-        # Set scale using centralized system
-        self.scale = get_scale('artifact')
-
-        # Set up cooldown
-        self.cooldown = 5.0
-        self.cooldown_timer = 0.0
+        # Override default cooldown
+        self.cooldown_max = 5.0
         
         # Dash properties
         self.dash_distance = 150  # Distance to dash
@@ -44,23 +30,12 @@ class DashArtifact(arcade.Sprite):
         Args:
             delta_time: Time since last update.
         """
-        # Update cooldown timer
-        if self.cooldown_timer > 0:
-            self.cooldown_timer -= delta_time
-            if self.cooldown_timer < 0:
-                self.cooldown_timer = 0
+        # Call parent update method to handle cooldown
+        super().update(delta_time)
                 
         # Fade out the dash trail
         if self.dash_trail and len(self.dash_trail) > 0:
             self.dash_trail = []
-
-    def is_ready(self):
-        """Check if the artifact is ready to use.
-
-        Returns:
-            bool: True if the artifact is ready, False otherwise.
-        """
-        return self.cooldown_timer <= 0
 
     def use(self):
         """Use the artifact.
@@ -68,8 +43,8 @@ class DashArtifact(arcade.Sprite):
         Returns:
             bool: True if the artifact was used, False otherwise.
         """
-        if self.is_ready():
-            self.cooldown_timer = self.cooldown
+        if super().use():
+            # Dash-specific activation code here
             return True
         return False
         
