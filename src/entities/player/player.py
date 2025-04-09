@@ -15,6 +15,41 @@ class Player(arcade.Sprite):
         """Initialize the player."""
         super().__init__()
 
+        # Set position
+        self.center_x = x
+        self.center_y = y
+
+        # Initialize target position
+        self.target_x = None
+        self.target_y = None
+
+        # Initialize health and hearts
+        self.health = 3
+        self.max_health = 3
+        self.current_hearts = 3
+        self.max_hearts = 3
+        self.gold_hearts = 0
+        
+        # Heart-related attributes
+        self.heart_textures = None  # Will be set by game_view
+        self.max_slots = 9  # Maximum heart slots
+
+        # Heart positioning
+        self.heart_start_x = 50
+        self.heart_y = 50
+        self.heart_spacing = 40
+        self.heart_width = 30
+        self.heart_height = 30
+
+        # Initialize invulnerability
+        self.invulnerable = False
+        self.invulnerable_timer = 0
+
+        # Initialize invincibility (seems to be used interchangeably with invulnerable)
+        self.invincible = False
+        self.invincibility_timer = 0
+        self.blink_timer = 0
+
         # Debug what textures are available
         print(f"🔍 Available textures in skin manager: {list(skin_manager.textures.keys())}")
 
@@ -32,25 +67,19 @@ class Player(arcade.Sprite):
         self.scale = get_scale('player')
         print(f"🔍 Setting player scale to: {self.scale}")
         
-        # Set initial position
-        self.center_x = x
-        self.center_y = y
-
-        # Player movement
+        # Initialize movement
         self.change_x = 0
         self.change_y = 0
-        self.target_x = None
-        self.target_y = None
-        self.speed = PLAYER_SPEED
+        self.speed = PLAYER_SPEED  # Pixels per second
         self.base_speed = PLAYER_SPEED
+        self.speed_bonus = 0  # Default speed bonus (0 = no bonus)
         self.speed_multiplier = 1.0
         self.speed_buff_timer = 0.0
         self.inverse_move = False
-        
-        # Movement attributes
-        self.speed_bonus = 0  # Default speed bonus (0 = no bonus)
+        self.move_threshold = 5  # Distance at which we consider "arrived"
+        self.is_moving = False
 
-        # Player dash
+        # Initialize dash
         self.can_dash = True
         self.dash_cooldown = 0.0
         self.base_dash_cooldown = PLAYER_DASH_COOLDOWN
@@ -58,42 +87,23 @@ class Player(arcade.Sprite):
         self.dash_duration = 0.15
         self.dash_timer = 0.0
         self.dashing = False
+        self.is_dashing = False  # Alternative flag for dashing state
         self.dash_direction_x = 0
         self.dash_direction_y = 0
 
-        # Player health
-        self.max_health = 3
-        self.health = 3
-        self.gold_hearts = 0
+        # Initialize shield
         self.shield_active = False
         self.has_shield = False
         self.shield_timer = 0.0
         self.shield = 0
 
-        # Heart-related attributes
-        self.heart_textures = None  # Will be set by game_view
-        self.max_slots = 9  # Maximum heart slots
-        self.current_hearts = 3  # Default value
-
-        # Heart positioning
-        self.heart_start_x = 50
-        self.heart_y = 50
-        self.heart_spacing = 40
-        self.heart_width = 30
-        self.heart_height = 30
-
-        # Player invincibility
-        self.invincible = False
-        self.invincible_timer = 0
-        self.invincibility_timer = 0
-        self.blink_timer = 0
+        # Initialize score
+        self.score = 0
+        self.multiplier = 1.0
+        self.score_multiplier = 1.0
 
         # Player currency
         self.coins = 0
-
-        # Player score multiplier
-        self.multiplier = 1.0
-        self.score_multiplier = 1.0
 
         # Player artifacts
         self.artifacts = []
@@ -140,110 +150,80 @@ class Player(arcade.Sprite):
         for key, tex in self.heart_textures.items():
             print(f" - {key}: {'✅' if tex else '❌'}")
 
-    def update(self, delta_time):
-        """Update the player.
+    def update(self, delta_time=1/60):
+        """Update player movement"""
+        # Handle other updates (status effects, etc.)
+        if hasattr(self, 'status_effects'):
+            self.status_effects.update(delta_time)
 
-        Args:
-            delta_time: Time since last update.
-        """
-        # Update status effects
-        self.status_effects.update(delta_time)
+        # Handle invulnerability if it exists
+        if hasattr(self, 'invulnerable') and self.invulnerable:
+            if not hasattr(self, 'invulnerable_timer'):
+                self.invulnerable_timer = 0
 
-        # Update position based on velocity
-        self.center_x += self.change_x * self.speed_multiplier
-        self.center_y += self.change_y * self.speed_multiplier
-
-        # Update dash cooldown
-        if not self.can_dash:
-            self.dash_cooldown -= delta_time
-            if self.dash_cooldown <= 0:
-                self.can_dash = True
-                self.dash_cooldown = 0
-
-        # Update dash timer
-        if self.dashing:
-            self.dash_timer -= delta_time
-            if self.dash_timer <= 0:
-                self.dashing = False
-                self.dash_timer = 0
-                self.change_x = 0
-                self.change_y = 0
-        else:
-            # Move towards target if set
-            if self.target_x is not None and self.target_y is not None:
-                # Calculate direction vector
-                dx = self.target_x - self.center_x
-                dy = self.target_y - self.center_y
-                distance = math.sqrt(dx*dx + dy*dy)
-
-                # If we're close enough to the target, stop moving
-                if distance < 5:
-                    self.change_x = 0
-                    self.change_y = 0
-                    self.target_x = None
-                    self.target_y = None
+            self.invulnerable_timer -= delta_time
+            if self.invulnerable_timer <= 0:
+                self.invulnerable = False
+                self.invulnerable_timer = 0
+                self.alpha = 255  # Fully visible
+            else:
+                # Flash while invulnerable
+                if int(self.invulnerable_timer * 10) % 2 == 0:
+                    self.alpha = 128  # Semi-transparent
                 else:
-                    # Normalize direction vector and scale by speed
-                    actual_speed = self.speed * (1 + self.speed_bonus)
-                    dx = dx / distance * actual_speed
-                    dy = dy / distance * actual_speed
+                    self.alpha = 255  # Fully visible
 
-                    # Apply inverse movement if active
-                    if self.inverse_move:
-                        dx = -dx
-                        dy = -dy
+        # If we're not moving or don't have a target, do nothing
+        if not self.is_moving or self.target_x is None or self.target_y is None:
+            self.change_x = 0
+            self.change_y = 0
+            return
 
-                    self.center_x += dx * delta_time
-                    self.center_y += dy * delta_time
+        # Calculate distance to target
+        dx = self.target_x - self.center_x
+        dy = self.target_y - self.center_y
+        distance = math.sqrt(dx*dx + dy*dy)
 
-        # Update speed buff timer
-        if hasattr(self, 'speed_boost_timer') and self.speed_boost_timer > 0:
-            self.speed_boost_timer -= delta_time
-            if self.speed_boost_timer <= 0:
-                self.speed_multiplier = 1.0
-                print("Speed boost expired")
+        # If we're close enough, stop moving
+        if distance < getattr(self, 'move_threshold', 5):
+            self.change_x = 0
+            self.change_y = 0
+            self.is_moving = False
+            print(f"✅ Arrived at target ({self.target_x}, {self.target_y})")
+            return
 
-        # Update slow timer
-        if hasattr(self, 'slow_timer') and self.slow_timer > 0:
-            self.slow_timer -= delta_time
-            if self.slow_timer <= 0:
-                self.speed_multiplier = 1.0
-                print("Slow effect expired")
+        # Normalize direction vector
+        dx /= distance
+        dy /= distance
 
-        # Update shield timer
-        if hasattr(self, 'shield_timer') and self.shield_timer > 0:
-            self.shield_timer -= delta_time
-            if self.shield_timer <= 0:
-                self.has_shield = False
-                print("Shield expired")
+        # Set velocity based on speed
+        actual_speed = getattr(self, 'speed', 5.0) * getattr(self, 'speed_multiplier', 1.0)
+        self.change_x = dx * actual_speed
+        self.change_y = dy * actual_speed
 
-        # Update invincibility timer
-        if hasattr(self, 'invincibility_timer') and self.invincibility_timer > 0:
-            self.invincibility_timer -= delta_time
-            if self.invincibility_timer <= 0:
-                self.is_invincible = False
-                print("Invincibility expired")
-
-        # Update invincibility
-        if self.invincible:
-            self.invincibility_timer += delta_time
-
-            # Blink effect - toggle visibility every 0.1 seconds
-            self.blink_timer = getattr(self, 'blink_timer', 0) + delta_time
-            if self.blink_timer >= 0.1:  # Toggle every 0.1 seconds
-                self.blink_timer = 0
-                self.alpha = 255 if self.alpha == 128 else 128
-
-            # Check if invincibility is over
-            if self.invincibility_timer >= self.invincible_timer:
-                self.invincible = False
-                self.invincibility_timer = 0
-                self.alpha = 255  # Restore full opacity
-                self.damage_sound_cooldown = False  # Reset sound cooldown
+        # Apply the velocity to move the player
+        self.center_x += self.change_x * delta_time
+        self.center_y += self.change_y * delta_time
 
         # Keep player on screen
-        self.center_x = max(0, min(self.center_x, arcade.get_window().width))
-        self.center_y = max(0, min(self.center_y, arcade.get_window().height))
+        window = arcade.get_window()
+        if self.left < 0:
+            self.left = 0
+        elif self.right > window.width:
+            self.right = window.width
+
+        if self.bottom < 0:
+            self.bottom = 0
+        elif self.top > window.height:
+            self.top = window.height
+
+        # Log movement occasionally
+        if random.random() < 0.05:  # 5% chance to log
+            print(f"🏃 Moving toward ({self.target_x}, {self.target_y}) with velocity ({self.change_x:.2f}, {self.change_y:.2f})")
+
+        # Update animation if it exists
+        if hasattr(self, 'update_animation'):
+            self.update_animation(delta_time)
 
     def update_hitbox(self):
         """Update the player's hitbox based on hitbox_multiplier."""
@@ -280,9 +260,13 @@ class Player(arcade.Sprite):
         })
 
     def set_target(self, x, y):
-        """Set a target position for the player to move towards"""
+        """Set a new movement target"""
         self.target_x = x
         self.target_y = y
+        self.is_moving = True
+
+        # Log only when target is set, not every frame
+        print(f"🎯 Set player target to ({x}, {y})")
 
     def perform_dash(self):
         """Perform a dash in the target direction"""
@@ -318,41 +302,68 @@ class Player(arcade.Sprite):
         self.perform_dash()
 
     def take_damage(self, amount=1):
-        """Take damage and handle invincibility."""
-        # Don't take damage if invincible or shield is active
-        if self.invincible:
-            return False
-            
-        # If player has a shield, remove it instead of taking damage
-        if self.shield_active:
-            self.shield_active = False
-            self.shield_timer = 0
-            return True  # Damage was blocked
+        """Take damage and check if defeated."""
+        # Initialize attributes if they don't exist
+        if not hasattr(self, 'invulnerable'):
+            self.invulnerable = False
+        if not hasattr(self, 'invincible'):
+            self.invincible = False
+        if not hasattr(self, 'invulnerable_timer'):
+            self.invulnerable_timer = 0
+        if not hasattr(self, 'has_shield'):
+            self.has_shield = False
 
-        # Apply damage
-        self.current_hearts -= amount
-        
-        # Set invincibility
+        # Check if invulnerable or has shield
+        if self.invulnerable or self.invincible:
+            return False
+
+        # Check if has shield
+        if self.has_shield:
+            self.has_shield = False
+            print("🛡️ Shield absorbed damage!")
+            return False
+
+        # Apply damage to health
+        if hasattr(self, 'health'):
+            self.health -= amount
+
+        # Apply damage to hearts
+        if hasattr(self, 'current_hearts'):
+            self.current_hearts = max(0, self.current_hearts - amount)
+
+        # Make invulnerable temporarily
+        self.invulnerable = True
         self.invincible = True
-        self.invincible_timer = 1.0
-        self.alpha = 128  # Start with reduced alpha
-        
-        # Set damage sound cooldown
-        self.damage_sound_cooldown = True
-        
-        # Play damage sound if available
+        self.invulnerable_timer = 1.0  # 1 second of invulnerability
+
+        # Play damage sound
         try:
             from src.audio.sound_manager import sound_manager
-            sound_manager.play_sound("player", "damage")
-        except:
-            pass
+            sound_manager.play_sound('player', 'damage')
+        except Exception as e:
+            print(f"Error playing damage sound: {e}")
+            try:
+                # Alternative sound manager call
+                from src.audio.sound_manager import sound_manager
+                sound_manager.play_sound('player_hit')
+            except Exception as e2:
+                print(f"Error playing alternative damage sound: {e2}")
 
-        # Check if player is dead
-        if self.current_hearts <= 0:
-            self.on_death()
-            return False
-            
-        return True  # Player is still alive
+        # Check if defeated
+        if (hasattr(self, 'health') and self.health <= 0) or \
+           (hasattr(self, 'current_hearts') and self.current_hearts <= 0):
+            if hasattr(self, 'health'):
+                self.health = 0
+            if hasattr(self, 'current_hearts'):
+                self.current_hearts = 0
+
+            # Call on_death if it exists
+            if hasattr(self, 'on_death'):
+                self.on_death()
+
+            return True
+
+        return False
 
     def on_death(self):
         """Handle player death"""
@@ -437,7 +448,7 @@ class Player(arcade.Sprite):
                 "gold": skin_manager.get_texture("ui", "heart_gold")
             }
         
-        print("❤️ Heart textures:", self.heart_textures)
+        #print("❤️ Heart textures:", self.heart_textures)
             
         if not self.heart_textures:
             return  # Skip if textures aren't set
@@ -470,23 +481,36 @@ class Player(arcade.Sprite):
                 arcade.draw_texture_rectangle(x, base_y, heart_size, heart_size, texture)
 
     def draw(self):
-        """Draw the player and effects"""
-        # Set alpha for invincibility blinking
-        if self.invincible:
-            self.alpha = 128
+        """Draw the player."""
+        # Check for invincibility/invulnerability
+        is_invulnerable = False
+
+        if hasattr(self, 'invincible') and self.invincible:
+            is_invulnerable = True
+        elif hasattr(self, 'invulnerable') and self.invulnerable:
+            is_invulnerable = True
+
+        # Flash when invulnerable
+        if is_invulnerable:
+            import time
+            if int(time.time() * 10) % 2 == 0:
+                self.alpha = 128
+            else:
+                self.alpha = 255
         else:
+            # Ensure full opacity when not invulnerable
             self.alpha = 255
-            
-        # Draw player with current alpha
+
+        # Draw the sprite
         super().draw()
 
-        # Draw shield if active
-        if self.shield_active:
+        # Draw any additional effects
+        if hasattr(self, 'has_shield') and self.has_shield:
+            # Draw shield effect
             arcade.draw_circle_outline(
                 self.center_x, self.center_y,
-                self.width * 0.6,  # Shield slightly larger than player
-                arcade.color.CYAN,
-                3  # Line width
+                self.width * 0.7,
+                arcade.color.BLUE, 3
             )
 
         # Draw dash particles

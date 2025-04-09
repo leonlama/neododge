@@ -81,9 +81,9 @@ class Enemy(arcade.Sprite):
         # Update based on enemy type
         if self.enemy_type == "wanderer":
             self._update_wanderer(delta_time)
-        elif self.enemy_type == "chaser":
+        elif self.enemy_type == "chaser" and self.target:
             self._update_chaser(delta_time)
-        elif self.enemy_type == "shooter":
+        elif self.enemy_type == "shooter" and self.target:
             self._update_shooter(delta_time)
         else:
             self._update_wanderer(delta_time)  # Default behavior
@@ -150,59 +150,71 @@ class Enemy(arcade.Sprite):
                 self.top = window.height
 
     def _update_shooter(self, delta_time):
-        """Update shooter enemy that moves slowly and shoots at the player."""
-        # Move slowly (half speed of wanderer)
-        self.center_x += self.change_x * 0.5 * delta_time
-        self.center_y += self.change_y * 0.5 * delta_time
+        """Update shooter enemy movement."""
+        # Move like a wanderer but slower
+        self._update_wanderer(delta_time)
 
-        # Bounce off screen edges
-        window = arcade.get_window()
-        if self.left < 0:
-            self.left = 0
-            self.change_x *= -1
-        elif self.right > window.width:
-            self.right = window.width
-            self.change_x *= -1
-
-        if self.bottom < 0:
-            self.bottom = 0
-            self.change_y *= -1
-        elif self.top > window.height:
-            self.top = window.height
-            self.change_y *= -1
-
-        # Shoot at target
-        if self.target:
-            self.shoot_timer += delta_time
-            if self.shoot_timer >= self.fire_rate:
-                self.shoot_timer = 0
-                self._shoot_at_target()
+        # Occasionally shoot at target
+        if self.target and random.random() < 0.01:  # 1% chance per frame
+            self._shoot_at_target()
 
     def _shoot_at_target(self):
-        """Shoot a bullet at the target."""
-        if not self.target:
-            return
+        """Shoot a projectile at the target."""
+        try:
+            # Create a bullet
+            from src.entities.projectiles.enemy_bullet import EnemyBullet
 
-        from src.entities.projectiles.enemy_bullet import EnemyBullet
+            # Calculate direction to target
+            dx = self.target.center_x - self.center_x
+            dy = self.target.center_y - self.center_y
+            distance = max(1, math.sqrt(dx*dx + dy*dy))
 
-        # Calculate direction to target
-        dx = self.target.center_x - self.center_x
-        dy = self.target.center_y - self.center_y
-        distance = max(1, math.hypot(dx, dy))
+            # Normalize direction
+            direction_x = dx / distance
+            direction_y = dy / distance
 
-        # Create bullet
-        bullet = EnemyBullet(
-            self.center_x,
-            self.center_y,
-            dx / distance,
-            dy / distance
-        )
+            # Create bullet
+            bullet = EnemyBullet(
+                self.center_x, 
+                self.center_y,
+                direction_x,
+                direction_y,
+                speed=5.0,
+                damage=1
+            )
 
-        # Add to bullet list
-        self.bullets.append(bullet)
+            # Add bullet to game
+            game_view = arcade.get_window()
+            if hasattr(game_view, 'bullets'):
+                game_view.bullets.append(bullet)
+            elif hasattr(game_view, 'projectiles'):
+                game_view.projectiles.append(bullet)
 
-        # Play sound
-        sound_manager.play_sound("enemy", "shoot")
+            # Play sound if available
+            if hasattr(game_view, 'sound_manager'):
+                game_view.sound_manager.play_sound('enemy_shoot')
+        except Exception as e:
+            print(f"Error creating bullet: {e}")
+
+            # Fallback: Create a simple bullet sprite
+            try:
+                bullet = arcade.Sprite()
+                bullet.center_x = self.center_x
+                bullet.center_y = self.center_y
+                bullet.texture = arcade.make_circle_texture(10, arcade.color.RED)
+                bullet.change_x = dx / distance * 5
+                bullet.change_y = dy / distance * 5
+                bullet.is_player_bullet = False
+                bullet.damage = 1
+
+                # Add bullet to game
+                game_view = arcade.get_window()
+                if hasattr(game_view, 'bullets'):
+                    game_view.bullets.append(bullet)
+                elif hasattr(game_view, 'projectiles'):
+                    game_view.projectiles.append(bullet)
+            except Exception as e2:
+                print(f"Error creating fallback bullet: {e2}")
 
     def take_damage(self, amount):
         """Take damage and check if dead."""

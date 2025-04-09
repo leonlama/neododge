@@ -43,6 +43,19 @@ class NeododgeGame(arcade.View):
 
     def setup(self):
         """Set up the game."""
+        # Create sprite lists
+        self.enemies = arcade.SpriteList()
+        self.orbs = arcade.SpriteList()
+        self.coins = arcade.SpriteList()
+        self.artifacts = arcade.SpriteList()
+        self.bullets = arcade.SpriteList()
+
+        # Initialize mouse state
+        self.left_mouse_down = False
+        self.right_mouse_down = False
+        self.mouse_x = 0
+        self.mouse_y = 0
+        
         # Create player
         self.player = Player(self.window.width // 2, self.window.height // 2)
         self.player.window = self.window
@@ -58,12 +71,6 @@ class NeododgeGame(arcade.View):
         
         # Pass heart textures to player
         self.player.heart_textures = self.heart_textures
-
-        # Initialize sprite lists
-        self.enemies = arcade.SpriteList()
-        self.orbs = arcade.SpriteList()
-        self.coins = arcade.SpriteList()
-        self.artifacts = arcade.SpriteList()
 
         # Set up wave manager
         self.setup_wave_manager()
@@ -335,18 +342,9 @@ class NeododgeGame(arcade.View):
             if hasattr(self, 'player') and self.player:
                 self.player.draw()
     
-            # Draw enemies with debug info
+            # Draw enemies
             if hasattr(self, 'enemies'):
                 self.enemies.draw()
-                
-                # Debug: Draw enemy count and positions
-                for i, enemy in enumerate(self.enemies):
-                    # Draw a bright outline around each enemy to make them more visible
-                    arcade.draw_circle_outline(
-                        enemy.center_x, enemy.center_y, 
-                        enemy.width / 2 + 5, 
-                        arcade.color.YELLOW, 2
-                    )
     
             # Draw orbs
             if hasattr(self, 'orbs'):
@@ -378,9 +376,6 @@ class NeododgeGame(arcade.View):
                     print(f"Error drawing HUD: {e}")
                     # Fallback to simple HUD
                     self.draw_simple_hud()
-            
-            # Debug: Draw enemy count
-            arcade.draw_text(f"Enemies: {len(self.enemies)}", 10, 40, arcade.color.WHITE, 14)
             
             # Draw player status effects
             if hasattr(self, 'player') and self.player:
@@ -572,17 +567,17 @@ class NeododgeGame(arcade.View):
 
     def on_update(self, delta_time):
         """Update game state."""
-        # Update player
-        if self.player:
-            self.player.update(delta_time)
+        # If either mouse button is held down, continuously update target
+        if (self.left_mouse_down or self.right_mouse_down) and self.player:
+            self.player.set_target(self.mouse_x, self.mouse_y)
 
         # Update wave manager
         if hasattr(self, 'wave_manager'):
             self.wave_manager.update(delta_time)
 
-        # If right mouse is held down, continuously update target
-        if self.right_mouse_down and self.player:
-            self.player.set_target(self.mouse_x, self.mouse_y)
+        # Update player
+        if self.player:
+            self.player.update(delta_time)
 
         # Update game controller
         if hasattr(self, 'game_controller'):
@@ -603,17 +598,20 @@ class NeododgeGame(arcade.View):
 
         # Update enemies
         for enemy in self.enemies:
-            # Set target if needed
-            if hasattr(enemy, 'set_target') and hasattr(enemy, 'target') and enemy.target is None:
-                enemy.set_target(self.player)
+            try:
+                # Set target if needed
+                if hasattr(enemy, 'set_target') and hasattr(enemy, 'target') and enemy.target is None:
+                    enemy.set_target(self.player)
 
-            # Update enemy
-            if hasattr(enemy, 'update'):
+                # Update enemy
                 enemy.update(delta_time)
-            else:
-                # Basic update for fallback enemies
-                enemy.center_x += getattr(enemy, 'change_x', 0)
-                enemy.center_y += getattr(enemy, 'change_y', 0)
+            except Exception as e:
+                print(f"Error updating enemy: {e}")
+
+        # Update bullets
+        if hasattr(self, 'bullets'):
+            for bullet in self.bullets:
+                bullet.update()
 
         # Update enemy bullets
         self.update_enemies(delta_time)
@@ -714,8 +712,12 @@ class NeododgeGame(arcade.View):
         # Check for orb collisions
         self.check_orb_collisions()
 
+        # Update active effects
+        if hasattr(self, '_update_active_effects'):
+            self._update_active_effects(delta_time)
+
         # Update score
-        self.score += delta_time * 10
+        self.score += 1 * getattr(self, 'score_multiplier', 1) * delta_time
 
     def spawn_coins(self, count):
         """Spawn a number of coins."""
@@ -854,18 +856,20 @@ class NeododgeGame(arcade.View):
     def check_collisions(self):
         """Check for collisions between game objects."""
         # Player-Enemy collisions
-        enemy_hit_list = arcade.check_for_collision_with_list(self.player, self.enemies)
-        for enemy in enemy_hit_list:
-            # Handle player taking damage
-            if hasattr(self.player, 'take_damage'):
-                self.player.take_damage()
-                
-                # Play damage sound
-                self.play_damage_sound()
+        if self.player and not getattr(self.player, 'invincible', False):
+            enemy_hit_list = arcade.check_for_collision_with_list(self.player, self.enemies)
+            for enemy in enemy_hit_list:
+                # Handle player taking damage
+                if hasattr(self.player, 'take_damage'):
+                    damage = getattr(enemy, 'damage', 1)
+                    self.player.take_damage(damage)
+                    
+                    # Play damage sound
+                    self.play_damage_sound()
 
-            # Remove enemy if it's a one-hit enemy
-            if hasattr(enemy, 'is_one_hit') and enemy.is_one_hit:
-                enemy.remove_from_sprite_lists()
+                # Remove enemy if it's a one-hit enemy
+                if hasattr(enemy, 'is_one_hit') and enemy.is_one_hit:
+                    enemy.remove_from_sprite_lists()
 
         # Player-Coin collisions
         coin_hit_list = arcade.check_for_collision_with_list(self.player, self.coins)
@@ -894,15 +898,10 @@ class NeododgeGame(arcade.View):
                 self.add_pickup_text("Coin collected!", self.player.center_x, self.player.center_y)
 
         # Player-Orb collisions
-        #print(f"Checking orb collisions. Player at ({self.player.center_x}, {self.player.center_y})")
-        #print(f"Number of orbs: {len(self.orbs)}")
-
-        # Use a more reliable collision detection method
         for orb in list(self.orbs):  # Use a copy of the list to safely modify during iteration
             distance = ((self.player.center_x - orb.center_x) ** 2 + 
                         (self.player.center_y - orb.center_y) ** 2) ** 0.5
-            #print(f"Orb at ({orb.center_x}, {orb.center_y}), Distance: {distance}")
-
+            
             # Check if player is close enough to collect the orb
             # Use a generous collision radius to make collection easier
             collision_radius = getattr(self.player, 'collision_radius', 30) + getattr(orb, 'collision_radius', 15)
@@ -936,51 +935,19 @@ class NeododgeGame(arcade.View):
                 except Exception as e:
                     print(f"Error applying orb effect: {e}")
 
-        # The original arcade.check_for_collision_with_list as a backup
-        orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
-        #print(f"Orb hit list length: {len(orb_hit_list)}")
-
-        # Process any hits found by arcade's collision detection (unlikely if our custom detection worked)
-        for orb in orb_hit_list:
-            if orb in self.orbs:  # Make sure it wasn't already removed
-                print(f"Arcade collision detected with {orb.orb_type} orb!")
-                # Get orb type and message
-                orb_type = getattr(orb, 'orb_type', "unknown")
-                message = getattr(orb, 'message', "Orb collected!")
-
-                # Apply the orb effect
-                try:
-                    self.apply_orb_effect(orb)
-                    print(f"Applied orb effect: {orb_type}")
-
-                    # Remove the orb
-                    orb.remove_from_sprite_lists()
-
-                    # Play appropriate sound
-                    if orb_type in ["speed", "shield", "invincibility"]:
-                        self.play_buff_sound()
-                    else:
-                        self.play_debuff_sound()
-
-                    # Add pickup text
-                    if hasattr(self, 'add_pickup_text'):
-                        self.add_pickup_text(message, self.player.center_x, self.player.center_y)
-                    elif hasattr(self, 'pickup_texts'):
-                        self.pickup_texts.append([message, self.player.center_x, self.player.center_y, 1.0])
-                except Exception as e:
-                    print(f"Error applying orb effect: {e}")
-
-        # Enemy bullet collisions with player
+        # Check bullet collisions
         for enemy in self.enemies:
             if hasattr(enemy, 'bullets'):
-                bullet_hit_list = arcade.check_for_collision_with_list(self.player, enemy.bullets)
-                for bullet in bullet_hit_list:
-                    # Remove the bullet
-                    bullet.remove_from_sprite_lists()
+                # Enemy bullets hit player
+                if self.player and not getattr(self.player, 'invincible', False):
+                    bullet_hit_list = arcade.check_for_collision_with_list(self.player, enemy.bullets)
+                    for bullet in bullet_hit_list:
+                        # Remove the bullet
+                        bullet.remove_from_sprite_lists()
 
-                    # Handle player taking damage
-                    if hasattr(self.player, 'take_damage'):
-                        self.player.take_damage(1)
+                        # Damage player
+                        damage = getattr(bullet, 'damage', 1)
+                        self.player.take_damage(damage)
                         
                         # Play damage sound
                         self.play_damage_sound()
@@ -1186,14 +1153,54 @@ class NeododgeGame(arcade.View):
             self.apply_skin_toggle()
 
     def on_mouse_press(self, x, y, button, modifiers):
-        """Handle mouse press events"""
+        """Handle mouse press events."""
+        # Store mouse position
+        self.mouse_x = x
+        self.mouse_y = y
+
         if button == arcade.MOUSE_BUTTON_RIGHT:
-            # Set player target with right click
+            # Convert screen coordinates to world coordinates if using camera
+            if hasattr(self, 'camera'):
+                # Different versions of Arcade have different methods for coordinate conversion
+                # Try the appropriate method based on your Arcade version
+                try:
+                    # For newer Arcade versions
+                    world_pos = self.camera.mouse_coordinates_to_world(x, y)
+                    x, y = world_pos
+                except AttributeError:
+                    # For older Arcade versions or custom Camera implementations
+                    # Calculate the conversion manually
+                    x = x / self.camera.scale + self.camera.position[0]
+                    y = y / self.camera.scale + self.camera.position[1]
+                    print(f"Converted mouse position to world coordinates: ({x}, {y})")
+
+            # Set player target
             if self.player:
                 self.player.set_target(x, y)
-                self.right_mouse_down = True
-                self.mouse_x = x
-                self.mouse_y = y
+            self.right_mouse_down = True
+            print(f"🖱️ Right mouse button pressed")
+        elif button == arcade.MOUSE_BUTTON_LEFT:
+            self.left_mouse_down = True
+            
+            # Set target position for player
+            if self.player:
+                self.player.set_target(x, y)
+            
+            print("🖱️ Left mouse button pressed")
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        """Handle mouse release events."""
+        # Update mouse position
+        self.mouse_x = x
+        self.mouse_y = y
+
+        # Update mouse button state
+        if button == arcade.MOUSE_BUTTON_LEFT:
+            self.left_mouse_down = False
+            print("🖱️ Left mouse button released")
+        elif button == arcade.MOUSE_BUTTON_RIGHT:
+            self.right_mouse_down = False
+            print("🖱️ Right mouse button released")
 
     def on_mouse_release(self, x, y, button, modifiers):
         """Handle mouse release events"""
@@ -1201,6 +1208,11 @@ class NeododgeGame(arcade.View):
             self.right_mouse_down = False
 
     def on_mouse_motion(self, x, y, dx, dy):
-        """Handle mouse motion events"""
+        """Handle mouse motion events."""
+        # Update mouse position
         self.mouse_x = x
         self.mouse_y = y
+
+        # If either mouse button is held down, update player target
+        if (self.left_mouse_down or self.right_mouse_down) and self.player:
+            self.player.set_target(x, y)

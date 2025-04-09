@@ -104,14 +104,22 @@ class GameController:
         self.artifacts = getattr(self.game_view, 'artifacts', arcade.SpriteList())
 
         # Update player
-        if hasattr(self.player, 'update'):
-            self.player.update(delta_time)
+        if self.player:
+            self.player.update()
 
         # Update enemies
         if self.enemies is not None:
             for enemy in self.enemies:
-                if hasattr(enemy, 'update'):
-                    enemy.update(delta_time)
+                try:
+                    # Call update without delta_time
+                    enemy.update()
+                except Exception as e:
+                    print(f"Error updating enemy: {e}")
+                    # Basic fallback update
+                    if hasattr(enemy, 'change_x'):
+                        enemy.center_x += getattr(enemy, 'change_x', 0)
+                    if hasattr(enemy, 'change_y'):
+                        enemy.center_y += getattr(enemy, 'change_y', 0)
 
         # Update orbs
         if self.orbs is not None:

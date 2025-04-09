@@ -1,32 +1,52 @@
 import arcade
-from src.entities.projectiles.base import Projectile
+import math
 from src.skins.skin_manager import skin_manager
-from src.core.scaling import get_scale
 
-class EnemyBullet(Projectile):
-    """Bullet fired by shooter enemies."""
+class EnemyBullet(arcade.Sprite):
+    """Bullet projectile class."""
 
-    def __init__(self, x, y, dx, dy):
-        """Initialize the bullet.
+    def __init__(self, x, y, direction_x, direction_y, speed=5.0, damage=1, is_player_bullet=True):
+        super().__init__()
 
-        Args:
-            x: Starting x position
-            y: Starting y position
-            dx: X velocity
-            dy: Y velocity
-        """
-        super().__init__(x, y, dx, dy, damage=1, projectile_type="enemy_bullet")
+        self.center_x = x
+        self.center_y = y
+        self.speed = speed
+        self.damage = damage
+        self.is_player_bullet = is_player_bullet
 
-        # Override scale for bullets specifically
-        self.scale = get_scale('bullet')
+        # Set velocity based on direction and speed
+        self.change_x = direction_x * speed
+        self.change_y = direction_y * speed
 
-    def _load_texture(self):
-        """Load the enemy bullet texture"""
+        # Set appearance
         try:
-            self.texture = skin_manager.get_texture("projectiles", "enemy_bullet")
-            if not self.texture:
-                # Create a fallback texture
-                self.texture = arcade.make_circle_texture(8, arcade.color.RED)
-        except:
-            # Fallback if texture loading fails
-            self.texture = arcade.make_circle_texture(8, arcade.color.RED)
+            if is_player_bullet:
+                self.texture = skin_manager.get_texture("projectiles", "player_bullet")
+            else:
+                self.texture = skin_manager.get_texture("projectiles", "enemy_bullet")
+        except Exception as e:
+            print(f"Error setting bullet texture: {e}")
+
+            # Fallback texture
+            if is_player_bullet:
+                self.texture = arcade.make_circle_texture(10, arcade.color.BLUE)
+            else:
+                self.texture = arcade.make_circle_texture(10, arcade.color.RED)
+
+        # Set scale
+        self.scale = 0.035  # Same as player scale
+
+        # Set rotation to match direction
+        self.angle = math.degrees(math.atan2(direction_y, direction_x))
+
+    def update(self):
+        """Update the bullet."""
+        # Move the bullet
+        self.center_x += self.change_x
+        self.center_y += self.change_y
+
+        # Check if bullet is off-screen
+        window = arcade.get_window()
+        if (self.center_x < 0 or self.center_x > window.width or
+            self.center_y < 0 or self.center_y > window.height):
+            self.remove_from_sprite_lists()

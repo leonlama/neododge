@@ -4,7 +4,7 @@
     "scales": {
         "player": 0.035,
         "enemy": 0.035,
-        "bullet": 0.035,
+        "bullet": 0.02,
         "orb": 0.1,
         "artifact": 0.035,
         "coin": 1.0

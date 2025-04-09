@@ -138,51 +138,70 @@ class WaveManager:
             self.on_clear_enemies()
 
     def spawn_enemy(self):
-        """Spawn an enemy based on the current wave configuration."""
-        if not self.enemies_to_spawn or not self.on_spawn_enemy:
-            print(f"Cannot spawn enemy: enemies_to_spawn={self.enemies_to_spawn}, on_spawn_enemy={self.on_spawn_enemy}")
+        """Spawn an enemy from the current wave."""
+        if self.enemies_to_spawn <= 0:
             return
 
-        # Get enemy type
+        # Get enemy type for this spawn
         enemy_index = self.current_wave["enemy_count"] - self.enemies_to_spawn
-        if enemy_index >= len(self.current_wave["enemy_types"]):
-            print(f"Enemy index {enemy_index} out of range for enemy types: {self.current_wave['enemy_types']}")
-            enemy_type = "wander"  # Default
-        else:
-            enemy_type = self.current_wave["enemy_types"][enemy_index]
+        enemy_type = self.current_wave["enemy_types"][min(enemy_index, len(self.current_wave["enemy_types"]) - 1)]
 
         print(f"Spawning enemy of type: {enemy_type}")
 
-        # Get spawn position based on formation
-        formation = self.current_wave.get("formation", "random")
-        screen_width = 800  # Default
-        screen_height = 600  # Default
+        # Generate formation if not already done
+        if not hasattr(self, 'spawn_positions') or not self.spawn_positions:
+            self._generate_formation()
 
-        if hasattr(self.game_view, 'get_screen_dimensions'):
+        # Get position from formation
+        position = None
+        if hasattr(self, 'spawn_positions') and self.spawn_positions:
+            if enemy_index < len(self.spawn_positions):
+                position = self.spawn_positions[enemy_index]
+            else:
+                # Fallback: generate a random position
+                screen_width, screen_height = self.game_view.get_screen_dimensions()
+                position = (
+                    random.randint(50, screen_width - 50),
+                    random.randint(50, screen_height - 50)
+                )
+        else:
+            # Fallback: generate a random position
             screen_width, screen_height = self.game_view.get_screen_dimensions()
-
-        # Generate positions if not already generated
-        if not hasattr(self, 'spawn_positions') or self.spawn_positions is None:
-            print(f"Generating formation: {formation}")
-            self.spawn_positions = self.wave_generator.formation_generator.generate_formation(
-                formation, 
-                self.current_wave["enemy_count"],
-                screen_width,
-                screen_height
+            position = (
+                random.randint(50, screen_width - 50),
+                random.randint(50, screen_height - 50)
             )
 
-        position = self.spawn_positions[enemy_index]
+        # Get enemy modifiers
+        speed = self.current_wave.get("enemy_speed", 1.0)
+        health = self.current_wave.get("enemy_health", 1.0)
 
-        # Call spawn callback with enemy parameters
+        # Spawn the enemy
         print(f"Calling on_spawn_enemy with: {enemy_type}, {position}")
         self.on_spawn_enemy(
             enemy_type=enemy_type,
             position=position,
-            speed=self.current_wave["enemy_speed"],
-            health=self.current_wave["enemy_health"]
+            speed=speed,
+            health=health
         )
 
+        # Decrement enemies to spawn
         self.enemies_to_spawn -= 1
+
+    def _generate_formation(self):
+        """Generate spawn positions based on the current wave formation."""
+        formation = self.current_wave.get("formation", "random")
+        screen_width, screen_height = 800, 600  # Default values
+
+        if hasattr(self.game_view, 'get_screen_dimensions'):
+            screen_width, screen_height = self.game_view.get_screen_dimensions()
+
+        self.spawn_positions = self.wave_generator.formation_generator.generate_formation(
+            formation,
+            self.current_wave["enemy_count"],
+            screen_width,
+            screen_height
+        )
 
     def set_player_profile(self, profile):
         """Set the player profile for wave generation."""
