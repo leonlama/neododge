@@ -1,5 +1,6 @@
 import arcade
 import time
+import uuid
 
 class StatusEffect:
     """Base class for player status effects."""
@@ -167,7 +168,7 @@ class StatusEffectManager:
 
     def add_effect(self, effect_type, duration, data=None):
         """Add or refresh an effect with optional extra data."""
-        effect_id = f"{effect_type}_{int(time.time() * 1000)}"
+        effect_id = f"{effect_type}_{uuid.uuid4().hex[:6]}"  # fix: unique ID
         
         if data is None:
             data = {}
@@ -190,13 +191,31 @@ class StatusEffectManager:
                 del self.effects[effect_id]
             
     def get_total_value(self, effect_type: str) -> float:
-        """Berechnet die Gesamtsumme aller aktiven Effektwerte eines Typs."""
+        """Get the total value of all active effects of a specific type."""
         total = 0
-        if effect_type in self.effects:
-            for effect in self.effects[effect_type]:
-                if effect["active"]:
-                    total += effect["value"]
+        for effect in self.effects.values():
+            if effect["active"] and effect["type"] == effect_type:
+                total += effect["data"].get("value", 0)
         return total
+
+    def get_active_effects(self):
+        """Get all currently active effects."""
+        return [e for effects in self.effects.values() for e in effects if e["active"]]
+
+    def get_aggregated_effects(self):
+        """Aggregate values by type, used for HUD display."""
+        totals = {}
+        for effect in self.effects.values():
+            if effect["active"]:
+                if effect["type"] not in totals:
+                    totals[effect["type"]] = {
+                        "value": effect["value"],
+                        "color": effect["color"],
+                        "icon": effect["icon"]
+                    }
+                else:
+                    totals[effect["type"]]["value"] += effect["value"]
+        return totals
 
     def get_active_effects(self):
         """Get all currently active effects."""
