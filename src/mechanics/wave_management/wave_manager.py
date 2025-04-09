@@ -22,6 +22,10 @@ class WaveManager:
         self.between_wave_timer = 0
         self.between_wave_duration = 5.0  # 5 seconds between waves
         
+        # Wave message
+        self.wave_message = ""
+        self.wave_message_alpha = 0.0
+        
         # Callbacks
         self.on_wave_start = None
         self.on_wave_end = None
@@ -34,6 +38,10 @@ class WaveManager:
         Args:
             delta_time: Time since last update
         """
+        # Update wave message fade
+        if hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
+            self.wave_message_alpha -= delta_time * 0.5
+            
         # Update wave timer
         if self.in_wave:
             self.wave_timer += delta_time
@@ -42,6 +50,10 @@ class WaveManager:
             if self.wave_timer >= self.wave_duration:
                 print(f"🌊 Wave {self.wave} completed!")
                 self.end_wave()
+
+                # Display wave completion message
+                self.wave_message = f"Wave {self.wave} Complete!"
+                self.wave_message_alpha = 1.0
 
                 # Start next wave after delay
                 self.between_wave_timer = 0

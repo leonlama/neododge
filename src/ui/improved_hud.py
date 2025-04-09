@@ -123,18 +123,24 @@ def draw_active_effects(active_effects):
             continue
 
         effect_type = effect.get('type', effect_id.split('_')[0])
-        value = effect.get('value', 0)
+        
+        # Calculate the actual remaining percentage
+        duration = effect.get('duration', 0)
+        elapsed_time = effect.get('elapsed_time', 0)
+        remaining = max(0, duration - elapsed_time)
+        percent = int((remaining / duration) * 100) if duration else 0
+        
         icon = effect.get('icon', f"ui/effects/{effect_type}")
         color = effect.get('color', arcade.color.WHITE)
 
         if effect_type not in aggregated:
             aggregated[effect_type] = {
-                "value": value,
+                "value": percent,
                 "icon": icon,
                 "color": color
             }
         else:
-            aggregated[effect_type]["value"] += value
+            aggregated[effect_type]["value"] += percent
 
     # Sort for consistent ordering
     sorted_effects = sorted(aggregated.items())
@@ -148,7 +154,7 @@ def draw_active_effects(active_effects):
     for idx, (effect_type, data) in enumerate(sorted_effects):
         y = y_start - idx * spacing
         display_name = effect_type.replace("_", " ").title()
-        value_text = f"+{int(data['value'])}%" if data["value"] > 0 else f"{int(data['value'])}%"
+        value_text = f"{int(data['value'])}%"
         # Make sure we're not passing "ui" twice in the path
         icon_path = data["icon"]
         if icon_path.startswith("ui/"):

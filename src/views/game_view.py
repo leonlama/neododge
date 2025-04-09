@@ -331,8 +331,8 @@ class NeododgeGame(arcade.View):
         # Get the current wave number
         wave_number = getattr(self.wave_manager, 'wave', 1)
 
-        # Get the wave timer
-        wave_timer = getattr(self.wave_manager, 'wave_timer', 0)
+        # Calculate the wave time left as a countdown
+        wave_time_left = max(0, int(self.wave_manager.wave_duration - self.wave_manager.wave_timer))
 
         try:
             # Draw HUD
@@ -340,7 +340,7 @@ class NeododgeGame(arcade.View):
                 self.player,
                 self.score,
                 wave_number,
-                wave_timer,
+                wave_time_left,
                 self.heart_textures
             )
         except Exception as e:
