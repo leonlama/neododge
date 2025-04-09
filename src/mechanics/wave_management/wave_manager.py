@@ -5,7 +5,13 @@ from src.mechanics.wave_management.wave_generator import WaveGenerator
 class WaveManager:
     """Manages the creation and progression of waves in the game."""
 
-    def __init__(self):
+    def __init__(self, game_view=None):
+        """Initialize the wave manager.
+
+        Args:
+            game_view: The game view that this wave manager is associated with.
+        """
+        self.game_view = game_view
         self.wave_generator = WaveGenerator()
         self.current_wave = None
         self.wave_number = 0
@@ -31,6 +37,22 @@ class WaveManager:
         }
         self.engagement_score = 0.5
 
+        # Set up callbacks if game_view is provided
+        if game_view:
+            self._setup_callbacks()
+
+    def _setup_callbacks(self):
+        """Set up callbacks based on the game_view."""
+        # Check if game_view has the necessary methods
+        if hasattr(self.game_view, 'spawn_enemy'):
+            self.on_spawn_enemy = self.game_view.spawn_enemy
+
+        if hasattr(self.game_view, 'clear_enemies'):
+            self.on_clear_enemies = self.game_view.clear_enemies
+
+        if hasattr(self.game_view, 'on_wave_complete'):
+            self.on_wave_complete = self.game_view.on_wave_complete
+
     def update(self, delta_time):
         """Update the wave manager."""
         if not self.in_wave:
@@ -41,6 +63,7 @@ class WaveManager:
 
         # Check if wave is complete
         if self.wave_timer >= self.wave_duration:
+            print(f"Wave {self.wave_number} completed (timer: {self.wave_timer:.2f}, duration: {self.wave_duration:.2f})")
             self.end_wave()
             if self.on_wave_complete:
                 self.on_wave_complete(self.wave_number)
@@ -72,7 +95,13 @@ class WaveManager:
         self.spawn_delay = self.current_wave.get("spawn_delay", 1.0)
         self.enemies_to_spawn = self.current_wave.get("enemy_count", 0)
 
-        print(f"Starting Wave {self.wave_number} with {self.enemies_to_spawn} enemies at speed {self.current_wave.get('enemy_speed', 1.0)}")
+        print(f"Starting Wave {self.wave_number}")
+        print(f"  Type: {self.current_wave.get('type', 'normal')}")
+        print(f"  Enemy Count: {self.enemies_to_spawn}")
+        print(f"  Enemy Types: {self.current_wave.get('enemy_types', [])}")
+        print(f"  Enemy Speed: {self.current_wave.get('enemy_speed', 1.0)}")
+        print(f"  Spawn Delay: {self.spawn_delay}")
+        print(f"  Duration: {self.wave_duration}")
 
         return self.current_wave
 
@@ -101,6 +130,8 @@ class WaveManager:
             "speed": self.current_wave.get("enemy_speed", 1.0),
             "health": self.current_wave.get("enemy_health", 1.0)
         }
+
+        print(f"Spawning enemy: {enemy_type} with params {enemy_params}")
 
         # Spawn the enemy
         self.on_spawn_enemy(enemy_type, enemy_params)

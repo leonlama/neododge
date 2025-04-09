@@ -35,39 +35,41 @@ class Orb(arcade.Sprite):
         self.scale = get_scale('orb')
 
 def get_random_orb(x, y, context=None):
-    """Generate a random orb at the given position
+    """
+    Get a random orb based on the current game context.
 
     Args:
-        x (float): X position
-        y (float): Y position
-        context (dict, optional): Dictionary with game context like 'wave', 'hp', 'mult', etc.
+        x (float): X position for the orb
+        y (float): Y position for the orb
+        context (dict): Game context information (wave, player stats, etc.)
 
     Returns:
-        Orb: A randomly generated orb
+        Orb: A randomly selected orb instance
     """
-    # Default to buff-heavy balance
-    base_buff_chance = 0.65
+    # Default context if none provided
+    if context is None:
+        context = {}
 
-    if context:
-        wave = context.get("wave", 1)
-        player_hp = context.get("hp", 3)
-        multiplier = context.get("mult", 1.0)
+    # Extract context variables with defaults
+    wave = context.get('wave', 1)  # Default to wave 1 if not provided
+    player_health = context.get('player_health', 3)
+    player_speed = context.get('player_speed', 1.0)
 
-        # More debuffs as waves progress
+    # Base chances for different orb types
+    base_buff_chance = 0.7  # 70% chance for buff orbs
+
+    # Adjust chances based on wave number
+    if wave is not None:
         base_buff_chance -= 0.05 * (wave // 5)
 
-        # More buffs when health is low
-        if player_hp <= 1:
-            base_buff_chance += 0.25
+    # Adjust chances based on player health
+    if player_health <= 1:
+        base_buff_chance += 0.2  # More likely to get buffs when low health
 
-        # Confuse the player with more speed/slow orbs when multiplier is high
-        if multiplier > 1.5:
-            BUFF_ORBS["speed_20"] += 10
-            DEBUFF_ORBS["slow"] += 10
+    # Clamp chance to reasonable range
+    base_buff_chance = max(0.3, min(0.9, base_buff_chance))
 
-        # Clamp chance
-        base_buff_chance = max(0.3, min(0.9, base_buff_chance))
-
+    # Determine if this will be a buff or debuff orb
     is_buff = random.random() < base_buff_chance
 
     if is_buff:

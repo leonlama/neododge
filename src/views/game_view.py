@@ -111,57 +111,73 @@ class NeododgeGame(arcade.View):
         self.setup_sounds()
 
     def setup_wave_manager(self):
-        """Set up the wave management system."""
+        """Set up the wave manager."""
         from src.mechanics.wave_management.wave_manager import WaveManager
-        from src.mechanics.wave_management.difficulty_adjuster import DifficultyAdjuster
-
-        # Initialize player profile if not exists
-        if not hasattr(self, 'player_profile'):
-            self.player_profile = {
-                "playstyle": {"bravery": 0.5, "chaos": 0.5},
-                "skill_level": 0.5,
-                "preferences": {"orb_preference": 0.5}
-            }
-
-        # Create wave manager
+        
+        # Initialize the wave manager with a reference to this game view
         self.wave_manager = WaveManager(self)
-
-        # Create difficulty adjuster
-        self.difficulty_adjuster = DifficultyAdjuster()
-
-        # Set initial wave parameters
-        self.wave_duration = 30.0
-        self.between_wave_duration = 5.0
-
-        # Set callbacks
-        self.wave_manager.on_spawn_enemies = self.spawn_enemies
-        self.wave_manager.on_clear_enemies = self.clear_enemies
-        self.wave_manager.on_wave_start = self.on_wave_start
-        self.wave_manager.on_wave_end = self.on_wave_end
-
-        # Start first wave
+        
+        # Start the first wave
         self.wave_manager.start_wave()
 
-    def spawn_enemies(self):
-        """Spawn enemies for the current wave."""
-        # Clear existing enemies
-        self.enemies.clear()
+    def spawn_enemy(self, enemy_type, params):
+        """Spawn an enemy of the specified type with the given parameters."""
+        # Import enemy classes
+        from src.entities.enemies.enemy import Enemy
+        from src.entities.enemies.chaser import Chaser
+        from src.entities.enemies.shooter import Shooter
+        from src.entities.enemies.wanderer import Wander
+        #from src.entities.enemies.boss import Boss
 
-        # Spawn new enemies
-        message = self.wave_manager.spawn_enemies(
-            self.enemies, 
-            self.window.width, 
-            self.window.height,
-            self.player
-        )
+        # Get screen dimensions
+        screen_width = self.window.width
+        screen_height = self.window.height
 
-        # Show wave message
-        self.wave_message = message
-        self.wave_message_alpha = 1.0
+        # Determine spawn position (outside the screen)
+        side = random.randint(0, 3)  # 0: top, 1: right, 2: bottom, 3: left
+
+        if side == 0:  # Top
+            x = random.randint(0, screen_width)
+            y = screen_height + 50
+        elif side == 1:  # Right
+            x = screen_width + 50
+            y = random.randint(0, screen_height)
+        elif side == 2:  # Bottom
+            x = random.randint(0, screen_width)
+            y = -50
+        else:  # Left
+            x = -50
+            y = random.randint(0, screen_height)
+
+        # Create the enemy based on type
+        enemy = None
+
+        if enemy_type == "basic":
+            enemy = Enemy(x, y)
+        elif enemy_type == "chaser":
+            enemy = Chaser(x, y)
+        elif enemy_type == "shooter":
+            enemy = Shooter(x, y)
+        elif enemy_type == "wander":
+            enemy = Wander(x, y)
+        #elif enemy_type == "boss":
+        #    enemy = Boss(x, y)
+
+        # Apply parameters
+        if enemy:
+            if "speed" in params:
+                enemy.speed = enemy.base_speed * params["speed"]
+            if "health" in params:
+                enemy.health = enemy.base_health * params["health"]
+
+            # Add to enemies list
+            self.enemies.append(enemy)
+            print(f"Spawned {enemy_type} enemy at ({x}, {y}) with speed {enemy.speed:.2f} and health {enemy.health:.2f}")
 
     def clear_enemies(self):
         """Clear all enemies."""
         self.enemies.clear()
+        print("Cleared all enemies")
 
     def on_wave_start(self, wave_number):
         """Called when a wave starts."""
@@ -182,6 +198,19 @@ class NeododgeGame(arcade.View):
         # Show wave complete message
         self.wave_message = f"Wave {wave_number} Complete!"
         self.wave_message_alpha = 1.0
+        
+        # Increment score
+        self.score += wave_number * 100
+
+        # Spawn coins as a reward
+        self.spawn_coins(wave_number * 2)
+
+        # Start the next wave after a delay
+        arcade.schedule(self.start_next_wave, 2.0)
+        
+    def start_next_wave(self, delta_time=0):
+        """Start the next wave."""
+        self.wave_manager.start_wave()
 
     def setup_sounds(self):
         """Set up game sounds."""
@@ -608,17 +637,28 @@ class NeododgeGame(arcade.View):
     def spawn_orbs(self, count):
         """Spawn a number of orbs."""
         for _ in range(count):
-            # Spawn an orb at a random position
-            x = random.randint(50, arcade.get_window().width - 50)
-            y = random.randint(50, arcade.get_window().height - 50)
+            self.spawn_orb()
+            
+    def spawn_orb(self, x=None, y=None):
+        """Spawn an orb at the specified position or a random position."""
+        if x is None or y is None:
+            # Random position within the screen
+            x = random.randint(50, self.window.width - 50)
+            y = random.randint(50, self.window.height - 50)
 
-            # Create a random orb using the orb pool with context
-            orb = get_random_orb(x, y, context={
-                "wave": self.wave_manager.current_wave,
-                "hp": self.player.current_hearts,
-                "mult": self.player.score_multiplier
-            })
-            self.orbs.append(orb)
+        # Create context with current wave number
+        context = {
+            'wave': self.wave_manager.current_wave if hasattr(self, 'wave_manager') else 1,
+            'player_health': self.player.current_hearts,
+            'player_speed': self.player.speed
+        }
+
+        # Get a random orb
+        orb = get_random_orb(x, y, context=context)
+
+        # Add to orbs list
+        self.orbs.append(orb)
+        print(f"Spawned orb at ({x}, {y})")
             
     def check_orb_collisions(self):
         """Check for collisions between player and orbs."""
