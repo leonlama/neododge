@@ -4,17 +4,11 @@ from src.skins.skin_manager import skin_manager
 
 def draw_hud(player, score, wave=1, wave_timer=None, heart_textures=None):
     """Draw the full HUD layout with a clean roguelike feel."""
-    # Draw player hearts
-    if hasattr(player, 'draw_hearts'):
-        player.draw_hearts()
-    else:
-        draw_player_health(player, heart_textures, SCREEN_WIDTH, SCREEN_HEIGHT)
-    
+    player.draw_hearts()
     draw_score(score)
     draw_wave_info(wave, wave_timer)
     draw_coin_count(getattr(player, 'coins', 0))
     
-    # Status effects (buffs)
     if hasattr(player, 'status_effects'):
         draw_active_effects(player.status_effects.effects)
 

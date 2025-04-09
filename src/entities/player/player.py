@@ -413,6 +413,8 @@ class Player(arcade.Sprite):
                 "gray": skin_manager.get_texture("ui", "heart_gray"),
                 "gold": skin_manager.get_texture("ui", "heart_gold")
             }
+        
+        print("❤️ Heart textures:", self.heart_textures)
             
         if not self.heart_textures:
             return  # Skip if textures aren't set

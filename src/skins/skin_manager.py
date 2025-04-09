@@ -224,6 +224,11 @@ class SkinManager:
         else:
             print("⚠️ No config file found, using default scales")
 
+        # Debug print to show all loaded textures
+        print("🎯 All loaded texture keys:")
+        for category, textures in self.textures.items():
+            print(f" - {category}: {list(textures.keys())}")
+
         self.current_skin = skin_name
         print(f"🎨 Loaded skin: {skin_name}")
 
@@ -240,9 +245,10 @@ class SkinManager:
             if os.path.exists(texture_path):
                 try:
                     texture = arcade.load_texture(texture_path)
-                    texture_key = f"{category}/{name}"
-                    self.textures[texture_key] = texture
-                    print(f"  ✓ Loaded texture: {texture_key} (size: {texture.width}x{texture.height})")
+                    if category not in self.textures:
+                        self.textures[category] = {}
+                    self.textures[category][name] = texture
+                    print(f"  ✓ Loaded texture: {category}/{name} (size: {texture.width}x{texture.height})")
                     return
                 except Exception as e:
                     print(f"  ✗ Error loading texture: {texture_path} - {e}")
@@ -263,35 +269,28 @@ class SkinManager:
         """Get the scale for a specific entity type."""
         return get_scale(entity_type)
 
-    def get_texture(self, category, name=None, force_reload=False):
+    def get_texture(self, category: str, name: str):
         """Get a texture by category and name.
         
         Args:
             category: Category of the texture (e.g., "ui").
-            name: Name of the texture (e.g., "heart_red" or "effects/speed").
-            force_reload: Whether to force reload the texture from disk.
+            name: Name of the texture (e.g., "heart_red").
             
         Returns:
             arcade.Texture: The texture if found, None otherwise.
         """
-        # Handle the case where name contains a slash (from old format)
-        if name and "/" in name:
-            parts = name.split("/", 1)
-            if len(parts) == 2:
-                subcategory, item_name = parts
-                texture_key = f"{category}/{subcategory}/{item_name}"
+        if category in self.textures:
+            subdict = self.textures[category]
+            if isinstance(subdict, dict):
+                texture = subdict.get(name)
+                if texture:
+                    return texture
+                else:
+                    print(f"⚠️ Texture not found in skin_manager.textures['{category}']: '{name}'")
             else:
-                texture_key = f"{category}/{name}"
-        elif name is None:
-            # Legacy support for old format where category contained the full path
-            texture_key = category
+                print(f"⚠️ Category '{category}' is not a dictionary!")
         else:
-            texture_key = f"{category}/{name}"
-
-        if texture_key in self.textures and not force_reload:
-            return self.textures[texture_key]
-
-        print(f"⚠️ Texture not found: {texture_key}")
+            print(f"⚠️ Texture category '{category}' does not exist!")
         return None
 
     def has_texture(self, category: str, name: str) -> bool:

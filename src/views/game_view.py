@@ -47,21 +47,14 @@ class NeododgeGame(arcade.View):
         self.player = Player(self.window.width // 2, self.window.height // 2)
         self.player.window = self.window
         self.player.parent_view = self
-        # Load heart textures directly
-        try:
-            self.heart_textures = {
-                "red": arcade.load_texture("assets/ui/heart_red.png"),
-                "gray": arcade.load_texture("assets/ui/heart_gray.png"),
-                "gold": arcade.load_texture("assets/ui/heart_gold.png")
-            }
-        except Exception as e:
-            print(f"Error loading heart textures: {e}")
-            # Create fallback textures
-            self.heart_textures = {
-                "red": arcade.make_soft_circle_texture(30, arcade.color.RED),
-                "gray": arcade.make_soft_circle_texture(30, arcade.color.GRAY),
-                "gold": arcade.make_soft_circle_texture(30, arcade.color.GOLD)
-            }
+        
+        # Load heart textures from skin manager
+        self.heart_textures = {
+            "red": skin_manager.get_texture("ui", "heart_red"),
+            "gray": skin_manager.get_texture("ui", "heart_gray"),
+            "gold": skin_manager.get_texture("ui", "heart_gold")
+        }
+        # Already loaded, or will fallback in player.draw_hearts()
         
         # Pass heart textures to player
         self.player.heart_textures = self.heart_textures
