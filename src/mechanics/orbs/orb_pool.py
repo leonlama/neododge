@@ -1,6 +1,8 @@
 import random
+import arcade
 from src.mechanics.orbs.buff_orbs import BuffOrb
 from src.mechanics.orbs.debuff_orbs import DebuffOrb
+from src.core.scaling import get_scale
 
 # Define orb pools with weights
 BUFF_ORBS = {
@@ -21,6 +23,16 @@ DEBUFF_ORBS = {
     "vision_blur": 15,
     "big_hitbox": 15
 }
+
+class Orb(arcade.Sprite):
+    def __init__(self, x, y, orb_type):
+        super().__init__()
+        self.center_x = x
+        self.center_y = y
+        self.orb_type = orb_type
+        
+        # Set scale using centralized system
+        self.scale = get_scale('orb')
 
 def get_random_orb(x, y, buff_chance=0.7):
     """Generate a random orb at the given position

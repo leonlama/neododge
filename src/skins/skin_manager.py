@@ -4,6 +4,7 @@ import arcade
 import os
 import json
 from src.core.resource_manager import load_texture
+from src.core.scaling import get_scale, set_scale
 
 # Import skin paths from constants
 from src.core.constants import DEFAULT_SKIN_PATH, MDMA_SKIN_PATH
@@ -15,7 +16,6 @@ class SkinManager:
         self.current_skin = "default"
         self.skins_path = "assets/skins"
         self.textures = {}
-        self.scales = {}  # Add scales dictionary to store scaling factors
 
         # Create default textures for fallbacks
         self.create_default_textures()
@@ -184,7 +184,16 @@ class SkinManager:
         self._load_texture(skin_path, "projectiles", "enemy_bullet")
 
         # Load scales from config
-        self._load_scales(skin_path)
+        config_path = os.path.join(skin_path, "config.json")
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                    self.load_scales(config)
+            except Exception as e:
+                print(f"⚠️ Error loading skin config: {e}")
+        else:
+            print("⚠️ No config file found, using default scales")
 
         self.current_skin = skin_name
         print(f"🎨 Loaded skin: {skin_name}")
@@ -205,30 +214,19 @@ class SkinManager:
 
         print(f"  ✗ Texture not found: {category}/{name}")
 
-    def _load_scales(self, skin_path):
-        """Load scales from skin config."""
-        # Set default scales
-        self.scales = {
-            "player": 1.0,
-            "enemy": 1.0,
-            "bullet": 1.0,
-            "orb": 1.0,
-            "artifact": 1.0,
-            "coin": 1.0
-        }
+    def load_scales(self, config_data):
+        """Load scales from config data."""
+        if 'scales' in config_data:
+            print(f"🎨 Loaded scales from config: {config_data['scales']}")
+            # Update the centralized scaling system
+            for entity_type, scale in config_data['scales'].items():
+                set_scale(entity_type, scale)
+        else:
+            print("⚠️ No scales found in config, using defaults")
 
-        # Try to load skin-specific scales from config file
-        config_path = os.path.join(skin_path, "config.json")
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, "r") as f:
-                    config = json.load(f)
-                    # Update scales if defined in config
-                    if "scales" in config:
-                        self.scales.update(config["scales"])
-                        print(f"🎨 Loaded scales from config: {self.scales}")
-            except Exception as e:
-                print(f"⚠️ Error loading skin config: {e}")
+    def get_scale(self, entity_type):
+        """Get the scale for a specific entity type."""
+        return get_scale(entity_type)
 
     def get_texture(self, category, name=None):
         """Get a texture by category and name."""
@@ -301,7 +299,7 @@ class SkinManager:
         Returns:
             float: The scale value.
         """
-        return self.scales.get("player", 0.035)
+        return self.get_scale("player")
     
     def get_orb_scale(self):
         """Get the scale for orb sprites.
@@ -309,7 +307,7 @@ class SkinManager:
         Returns:
             float: The scale value.
         """
-        scale = self.scales.get("orb", 1.0)
+        scale = self.get_scale("orb")
         print(f"🔍 Getting orb scale: {scale} for skin: {self.current_skin}")
         return scale
         
@@ -319,7 +317,15 @@ class SkinManager:
         Returns:
             float: The scale value.
         """
-        return self.scales.get("enemy", 1.0)
+        return self.get_scale("enemy")
+        
+    def get_artifact_scale(self):
+        """Get the scale for artifact sprites.
+        
+        Returns:
+            float: The scale value.
+        """
+        return self.get_scale("artifact")
 
 # Global instance (singleton)
 skin_manager = SkinManager()

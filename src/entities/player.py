@@ -4,6 +4,7 @@ import random
 from src.core.constants import PLAYER_SPEED, PLAYER_DASH_DISTANCE, PLAYER_DASH_COOLDOWN
 from src.skins.skin_manager import skin_manager
 from src.core.constants import PLAYER_DASH_SPEED
+from src.core.scaling import get_scale
 
 class Player(arcade.Sprite):
     """Player character class"""
@@ -23,8 +24,8 @@ class Player(arcade.Sprite):
             print(f"⚠️ Error loading player texture: {e}")
             self.texture = arcade.make_circle_texture(64, arcade.color.WHITE)
         
-        # Set scale
-        self.scale = skin_manager.get_player_scale()
+        # Set scale using centralized system
+        self.scale = get_scale('player')
         
         # Set initial position
         self.center_x = x
@@ -205,12 +206,21 @@ class Player(arcade.Sprite):
         
         # Update active effects
         self.update_effects(delta_time)
-        
         # Update active effects timers
         for effect_type, effect_data in self.active_effects.items():
-            if effect_data['active']:
-                effect_data['timer'] -= delta_time
-                if effect_data['timer'] <= 0:
+            if effect_data.get('active', False):
+                if 'timer' in effect_data:
+                    effect_data['timer'] -= delta_time
+                elif 'duration' in effect_data:  # Try using 'duration' if 'timer' doesn't exist
+                    effect_data['duration'] -= delta_time
+                else:
+                    # If neither exists, create a timer with a default value
+                    effect_data['timer'] = 5.0  # Default 5 seconds
+                    effect_data['timer'] -= delta_time
+                
+                # Check if timer or duration has expired
+                timer_value = effect_data.get('timer', effect_data.get('duration', 0))
+                if timer_value <= 0:
                     effect_data['active'] = False
                     effect_data['value'] = 0
 
@@ -281,7 +291,8 @@ class Player(arcade.Sprite):
             'value': value,
             'duration': duration,
             'color': color,
-            'is_percentage': is_percentage
+            'is_percentage': is_percentage,
+            'active': True
         }
 
         # Apply the effect

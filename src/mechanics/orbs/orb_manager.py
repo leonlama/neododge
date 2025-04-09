@@ -1,5 +1,6 @@
 import arcade
 import random
+from src.core.scaling import get_scale
 
 class Orb(arcade.Sprite):
     def __init__(self, x, y, orb_type="speed"):
@@ -11,6 +12,9 @@ class Orb(arcade.Sprite):
 
         # Set appearance based on type
         self._set_appearance()
+        
+        # Set scale using centralized system
+        self.scale = get_scale('orb')
 
     def _set_appearance(self):
         if self.orb_type in ["speed", "shield", "invincibility"]:

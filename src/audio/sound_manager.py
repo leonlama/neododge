@@ -98,6 +98,10 @@ class SoundManager:
         Returns:
             arcade.Sound: The requested sound
         """
+        # Check if we should skip this sound (for bounce sound)
+        if category == "enemy" and name == "bounce":
+            return None  # Silently skip bounce sounds
+            
         sound_key = f"{category}/{name}"
 
         # Return cached sound if available
@@ -124,9 +128,12 @@ class SoundManager:
                 self.sounds[sound_key] = sound
                 return sound
             else:
-                print(f"⚠️ Sound file not found: {sound_path}")
+                # Only log for sounds we actually want
+                if not (category == "enemy" and name == "bounce"):
+                    print(f"⚠️ Sound file not found: {sound_path}")
         except Exception as e:
-            print(f"⚠️ Error loading sound '{name}': {e}")
+            if not (category == "enemy" and name == "bounce"):
+                print(f"⚠️ Error loading sound '{name}': {e}")
 
         return None
 
@@ -140,6 +147,10 @@ class SoundManager:
         Returns:
             int: The sound player ID or None if sound couldn't be played
         """
+        # Check if we should skip this sound (for bounce sound)
+        if category == "enemy" and name == "bounce":
+            return None  # Silently skip bounce sounds
+            
         sound = self.get_sound(category, name)
         if sound:
             # Calculate volume based on master, sfx, and category levels

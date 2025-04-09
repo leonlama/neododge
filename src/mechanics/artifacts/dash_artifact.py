@@ -2,6 +2,7 @@ import arcade
 import math
 from src.mechanics.artifacts.base import Artifact
 from src.skins.skin_manager import skin_manager
+from src.core.scaling import get_scale
 
 class DashArtifact(arcade.Sprite):
     """Artifact that allows the player to dash."""
@@ -25,8 +26,8 @@ class DashArtifact(arcade.Sprite):
             # Create a fallback texture without the 'soft' parameter
             self.texture = arcade.make_circle_texture(32, arcade.color.PURPLE)
 
-        # Set scale
-        self.scale = skin_manager.get_artifact_scale()
+        # Set scale using centralized system
+        self.scale = get_scale('artifact')
 
         # Set up cooldown
         self.cooldown = 5.0

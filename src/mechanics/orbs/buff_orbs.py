@@ -2,6 +2,7 @@ import arcade
 import random
 from src.mechanics.orbs.orb import Orb
 from src.skins.skin_manager import skin_manager
+from src.core.scaling import get_scale
 
 class BuffOrb(Orb):
     """Orb that provides positive effects to the player"""
@@ -15,6 +16,9 @@ class BuffOrb(Orb):
 
         # Set texture based on orb type
         self.set_texture()
+        
+        # Set scale using centralized system
+        self.scale = get_scale('orb')
 
     def set_texture(self):
         """Set the texture based on orb type."""

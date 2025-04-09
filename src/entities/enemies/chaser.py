@@ -2,6 +2,7 @@ from src.entities.enemies.enemy import Enemy
 import random
 import math
 import arcade
+from src.core.scaling import get_scale
 
 class ChaserEnemy(Enemy):
     """Enemy that chases the player."""

@@ -2,6 +2,7 @@ import arcade
 import random
 from src.skins.skin_manager import skin_manager
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.core.scaling import get_scale
 
 class Orb(arcade.Sprite):
     """Base class for all orbs in the game"""
@@ -24,8 +25,8 @@ class Orb(arcade.Sprite):
             category = "orbs"
             self.texture = skin_manager.get_texture(category, orb_type)
 
-            # Get the scale from skin manager
-            self.base_scale = skin_manager.get_orb_scale()
+            # Set base scale for animation
+            self.base_scale = get_scale('orb')
             self.scale = self.base_scale
         except Exception as e:
             print(f"⚠️ Error loading orb texture '{orb_type}': {e}")
@@ -35,8 +36,8 @@ class Orb(arcade.Sprite):
             else:
                 color = arcade.color.RED
             self.texture = arcade.make_circle_texture(30, color)
-            self.base_scale = 1.0
-            self.scale = 1.0
+            self.base_scale = get_scale('orb')
+            self.scale = self.base_scale
 
         # Movement properties
         self.velocity = (random.uniform(-1, 1), random.uniform(-1, 1))

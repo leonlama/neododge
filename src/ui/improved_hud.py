@@ -36,8 +36,8 @@ def draw_player_health(player, heart_textures=None, screen_width=800, screen_hei
         heart_gray = heart_textures['gray']
 
     # Draw hearts
-    heart_size = 20  # Smaller heart size
-    heart_spacing = 5  # Smaller spacing
+    heart_size = 1  # Smaller heart size
+    heart_spacing = 18  # Smaller spacing
     start_x = 20 + heart_size // 2  # Left margin
     start_y = screen_height - 30  # Top margin
 

@@ -1,5 +1,6 @@
 import arcade
 from src.skins.skin_manager import skin_manager
+from src.core.scaling import get_scale
 
 class EnemyBullet(arcade.Sprite):
     """Bullet fired by shooter enemies."""
@@ -33,11 +34,8 @@ class EnemyBullet(arcade.Sprite):
             # Fallback if texture loading fails
             self.texture = arcade.make_circle_texture(8, arcade.color.RED)
 
-        # Set scale
-        try:
-            self.scale = skin_manager.scales.get("bullet", 1.0)
-        except:
-            self.scale = 1.0
+        # Set scale using centralized system
+        self.scale = get_scale('bullet')
 
         # Set properties
         self.damage = 1

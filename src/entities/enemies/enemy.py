@@ -3,6 +3,7 @@ import math
 import random
 from src.skins.skin_manager import skin_manager
 from src.audio.sound_manager import sound_manager
+from src.core.scaling import get_scale
 
 class Enemy(arcade.Sprite):
     """Base enemy class that all enemy types inherit from."""
@@ -52,8 +53,8 @@ class Enemy(arcade.Sprite):
             color = colors.get(enemy_type, arcade.color.WHITE)
             self.texture = arcade.make_circle_texture(64, color)
 
-        # Set scale
-        self.scale = skin_manager.get_enemy_scale()
+        # Set scale using centralized system
+        self.scale = get_scale('enemy')
 
         # Set health and other properties
         self.health = 1
