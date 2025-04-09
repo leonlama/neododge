@@ -174,8 +174,11 @@ class StatusEffectManager:
         
         # Map the effect type to the correct icon name
         icon_name = EFFECT_ICON_MAP.get(effect_type, effect_type)
+        
+        if effect_type not in self.effects:
+            self.effects[effect_type] = []
             
-        self.effects[effect_id] = {
+        self.effects[effect_type].append({
             "type": effect_type,
             "duration": duration,
             "remaining": duration,
@@ -183,24 +186,30 @@ class StatusEffectManager:
             "color": effect_data.get("color", (255, 255, 255)) if effect_data else (255, 255, 255),
             "icon": effect_data.get("icon", f"effects/{icon_name}") if effect_data else f"effects/{icon_name}",
             "active": True,
-        }
+        })
         
         return True
 
     def update(self, delta_time):
         """Update all effects, reducing time and cleaning up expired ones."""
-        expired_keys = []
-        for effect_id, effect in self.effects.items():
-            effect["remaining"] -= delta_time
-            if effect["remaining"] <= 0:
-                expired_keys.append(effect_id)
-
-        for key in expired_keys:
-            del self.effects[key]
+        for effect_list in self.effects.values():
+            for effect in effect_list[:]:  # copy for safe removal
+                effect["remaining"] -= delta_time
+                if effect["remaining"] <= 0:
+                    effect_list.remove(effect)
+            
+    def get_total_value(self, effect_type: str) -> float:
+        """Berechnet die Gesamtsumme aller aktiven Effektwerte eines Typs."""
+        total = 0
+        if effect_type in self.effects:
+            for effect in self.effects[effect_type]:
+                if effect["active"]:
+                    total += effect["value"]
+        return total
 
     def get_active_effects(self):
         """Get all currently active effects."""
-        return [effect for effect in self.effects.values() if effect["active"]]
+        return [e for effects in self.effects.values() for e in effects if e["active"]]
 
     def get_aggregated_effects(self):
         """Aggregate values by type, used for HUD display."""
