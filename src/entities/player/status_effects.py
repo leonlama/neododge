@@ -165,38 +165,29 @@ class StatusEffectManager:
             if texture:
                 self.icon_textures[effect_type] = texture
 
-    def add_effect(self, effect_type, duration=None, effect_data=None):
+    def add_effect(self, effect_type, duration, data=None):
         """Add or refresh an effect with optional extra data."""
         effect_id = f"{effect_type}_{int(time.time() * 1000)}"
         
-        if effect_data is None:
-            effect_data = {}
-        
-        # Map the effect type to the correct icon name
-        icon_name = EFFECT_ICON_MAP.get(effect_type, effect_type)
-        
-        if effect_type not in self.effects:
-            self.effects[effect_type] = []
+        if data is None:
+            data = {}
             
-        self.effects[effect_type].append({
+        self.effects[effect_id] = {
             "type": effect_type,
-            "duration": duration,
             "remaining": duration,
-            "value": effect_data.get("value", 0) if effect_data else 0,
-            "color": effect_data.get("color", (255, 255, 255)) if effect_data else (255, 255, 255),
-            "icon": effect_data.get("icon", f"effects/{icon_name}") if effect_data else f"effects/{icon_name}",
             "active": True,
-        })
+            "data": data
+        }
         
         return True
 
     def update(self, delta_time):
         """Update all effects, reducing time and cleaning up expired ones."""
-        for effect_list in self.effects.values():
-            for effect in effect_list[:]:  # copy for safe removal
-                effect["remaining"] -= delta_time
-                if effect["remaining"] <= 0:
-                    effect_list.remove(effect)
+        for effect_id, effect in list(self.effects.items()):  # ✅ copy for safe removal
+            effect["remaining"] -= delta_time
+            if effect["remaining"] <= 0:
+                effect["active"] = False
+                del self.effects[effect_id]
             
     def get_total_value(self, effect_type: str) -> float:
         """Berechnet die Gesamtsumme aller aktiven Effektwerte eines Typs."""

@@ -221,49 +221,50 @@ class NeododgeGame(arcade.View):
 
     def on_draw(self):
         """Render the screen."""
-        # Start rendering
-        self.clear()
-
-        # Draw background
-        if hasattr(self, 'background') and self.background:
-            self.background.draw()
-
-        # Use game camera for game elements
-        self.camera.use()
-
+        print("Starting on_draw method")
         try:
+            # Start rendering
+            arcade.start_render()
+            
+            # Draw background
+            if hasattr(self, 'background') and self.background:
+                self.background.draw()
+    
+            # Use game camera for game elements
+            self.camera.use()
+    
             # Draw player
             if hasattr(self, 'player') and self.player:
                 self.player.draw()
-
+    
             # Draw enemies
             if hasattr(self, 'enemies'):
                 self.enemies.draw()
-
+    
             # Draw orbs
             if hasattr(self, 'orbs'):
                 self.orbs.draw()
-
+    
             # Draw coins
             if hasattr(self, 'coins'):
                 self.coins.draw()
-
+    
             # Draw artifacts
             if hasattr(self, 'artifacts'):
                 self.artifacts.draw()
-
+    
             # Draw enemy bullets
             for enemy in self.enemies:
                 if hasattr(enemy, 'bullets'):
                     enemy.bullets.draw()
-
+    
             # Use GUI camera for UI elements
             self.gui_camera.use()
-
+    
             # Draw player status effects
             if hasattr(self, 'player') and self.player:
                 self.player.draw_effects(self.window.width, self.window.height)
-
+    
             # Draw HUD
             try:
                 self.draw_improved_hud()
@@ -271,21 +272,23 @@ class NeododgeGame(arcade.View):
                 print(f"Error drawing HUD: {e}")
                 # Fallback to simple HUD
                 self.draw_simple_hud()
-
+    
             # Draw any pickup texts
             if hasattr(self, 'pickup_texts'):
                 draw_pickup_texts(self.pickup_texts)
-
+    
             # Draw wave message if active
             if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
                 draw_wave_message(self.wave_message, int(255 * self.wave_message_alpha))
-
+    
             # Draw debug info if enabled
             if hasattr(self, 'debug_mode') and self.debug_mode:
                 self.draw_debug_info()
-
+    
         except Exception as e:
-            print(f"Error in on_draw: {e}")
+            print("❌ Error in on_draw:", e)
+            import traceback
+            traceback.print_exc()
 
     def draw_game_elements(self):
         """Draw all game elements."""
