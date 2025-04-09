@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import arcade
-from src.views.game_view import GameView
+from src.views.game_view import NeododgeGame as GameView
 from src.mechanics.wave_management.wave_manager import WaveManager
 from src.mechanics.wave_management.wave_generator import WaveGenerator
 

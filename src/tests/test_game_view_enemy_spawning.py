@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import arcade
-from src.views.game_view import GameView
+from src.views.game_view import NeododgeGame as GameView
 
 def test_game_view_spawn_enemy():
     """Test that the game view spawns enemies correctly."""

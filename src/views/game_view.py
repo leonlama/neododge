@@ -138,12 +138,14 @@ class NeododgeGame(arcade.View):
             x, y = position[0], position[1]
         else:
             print(f"Invalid position format: {position}")
-            x, y = random.randint(50, self.width - 50), random.randint(50, self.height - 50)
+            window = arcade.get_window()
+            x, y = random.randint(50, window.width - 50), random.randint(50, window.height - 50)
 
         # Create enemy based on type
         enemy = None
 
         try:
+            # Use the correct class names
             if enemy_type == "chaser":
                 from src.entities.enemies.chaser import Chaser
                 enemy = Chaser(x, y)
@@ -153,30 +155,46 @@ class NeododgeGame(arcade.View):
             elif enemy_type == "shooter":
                 from src.entities.enemies.shooter import Shooter
                 enemy = Shooter(x, y)
-            elif enemy_type == "flight":
-                from src.entities.enemies.flight import Flight
-                enemy = Flight(x, y)
-            elif enemy_type == "bomber":
-                from src.entities.enemies.bomber import Bomber
-                enemy = Bomber(x, y)
             elif enemy_type == "boss":
                 from src.entities.enemies.boss import Boss
                 enemy = Boss(x, y)
-            else:
-                # Default to wander enemy if type not recognized
-                from src.entities.enemies.wanderer import Wanderer
-                enemy = Wanderer(x, y)
-                print(f"Unknown enemy type: {enemy_type}, defaulting to Wanderer")
         except ImportError as e:
             print(f"Error importing enemy class: {e}")
-            return
+            # Fall back to a basic enemy implementation
+            try:
+                # Create a basic enemy sprite
+                enemy = arcade.Sprite()
+                enemy.center_x = x
+                enemy.center_y = y
+
+                # Set appearance based on enemy type
+                if enemy_type == "chaser":
+                    enemy.texture = arcade.make_circle_texture(30, arcade.color.PURPLE)
+                elif enemy_type == "wanderer":
+                    enemy.texture = arcade.make_circle_texture(30, arcade.color.ORANGE)
+                elif enemy_type == "shooter":
+                    enemy.texture = arcade.make_circle_texture(30, arcade.color.BLUE)
+                else:
+                    enemy.texture = arcade.make_circle_texture(30, arcade.color.RED)
+
+                # Set basic properties
+                enemy.scale = 1.0
+                enemy.speed = speed
+                enemy.health = health
+                enemy.enemy_type = enemy_type
+
+                print(f"Created fallback enemy of type: {enemy_type}")
+            except Exception as e:
+                print(f"Error creating fallback enemy: {e}")
+                return
         except Exception as e:
             print(f"Error creating enemy: {e}")
             return
 
         if enemy:
             # Apply speed and health modifiers
-            enemy.speed *= speed
+            if hasattr(enemy, 'speed'):
+                enemy.speed *= speed
             if hasattr(enemy, 'max_health'):
                 enemy.max_health = int(enemy.max_health * health)
                 enemy.health = enemy.max_health
@@ -184,7 +202,15 @@ class NeododgeGame(arcade.View):
             # Add to sprite lists
             print(f"Adding enemy to sprite lists")
             self.enemies.append(enemy)
-            self.all_sprites.append(enemy)
+
+            # Add to scene if it exists
+            if hasattr(self, 'scene') and hasattr(self.scene, 'add_sprite'):
+                try:
+                    self.scene.add_sprite("enemies", enemy)
+                except Exception as e:
+                    print(f"Error adding to scene: {e}")
+
+            return enemy
 
     def spawn_artifact(self):
         """Spawn a random artifact."""
@@ -314,20 +340,12 @@ class NeododgeGame(arcade.View):
                 self.enemies.draw()
                 
                 # Debug: Draw enemy count and positions
-                arcade.draw_text(f"Enemies: {len(self.enemies)}", 10, 40, arcade.color.WHITE, 14)
                 for i, enemy in enumerate(self.enemies):
                     # Draw a bright outline around each enemy to make them more visible
                     arcade.draw_circle_outline(
                         enemy.center_x, enemy.center_y, 
                         enemy.width / 2 + 5, 
                         arcade.color.YELLOW, 2
-                    )
-                    
-                    # Draw enemy type and position
-                    arcade.draw_text(
-                        f"{getattr(enemy, 'enemy_type', 'unknown')}",
-                        enemy.center_x, enemy.center_y + 20,
-                        arcade.color.YELLOW, 10, anchor_x="center"
                     )
     
             # Draw orbs
@@ -360,6 +378,9 @@ class NeododgeGame(arcade.View):
                     print(f"Error drawing HUD: {e}")
                     # Fallback to simple HUD
                     self.draw_simple_hud()
+            
+            # Debug: Draw enemy count
+            arcade.draw_text(f"Enemies: {len(self.enemies)}", 10, 40, arcade.color.WHITE, 14)
             
             # Draw player status effects
             if hasattr(self, 'player') and self.player:
@@ -552,7 +573,8 @@ class NeododgeGame(arcade.View):
     def on_update(self, delta_time):
         """Update game state."""
         # Update player
-        self.player.update(delta_time)
+        if self.player:
+            self.player.update(delta_time)
 
         # Update wave manager
         if hasattr(self, 'wave_manager'):
@@ -580,28 +602,42 @@ class NeododgeGame(arcade.View):
             return
 
         # Update enemies
+        for enemy in self.enemies:
+            # Set target if needed
+            if hasattr(enemy, 'set_target') and hasattr(enemy, 'target') and enemy.target is None:
+                enemy.set_target(self.player)
+
+            # Update enemy
+            if hasattr(enemy, 'update'):
+                enemy.update(delta_time)
+            else:
+                # Basic update for fallback enemies
+                enemy.center_x += getattr(enemy, 'change_x', 0)
+                enemy.center_y += getattr(enemy, 'change_y', 0)
+
+        # Update enemy bullets
         self.update_enemies(delta_time)
-        self.enemies.update()
 
         # Update orbs
-        self.orbs.update()
+        for orb in self.orbs:
+            orb.update()
 
         # Update coins
-        self.coins.update()
+        for coin in self.coins:
+            coin.update()
+            # Update coin animations
+            if hasattr(coin, 'update_animation'):
+                coin.update_animation(delta_time)
 
         # Update artifacts
-        self.artifacts.update()
+        for artifact in self.artifacts:
+            artifact.update()
 
         # Update message timer
         if hasattr(self, 'message') and self.message:
             self.message_timer += delta_time
             if self.message_timer >= self.message_duration:
                 self.message = None
-
-        # Update coin animations
-        for coin in self.coins:
-            if hasattr(coin, 'update_animation'):
-                coin.update_animation(delta_time)
 
         # Handle coin spawning
         if hasattr(self, 'coins_to_spawn') and self.coins_to_spawn > 0:
