@@ -1,7 +1,27 @@
 import pytest
+import arcade
 from src.mechanics.wave_management.difficulty_adjuster import DifficultyAdjuster
 
+def ensure_window():
+    """Ensure an arcade window exists for testing."""
+    try:
+        if not arcade.get_window():
+            arcade.open_window(800, 600, "Test Window")
+    except:
+        arcade.open_window(800, 600, "Test Window")
+
 class TestDifficultyAdjuster:
+    def setup_method(self):
+        """Set up test environment before each test."""
+        ensure_window()
+        
+    def teardown_method(self):
+        """Clean up after each test."""
+        try:
+            arcade.close_window()
+        except:
+            pass
+            
     def test_difficulty_scaling(self):
         """Test that difficulty scales with wave number."""
         adjuster = DifficultyAdjuster()

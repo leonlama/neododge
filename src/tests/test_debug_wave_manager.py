@@ -25,7 +25,7 @@ def test_debug_wave_manager():
 
     # Print initial state
     print("\nInitial state:")
-    print(f"Wave number: {wave_manager.wave_number}")
+    print(f"Wave number: {wave_manager.current_wave}")
     print(f"In wave: {wave_manager.in_wave}")
     print(f"Enemies to spawn: {wave_manager.enemies_to_spawn}")
 
@@ -35,7 +35,7 @@ def test_debug_wave_manager():
 
     # Print wave state
     print("\nWave state:")
-    print(f"Wave number: {wave_manager.wave_number}")
+    print(f"Wave number: {wave_manager.current_wave}")
     print(f"In wave: {wave_manager.in_wave}")
     print(f"Enemies to spawn: {wave_manager.enemies_to_spawn}")
     print(f"Wave configuration: {wave_manager.current_wave}")
@@ -47,6 +47,6 @@ def test_debug_wave_manager():
 
     # Print final state
     print("\nFinal state:")
-    print(f"Wave number: {wave_manager.wave_number}")
+    print(f"Wave number: {wave_manager.current_wave}")
     print(f"In wave: {wave_manager.in_wave}")
     print(f"Enemies to spawn: {wave_manager.enemies_to_spawn}")

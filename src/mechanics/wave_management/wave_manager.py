@@ -103,16 +103,22 @@ class WaveManager:
     def update(self, delta_time):
         """Update the wave manager."""
         if not self.in_wave:
-            print("Not in wave, starting new wave...")
-            self.start_wave()
+            # If we're not in a wave, start a new one after a delay
+            if not hasattr(self, 'wave_break_timer'):
+                self.wave_break_timer = 3.0  # 3 second break between waves
+
+            self.wave_break_timer -= delta_time
+            if self.wave_break_timer <= 0:
+                print("Break between waves finished, starting new wave...")
+                self.start_wave()
+                delattr(self, 'wave_break_timer')  # Remove the timer attribute
             return
 
         # Update wave timer
         self.wave_timer += delta_time
 
         # Check if wave is complete
-        current_config = self.wave_history[-1] if self.wave_history else {"duration": self.wave_duration}
-        if self.wave_timer >= current_config["duration"]:
+        if self.current_config and self.wave_timer >= self.current_config["duration"]:
             print(f"Wave {self.current_wave} completed (duration reached)")
             self.end_wave()
             return
@@ -149,8 +155,8 @@ class WaveManager:
         base_enemy_count = int(4 + self.difficulty * 2)
         base_enemy_speed = 0.8 + self.difficulty * 0.4
         base_enemy_health = 0.8 + self.difficulty * 0.4
-        base_orb_count = int(self.difficulty * 5)
-        base_coin_count = int(10 + self.difficulty * 15)
+        base_orb_count = int(self.difficulty * 3)
+        base_coin_count = int(1 + self.difficulty * 2)
 
         # Apply wave type multipliers
         enemy_count = max(1, int(base_enemy_count * type_config["enemy_count_multiplier"]))
@@ -179,9 +185,7 @@ class WaveManager:
             "coin_count": int(base_coin_count * type_config["coin_count_multiplier"])
         }
 
-        print(f"Creating wave {self.current_wave}")
-        print(f"Wave type: {wave_type}")
-        print(f"Wave configuration: {config}")
+        print(f"🌊 Wave {self.current_wave}: {wave_type.upper()} | {enemy_count} enemies | Formation: {formation}")
 
         return config
 
@@ -263,6 +267,11 @@ class WaveManager:
         self.wave_duration = config["duration"]
         self.spawn_delay = config["spawn_delay"]
         self.enemies_to_spawn = config["enemy_count"]
+        
+        # Set up coin spawning parameters
+        self.coins_remaining = config['coin_count']
+        self.coin_spawn_interval = 1
+        self.coin_spawn_timer = 0
 
         # Reset timers
         self.spawn_timer = 0
@@ -291,8 +300,8 @@ class WaveManager:
                 print(f"Error spawning coins: {e}")
 
         # Display wave message if available
-        if hasattr(self.game_view, 'show_message'):
-            self.game_view.show_message(f"Wave {self.current_wave}: {config['type'].capitalize()}")
+        if hasattr(self.game_view, 'show_wave_message'):
+            self.game_view.show_wave_message(f"Wave {self.current_wave}: {config['type'].capitalize()}")
 
         # Spawn artifact if configured
         if hasattr(self, 'game_view') and config.get('spawn_artifact', False):
@@ -313,23 +322,29 @@ class WaveManager:
         return config
 
     def end_wave(self):
-        """End the current wave."""
+        """End the current wave"""
+        if not self.in_wave:
+            print("Not in a wave, can't end it")
+            return
+
         self.in_wave = False
 
-        # Clear remaining enemies if callback exists
-        if self.on_clear_enemies:
-            self.on_clear_enemies()
-
         # Call the end wave callback
-        if self.on_wave_complete:
-            self.on_wave_complete(self.current_wave)
+        if hasattr(self, 'game_view') and hasattr(self.game_view, 'on_wave_end'):
+            self.game_view.on_wave_end(self.current_wave)
 
         print(f"Ended Wave {self.current_wave}")
 
-        # Prepare for next wave
-        self.waves_until_boss -= 1
-        if self.waves_until_boss <= 0:
-            self.waves_until_boss = random.randint(8, 12)
+        # Set up a timer for the break between waves
+        self.wave_break_timer = 5.0  # 5 second break
+
+        # Clear any remaining enemies
+        if hasattr(self, 'game_view') and hasattr(self.game_view, 'clear_enemies'):
+            self.game_view.clear_enemies()
+
+        # Maybe spawn a reward
+        if hasattr(self, 'game_view') and hasattr(self.game_view, 'spawn_wave_reward'):
+            self.game_view.spawn_wave_reward(self.current_wave)
 
     def spawn_enemy(self):
         """Spawn an enemy from the current wave."""

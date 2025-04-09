@@ -13,7 +13,15 @@ from src.views.shop_view import ShopView
 
 from src.mechanics.wave_management.wave_manager import WaveManager
 from src.controllers.game_controller import GameController
-from src.ui.improved_hud import draw_hud, draw_wave_message, draw_pickup_texts
+from src.ui.improved_hud import (
+    draw_wave_info,
+    draw_score,
+    draw_player_health,
+    draw_active_effects,
+    draw_coin_count,
+    draw_wave_message,
+    draw_pickup_texts
+)
 
 class NeododgeGame(arcade.View):
     """Main game view."""
@@ -106,7 +114,9 @@ class NeododgeGame(arcade.View):
         self.in_wave = True
         self.wave_pause = False
         self.wave_message = ""
-        self.wave_message_alpha = 0
+        self.wave_message_alpha -= 5
+        self.message_timer = 0
+        self.message_duration = 2.0  # duration (in seconds) the message is shown
 
         # Initialize pickup texts
         self.pickup_texts = []
@@ -130,6 +140,12 @@ class NeododgeGame(arcade.View):
         # Set callbacks
         self.wave_manager.on_spawn_enemy = self.spawn_enemy
         self.wave_manager.on_clear_enemies = self.clear_enemies
+
+        # Set up callbacks dictionary
+        self.wave_manager.callbacks = {
+            "on_wave_start": self.on_wave_start,
+            "on_wave_end": self.on_wave_end
+        }
 
         print("Wave manager set up with callbacks")
 
@@ -300,34 +316,38 @@ class NeododgeGame(arcade.View):
         """Clear all enemies from the screen."""
         self.enemies = arcade.SpriteList()
 
-    def on_wave_start(self, wave_number):
-        """Called when a wave starts."""
-        print(f"Wave {wave_number} started!")
+    def on_wave_start(self, wave_config):
+        """
+        Called when a new wave starts.
 
-        # Show wave message
-        self.wave_message = f"Wave {wave_number}"
-        self.wave_message_alpha = 1.0
+        Args:
+            wave_config (dict): The configuration for the new wave
+        """
+        wave_number = wave_config["wave_number"]
+        wave_type = wave_config["type"]
 
-        # Spawn some coins and orbs
-        self.spawn_coins(5)
-        self.spawn_orbs(2)
+        # Show appropriate message based on wave type
+        if wave_type == "normal":
+            self.show_message(f"Wave {wave_number}")
+        elif wave_type == "swarm":
+            self.show_message(f"Swarm Wave {wave_number}!")
+        elif wave_type == "elite":
+            self.show_message(f"Elite Wave {wave_number}!")
+        elif wave_type == "boss":
+            self.show_message(f"BOSS WAVE {wave_number}!")
+
+        print(f"🌊 Starting {wave_type} wave {wave_number}")
 
     def on_wave_end(self, wave_number):
-        """Called when a wave ends."""
-        print(f"Wave {wave_number} completed!")
+        """
+        Called when a wave ends.
 
-        # Show wave complete message
-        self.wave_message = f"Wave {wave_number} Complete!"
-        self.wave_message_alpha = 1.0
-        
-        # Increment score
-        self.score += wave_number * 100
-
-        # Spawn coins as a reward
-        self.spawn_coins(wave_number * 2)
-
-        # Start the next wave after a delay
-        arcade.schedule(self.start_next_wave, 2.0)
+        Args:
+            wave_number (int): The completed wave number
+        """
+        self.show_message(f"Wave {wave_number} Complete!")
+        self.score += wave_number * 100  # Bonus points for completing a wave
+        print(f"🌊 Wave {wave_number} completed! Score: {self.score}")
         
     def start_next_wave(self, delta_time=0):
         """Start the next wave."""
@@ -390,7 +410,7 @@ class NeododgeGame(arcade.View):
         """Render the screen."""
         try:
             # Start rendering
-            self.clear()
+            arcade.start_render()
             
             # Draw background
             if hasattr(self, 'background') and self.background:
@@ -399,23 +419,19 @@ class NeododgeGame(arcade.View):
             # Use game camera for game elements
             self.camera.use()
     
-            # Draw player
+            # Draw all sprites
             if hasattr(self, 'player') and self.player:
                 self.player.draw()
     
-            # Draw enemies
             if hasattr(self, 'enemies'):
                 self.enemies.draw()
     
-            # Draw orbs
             if hasattr(self, 'orbs'):
                 self.orbs.draw()
     
-            # Draw coins
             if hasattr(self, 'coins'):
                 self.coins.draw()
     
-            # Draw artifacts
             if hasattr(self, 'artifacts'):
                 self.artifacts.draw()
     
@@ -427,31 +443,56 @@ class NeododgeGame(arcade.View):
             # Use GUI camera for UI elements
             self.gui_camera.use()
     
-            # Draw HUD
-            if hasattr(self, 'draw_hud'):
-                self.draw_hud()
-            else:
-                try:
-                    self.draw_improved_hud()
-                except Exception as e:
-                    print(f"Error drawing HUD: {e}")
-                    # Fallback to simple HUD
-                    self.draw_simple_hud()
-            
-            # Draw player status effects
+            # 💚 Top-left hearts
+            from src.ui.improved_hud import draw_player_health
             if hasattr(self, 'player') and self.player:
-                self.player.draw_effects(self.window.width, self.window.height)
-            
-            # Draw active buffs
-            self.draw_buffs()
+                draw_player_health(self.player, self.heart_textures)
+    
+            # 💯 Score
+            from src.ui.improved_hud import draw_score
+            draw_score(self.score)
+    
+            # 💥 Top-right active effects
+            from src.ui.improved_hud import draw_active_effects
+            if hasattr(self, 'player') and self.player and hasattr(self.player, 'status_effects'):
+                draw_active_effects(self.player.status_effects)
+    
+            # 💸 Coins bottom-right
+            from src.ui.improved_hud import draw_coin_count
+            if hasattr(self, 'player') and self.player:
+                draw_coin_count(getattr(self.player, 'coins', 0))
+    
+            # 🌊 Top-center wave info
+            from src.ui.improved_hud import draw_wave_info
+            if hasattr(self, 'wave_manager'):
+                draw_wave_info(
+                    self.wave_manager.current_wave,
+                    wave_timer=getattr(self.wave_manager, 'wave_timer', None),
+                    enemies_left=len(self.enemies) if hasattr(self, 'enemies') else None
+                )
     
             # Draw any pickup texts
             if hasattr(self, 'pickup_texts'):
+                from src.ui.improved_hud import draw_pickup_texts
                 draw_pickup_texts(self.pickup_texts)
     
             # Draw wave message if active
             if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
-                draw_wave_message(self.wave_message, int(255 * self.wave_message_alpha))
+                from src.ui.improved_hud import draw_wave_message
+                draw_wave_message(self.wave_message, self.wave_message_alpha)
+    
+            # Draw message if active
+            if hasattr(self, 'message') and hasattr(self, 'message_timer') and self.message_timer > 0:
+                arcade.draw_text(
+                    self.message,
+                    self.window.width / 2,
+                    self.window.height / 2,
+                    arcade.color.WHITE,
+                    font_size=24,
+                    anchor_x="center",
+                    anchor_y="center",
+                    bold=True
+                )
     
             # Draw debug info if enabled
             if hasattr(self, 'debug_mode') and self.debug_mode:
@@ -628,6 +669,10 @@ class NeododgeGame(arcade.View):
 
     def on_update(self, delta_time):
         """Update game state."""
+        # Update message timer
+        if hasattr(self, 'message_timer') and self.message_timer > 0:
+            self.message_timer -= delta_time
+
         # If either mouse button is held down, continuously update target
         if (self.left_mouse_down or self.right_mouse_down) and self.player:
             self.player.set_target(self.mouse_x, self.mouse_y)
@@ -707,23 +752,13 @@ class NeododgeGame(arcade.View):
             if self.message_timer >= self.message_duration:
                 self.message = None
 
-        # Handle coin spawning
-        if hasattr(self, 'coins_to_spawn') and self.coins_to_spawn > 0:
-            if hasattr(self, 'coin_spawn_timer'):
-                self.coin_spawn_timer -= delta_time
-                if self.coin_spawn_timer <= 0:
-                    # Spawn a coin at a random position
-                    x = random.randint(50, arcade.get_window().width - 50)
-                    y = random.randint(50, arcade.get_window().height - 50)
-
-                    # Create the coin
-                    coin = Coin(x, y)
-                    self.coins.append(coin)
-
-                    # Update spawn counter and timer
-                    self.coins_to_spawn -= 1
-                    self.coin_spawn_timer = random.uniform(3, 7)  # Random time until next coin
-                    print(f"🪙 Spawned a coin! Remaining: {self.coins_to_spawn}")
+        # Controlled coin spawning
+        if hasattr(self, 'coins_remaining') and self.coins_remaining > 0:
+            self.coin_spawn_timer += delta_time
+            if self.coin_spawn_timer >= self.coin_spawn_interval:
+                self.spawn_coin()
+                self.coins_remaining -= 1
+                self.coin_spawn_timer = 0
 
         # Handle orb spawning
         if hasattr(self, 'orb_spawn_timer'):
@@ -774,7 +809,9 @@ class NeododgeGame(arcade.View):
 
         # Update wave message alpha
         if hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
-            self.wave_message_alpha -= delta_time * 0.5  # Fade out over 2 seconds
+            self.message_timer += delta_time
+            if self.message_timer >= self.message_duration:
+                self.wave_message_alpha -= 5  # Fade out
 
         # Check for collisions
         self.check_collisions()
@@ -836,13 +873,25 @@ class NeododgeGame(arcade.View):
             self.spawn_coin()
         
     def spawn_coins(self, count):
-        """Spawn a number of coins."""
-        self.coins_to_spawn = count
-        self.coin_spawn_timer = 0.5  # Start spawning soon
+        """
+        Spawn a number of coins over time.
 
-        # Spawn a few coins immediately
-        for _ in range(min(5, count)):
+        Args:
+            count (int): Total number of coins to spawn for this wave
+        """
+        # Store the count for gradual spawning
+        self.coins_to_spawn = count
+
+        # Set initial spawn timer
+        self.coin_spawn_timer = 2.0  # Wait 2 seconds before first spawn
+
+        # Spawn a few coins immediately (max 3)
+        initial_spawn_count = min(3, count)
+        for _ in range(initial_spawn_count):
             self.spawn_coin()
+            self.coins_to_spawn -= 1  # Reduce the count
+
+        print(f"🪙 Scheduled {self.coins_to_spawn} more coins to spawn gradually")
 
     def spawn_coin(self, x=None, y=None, min_distance_from_player=100):
         """
@@ -906,6 +955,29 @@ class NeododgeGame(arcade.View):
         except Exception as e:
             print(f"Error spawning coin: {e}")
             return False
+
+    def spawn_wave_reward(self, wave_number):
+        """
+        Spawn a reward for completing a wave.
+
+        Args:
+            wave_number (int): The completed wave number
+        """
+        # Spawn coins as a reward
+        reward_coins = wave_number * 2  # 2 coins per wave number
+        for _ in range(reward_coins):
+            x = self.player.center_x + random.uniform(-100, 100)
+            y = self.player.center_y + random.uniform(-100, 100)
+            self.spawn_coin(x, y)
+
+        # Maybe spawn an artifact
+        if random.random() < 0.3:  # 30% chance
+            self.spawn_artifact()
+
+        # Show a message
+        self.show_message(f"Wave {wave_number} Complete!")
+
+        print(f"🎁 Spawned wave completion reward: {reward_coins} coins")
 
     def spawn_orbs(self, count, orb_types=None, min_distance_from_player=100):
         """
@@ -1241,7 +1313,7 @@ class NeododgeGame(arcade.View):
 
         elif orb_type == "slow":
             # Slow debuff
-            self.player.speed_multiplier = 0.5
+            self.player.speed_multiplier = 0.85
             self.player.slow_timer = 4.0  # 4 seconds
             print(f"Applied slow debuff: {self.player.speed_multiplier}x for {self.player.slow_timer}s")
 
@@ -1260,10 +1332,16 @@ class NeododgeGame(arcade.View):
         self.window.show_view(shop_view)
         
     def show_message(self, message, duration=2.0):
-        """Show a message on the screen."""
+        """
+        Show a message on screen.
+
+        Args:
+            message (str): The message to display
+            duration (float): How long to display the message in seconds
+        """
         self.message = message
-        self.message_timer = 0
-        self.message_duration = duration
+        self.message_timer = duration
+        print(f"📢 Showing message: {message}")
         
     def get_screen_dimensions(self):
         """Get the dimensions of the game screen."""
@@ -1456,3 +1534,8 @@ class NeododgeGame(arcade.View):
         # If either mouse button is held down, update player target
         if (self.left_mouse_down or self.right_mouse_down) and self.player:
             self.player.set_target(x, y)
+
+    def show_wave_message(self, text):
+        self.wave_message = text
+        self.wave_message_alpha = 255
+        self.message_timer = 0  # reset

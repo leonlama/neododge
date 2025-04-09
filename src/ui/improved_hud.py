@@ -1,97 +1,11 @@
 import arcade
 from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
-from src.skins.skin_manager import skin_manager
+from src.entities.player.player import Player
+from src.entities.player.status_effects import StatusEffectManager
 
-def draw_hud(player, score, wave=1, wave_timer=None, heart_textures=None):
-    """Draw the full HUD layout with a clean roguelike feel."""
-    # Draw player hearts with correct logic
-    if heart_textures:
-        # Configuration for heart display
-        heart_size = 1  # Scale factor
-        heart_spacing = 18
-        start_x = 20 + heart_size // 2
-        start_y = SCREEN_HEIGHT - 30
-        
-        # Get player heart values
-        max_slots = player.max_slots
-        current_hearts = max(0, player.current_hearts)  # Ensure non-negative
-        gold_hearts = getattr(player, 'gold_hearts', 0)
-        
-        # Draw hearts with correct order: red, gold, then gray
-        for i in range(max_slots):
-            x = start_x + i * (heart_size + heart_spacing)
-            y = start_y
-            
-            if i < current_hearts:
-                texture = heart_textures['red']
-            elif i < current_hearts + gold_hearts:
-                texture = heart_textures['gold']
-            else:
-                texture = heart_textures['gray']
-                
-            arcade.draw_scaled_texture_rectangle(
-                center_x=x,
-                center_y=y,
-                texture=texture,
-                scale=heart_size / 30.0
-            )
-    else:
-        player.draw_hearts()
-        
-    draw_score(score)
-    draw_wave_info(wave, wave_timer)
-    draw_coin_count(getattr(player, 'coins', 0))
-    
-    if hasattr(player, 'status_effects'):
-        draw_active_effects(player.status_effects.effects)
 
-def draw_player_health(player, heart_textures=None, screen_width=800, screen_height=600):
-    """Draw player health hearts at top left."""
-    from src.core.constants import MAX_HEARTS
-
-    # Use provided textures or create fallbacks
-    if not heart_textures or not heart_textures.get('red') or not heart_textures.get('gray'):
-        heart_red = arcade.make_soft_circle_texture(30, arcade.color.RED)
-        heart_gray = arcade.make_soft_circle_texture(30, arcade.color.GRAY)
-    else:
-        heart_red = heart_textures['red']
-        heart_gray = heart_textures['gray']
-
-    # Draw hearts
-    heart_size = 1  # Smaller heart size
-    heart_spacing = 18  # Smaller spacing
-    start_x = 20 + heart_size // 2  # Left margin
-    start_y = screen_height - 30  # Top margin
-
-    # Draw hearts up to MAX_HEARTS
-    for i in range(MAX_HEARTS):
-        x = start_x + i * (heart_size + heart_spacing)
-        y = start_y
-
-        if i < player.max_slots:
-            texture = heart_red if i < player.current_hearts else heart_gray
-            arcade.draw_scaled_texture_rectangle(
-                center_x=x,
-                center_y=y,
-                texture=texture,
-                scale=heart_size / 30.0
-            )
-
-def draw_score(score):
-    """Draw score at specified position."""
-    from src.core.constants import SCREEN_HEIGHT
-
-    arcade.draw_text(
-        f"Score: {int(score)}",
-        20, SCREEN_HEIGHT - 90,  # Moved down from 60 to 90
-        arcade.color.WHITE,
-        15,
-        font_name="Kenney Pixel Square",
-        bold=True,
-        anchor_x="left"
-    )
-
-def draw_wave_info(wave, wave_timer):
+def draw_wave_info(wave, wave_timer=None, enemies_left=None):
+    # Wave title
     arcade.draw_text(
         f"WAVE {wave}",
         SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40,
@@ -101,153 +15,148 @@ def draw_wave_info(wave, wave_timer):
         font_name="Kenney Mini Square"
     )
 
+    # Enemies left
+    if enemies_left is not None:
+        arcade.draw_text(
+            f"{enemies_left} enemies left",
+            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 65,
+            arcade.color.LIGHT_GRAY,
+            14,
+            anchor_x="center",
+            font_name="Kenney Pixel"
+        )
+
+    # Optional timer
     if wave_timer is not None:
         arcade.draw_text(
             f"{int(wave_timer)}s",
-            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70,
+            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 85,
             arcade.color.LIGHT_GRAY,
             18,
             anchor_x="center",
             font_name="Kenney Pixel"
         )
 
-def draw_active_effects(active_effects):
-    """Draw buff/debuff effects in a clean top-right layout."""
-    from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
-    # Group by effect type
-    aggregated = {}
+def draw_player_health(player, heart_textures):
+    """Draw player's hearts in the top-left corner."""
+    margin = 20
+    heart_size = 32
+    x = margin
+    y = SCREEN_HEIGHT - margin - heart_size
 
-    for effect_id, effect in active_effects.items():
-        if not effect.get('active', False):
-            continue
+    # Draw full hearts
+    for i in range(player.current_hearts):
+        arcade.draw_texture_rectangle(x + i * (heart_size + 5), y, heart_size, heart_size, heart_textures["red"])
 
-        effect_type = effect.get('type', effect_id.split('_')[0])
-        
-        # Calculate the actual remaining percentage
-        duration = effect.get('duration', 0)
-        elapsed_time = effect.get('elapsed_time', 0)
-        remaining = max(0, duration - elapsed_time)
-        percent = int((remaining / duration) * 100) if duration else 0
-        
-        icon = effect.get('icon', f"ui/effects/{effect_type}")
-        color = effect.get('color', arcade.color.WHITE)
+    # Draw empty slots (gray hearts)
+    for i in range(player.max_slots):
+        if i >= player.current_hearts:
+            arcade.draw_texture_rectangle(x + i * (heart_size + 5), y, heart_size, heart_size, heart_textures["gray"])
 
-        if effect_type not in aggregated:
-            aggregated[effect_type] = {
-                "value": percent,
-                "icon": icon,
-                "color": color
-            }
-        else:
-            aggregated[effect_type]["value"] += percent
+    # Draw overhearts (gold)
+    for i in range(player.golden_overhearts):
+        arcade.draw_texture_rectangle(x + (player.max_slots + i) * (heart_size + 5), y, heart_size, heart_size, heart_textures["gold"])
 
-    # Sort for consistent ordering
-    sorted_effects = sorted(aggregated.items())
 
-    # UI constants
-    x_base = SCREEN_WIDTH - 160
-    y_start = SCREEN_HEIGHT - 40
-    icon_size = 24
-    spacing = 32
-
-    for idx, (effect_type, data) in enumerate(sorted_effects):
-        y = y_start - idx * spacing
-        display_name = effect_type.replace("_", " ").title()
-        value_text = f"{int(data['value'])}%"
-        # Make sure we're not passing "ui" twice in the path
-        icon_path = data["icon"]
-        if icon_path.startswith("ui/"):
-            # Extract the part after "ui/"
-            icon_path = icon_path[3:]
-        
-        # Use preloaded textures from status_effects manager
-        effect_type = effect_type.lower()  # Ensure lowercase key match
-        from src.skins.skin_manager import skin_manager
-
-        icon_path = f"effects/{effect_type}"
-
-        # Ensure the texture is loaded
-        if not skin_manager.has_texture("ui", icon_path):
-            texture_path = f"assets/skins/default/ui/{icon_path}.png"
-            try:
-                skin_manager.load_texture("ui", icon_path, texture_path)
-                print(f"✅ Loaded texture: ui/{icon_path}")
-            except FileNotFoundError:
-                print(f"❌ Texture file not found: {texture_path}")
-
-        # Get icon (may still be None)
-        icon = skin_manager.get_texture("ui", icon_path)
-
-        # Draw icon
-        if icon:
-            arcade.draw_scaled_texture_rectangle(
-                x_base, y + icon_size // 2,
-                icon,
-                scale=icon_size / icon.width
-            )
-        else:
-            print(f"⚠️ Missing icon for {effect_type}, skipping texture draw.")
-
-        # Draw text
-        arcade.draw_text(
-            f"{display_name}: {value_text}",
-            x_base + icon_size + 10, y + 5,
-            data["color"],
-            font_size=14,
-            font_name="Kenney Pixel"
-        )
-
-def draw_coin_count(coins):
-    """Draw coin count at bottom right."""
-    from src.core.constants import SCREEN_WIDTH
-
+def draw_score(score):
     arcade.draw_text(
-        f"Coins: {coins}",
-        SCREEN_WIDTH - 30, 30,
-        arcade.color.GOLD,
+        f"Score: {score}",
+        20, SCREEN_HEIGHT - 75,
+        arcade.color.LIGHT_GRAY,
         14,
-        anchor_x="right",
-        font_name="Kenney Rocket"
-    )
-
-def draw_wave_message(message, alpha=255):
-    """Draw a centered wave message with the given alpha"""
-    if not message:
-        return
-
-    # Create color with alpha
-    color = (arcade.color.LIGHT_GREEN[0], 
-             arcade.color.LIGHT_GREEN[1], 
-             arcade.color.LIGHT_GREEN[2], 
-             alpha)
-
-    arcade.draw_text(
-        message,
-        SCREEN_WIDTH // 2,
-        SCREEN_HEIGHT // 2,
-        color,
-        36,
-        anchor_x="center",
-        anchor_y="center",
         font_name="Kenney Pixel"
     )
 
-def draw_pickup_texts(pickup_texts):
-    """Draw floating pickup text animations"""
-    for text, x, y, timer in pickup_texts:
-        # Calculate alpha based on remaining time
-        alpha = min(255, int(timer * 255 * 2))
 
-        # Draw the text
+def draw_active_effects(status_effects: StatusEffectManager):
+    effects = status_effects.get_active_effects_summary()
+    x = SCREEN_WIDTH - 180
+    y = SCREEN_HEIGHT - 30
+    spacing = 20
+
+    # Draw count
+    arcade.draw_text(
+        f"{len(effects)} effects",
+        x, y,
+        arcade.color.GRAY,
+        12,
+        font_name="Kenney Pixel"
+    )
+    y -= spacing
+
+    for effect_name, value in effects.items():
+        color = get_effect_color(effect_name)
         arcade.draw_text(
-            text,
+            f"{effect_name.capitalize()}: +{int(value * 100)}%",
             x, y,
-            arcade.color.WHITE + (alpha,),
-            14,
-            anchor_x="center",
+            color,
+            13,
             font_name="Kenney Pixel"
         )
+        y -= spacing
 
-# Print available textures once at game start
-print("✅ Available UI textures:", skin_manager.textures.get("ui", {}).keys())
+
+def draw_coins(coin_count):
+    text = f"Coins: {coin_count}"
+    arcade.draw_text(
+        text,
+        SCREEN_WIDTH - 120, 20,
+        arcade.color.GOLD,
+        14,
+        font_name="Kenney Pixel"
+    )
+
+
+def get_effect_color(effect_name: str):
+    return {
+        "speed": arcade.color.BLUE,
+        "multiplier": arcade.color.ORANGE,
+        "cooldown": arcade.color.RED,
+        "hitbox": arcade.color.WHITE,
+        "vision": arcade.color.GRAY,
+        "shield": arcade.color.GREEN
+    }.get(effect_name, arcade.color.LIGHT_GRAY)
+
+
+def draw_coin_count(coin_count: int):
+    """Draw the current coin count in the bottom-right corner."""
+    text = f"Coins: {coin_count}"
+    margin = 20
+    x = 800 - margin
+    y = margin + 10
+    arcade.draw_text(
+        text,
+        x,
+        y,
+        arcade.color.YELLOW,
+        16,
+        anchor_x="right",
+        anchor_y="bottom",
+        font_name="Kenney Pixel"  # or any font you're using
+    )
+
+def draw_wave_message(text: str, alpha: float):
+    """Draw the wave message in the center top with a given alpha."""
+    label = arcade.Text(
+        text,
+        start_x=arcade.get_window().width // 2,
+        start_y=arcade.get_window().height - 100,
+        color=arcade.color.GREEN + (int(alpha * 255),),  # Add alpha to the RGB color
+        font_size=28,
+        anchor_x="center",
+        anchor_y="center",
+        font_name="Kenney Mini Square"
+    )
+    label.draw()
+
+def draw_pickup_texts(pickup_texts: list):
+    """Draw pickup text notifications."""
+    for text_obj in pickup_texts:
+        if isinstance(text_obj, arcade.Text):
+            text_obj.draw()
+        elif isinstance(text_obj, list):
+            # If somehow a nested list snuck in, draw its items too
+            for inner_text in text_obj:
+                if isinstance(inner_text, arcade.Text):
+                    inner_text.draw()

@@ -198,42 +198,40 @@ class StatusEffectManager:
                 total += effect["data"].get("value", 0)
         return total
 
+    def get_active_effects_summary(self):
+        """Get a summary of all active effects with their aggregated values."""
+        summary = {}
+        
+        for effect_id, effect_data in self.effects.items():
+            if effect_data["active"] and effect_data["remaining"] > 0:
+                effect_type = effect_data["type"]
+                value = effect_data["data"].get("value", 0)
+                
+                if effect_type in summary:
+                    summary[effect_type] += value
+                else:
+                    summary[effect_type] = value
+                    
+        return summary
+
     def get_active_effects(self):
         """Get all currently active effects."""
-        return [e for effects in self.effects.values() for e in effects if e["active"]]
+        return [effect for effect in self.effects.values() if effect["active"]]
 
     def get_aggregated_effects(self):
         """Aggregate values by type, used for HUD display."""
         totals = {}
         for effect in self.effects.values():
             if effect["active"]:
-                if effect["type"] not in totals:
-                    totals[effect["type"]] = {
-                        "value": effect["value"],
-                        "color": effect["color"],
-                        "icon": effect["icon"]
+                effect_type = effect["type"]
+                if effect_type not in totals:
+                    totals[effect_type] = {
+                        "value": effect["data"].get("value", 0),
+                        "remaining": effect["remaining"],
+                        "icon": self.icon_textures.get(effect_type)
                     }
                 else:
-                    totals[effect["type"]]["value"] += effect["value"]
-        return totals
-
-    def get_active_effects(self):
-        """Get all currently active effects."""
-        return [e for effects in self.effects.values() for e in effects if e["active"]]
-
-    def get_aggregated_effects(self):
-        """Aggregate values by type, used for HUD display."""
-        totals = {}
-        for effect in self.effects.values():
-            if effect["active"]:
-                if effect["type"] not in totals:
-                    totals[effect["type"]] = {
-                        "value": effect["value"],
-                        "color": effect["color"],
-                        "icon": effect["icon"]
-                    }
-                else:
-                    totals[effect["type"]]["value"] += effect["value"]
+                    totals[effect_type]["value"] += effect["data"].get("value", 0)
         return totals
 
     def draw_effect_indicators(self, screen_width, screen_height):

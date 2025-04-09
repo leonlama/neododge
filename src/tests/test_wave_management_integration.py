@@ -4,9 +4,19 @@ import arcade
 from src.views.game_view import NeododgeGame as GameView
 from src.mechanics.wave_management.wave_manager import WaveManager
 from src.mechanics.wave_management.wave_generator import WaveGenerator
+from src.entities.enemies.chaser import Chaser
+from src.entities.enemies.wanderer import Wanderer
+
+def ensure_window():
+    """Ensure an arcade window exists for testing."""
+    if not arcade.get_window():
+        arcade.open_window(800, 600, "Test Window")
 
 def test_wave_management_integration():
     """Test the integration of wave management components."""
+    # Ensure window exists
+    ensure_window()
+    
     # Create game view
     game_view = GameView()
 
@@ -14,12 +24,17 @@ def test_wave_management_integration():
     game_view.enemies = arcade.SpriteList()
     game_view.all_sprites = arcade.SpriteList()
     game_view.player = MagicMock()
+    game_view.get_screen_dimensions = MagicMock(return_value=(800, 600))
 
-    # Mock enemy class
-    with patch('src.entities.enemies.enemy.Enemy') as MockEnemy:
-        # Create mock enemy instance
-        mock_enemy = MagicMock()
-        MockEnemy.return_value = mock_enemy
+    # Patch all possible enemy types
+    with patch('src.entities.enemies.chaser.Chaser') as MockChaser, \
+         patch('src.entities.enemies.wanderer.Wanderer') as MockWanderer:
+        
+        # Create mock enemy instances
+        mock_chaser = MagicMock()
+        mock_wanderer = MagicMock()
+        MockChaser.return_value = mock_chaser
+        MockWanderer.return_value = mock_wanderer
 
         # Set up wave manager
         wave_manager = WaveManager()
@@ -36,5 +51,6 @@ def test_wave_management_integration():
         # Check that an enemy was spawned
         assert len(game_view.enemies) == 1
 
-        # Check that the enemy was set up correctly
-        assert game_view.enemies[0] == mock_enemy
+        # Check that the enemy is one of our mocked types
+        spawned_enemy = game_view.enemies[0]
+        assert spawned_enemy in [mock_chaser, mock_wanderer], "Spawned enemy should be one of our mocked types"

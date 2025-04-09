@@ -29,6 +29,8 @@ class Player(arcade.Sprite):
         self.current_hearts = 3
         self.max_hearts = 3
         self.gold_hearts = 0
+        self.golden_overhearts = 0  # Overhearts that are drawn on top of the normal ones
+        self.max_heart_slots = 3    # how many gray hearts can be shown
         
         # Heart-related attributes
         self.heart_textures = None  # Will be set by game_view
@@ -266,7 +268,7 @@ class Player(arcade.Sprite):
         self.is_moving = True
 
         # Log only when target is set, not every frame
-        print(f"🎯 Set player target to ({x}, {y})")
+        #print(f"🎯 Set player target to ({x}, {y})")
 
     def perform_dash(self):
         """Perform a dash in the target direction"""

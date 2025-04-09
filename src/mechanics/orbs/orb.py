@@ -110,7 +110,7 @@ class Orb(arcade.Sprite):
                 player.is_invincible = True
                 player.invincibility_timer = self.effect_duration
             elif self.orb_type == "slow":
-                player.speed_multiplier = 0.5
+                player.speed_multiplier = 0.85
                 player.slow_timer = self.effect_duration
             elif self.orb_type == "damage":
                 player.take_damage(1)
