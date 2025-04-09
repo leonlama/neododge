@@ -176,6 +176,16 @@ class Player(arcade.Sprite):
                 else:
                     self.alpha = 255  # Fully visible
 
+        # Handle blinking and invincibility
+        if self.blink_timer > 0:
+            self.blink_timer -= delta_time
+            self.visible = int(self.blink_timer * 10) % 2 == 0
+            if self.blink_timer <= 0:
+                self.visible = True
+                self.invincible = False
+        else:
+            self.visible = True
+
         # Set base speed for smooth movement
         self.base_speed = PLAYER_SPEED
 
@@ -197,20 +207,22 @@ class Player(arcade.Sprite):
                 self.change_x = direction_x * move_speed
                 self.change_y = direction_y * move_speed
                 
-                # Log movement occasionally
-                if random.random() < 0.05:  # 5% chance to log
-                    print(f"🏃 Moving toward ({self.target_x}, {self.target_y}) with velocity ({self.change_x:.2f}, {self.change_y:.2f})")
             else:
                 # We've reached the target
                 self.change_x = 0
                 self.change_y = 0
                 self.is_moving = False
-                print(f"✅ Arrived at target ({self.target_x}, {self.target_y})")
         else:
             # No target, don't move
             self.change_x = 0
             self.change_y = 0
             self.is_moving = False
+
+        # Fix for player flickering when idle - ignore very small movements
+        if abs(self.change_x) < 0.5:
+            self.change_x = 0
+        if abs(self.change_y) < 0.5:
+            self.change_y = 0
 
         # Keep player on screen
         window = arcade.get_window()
@@ -339,7 +351,8 @@ class Player(arcade.Sprite):
         self.invulnerable = True
         self.invincible = True
         self.invulnerable_timer = 1.0  # 1 second of invulnerability
-
+        self.blink_timer = 1.0  # 1 second of blinking
+        
         # Play damage sound
         try:
             from src.audio.sound_manager import sound_manager

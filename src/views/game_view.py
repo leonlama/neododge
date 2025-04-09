@@ -50,6 +50,7 @@ class NeododgeGame(arcade.View):
         self.score = 0
         self.pickup_texts = []
         self.buff_display_text = []
+        self.wave_time_remaining = 10  # seconds for example
 
         # Mouse tracking
         self.mouse_x = 0
@@ -184,7 +185,7 @@ class NeododgeGame(arcade.View):
             if hasattr(self, 'wave_manager'):
                 draw_wave_info(
                     self.wave_manager.current_wave,
-                    wave_timer=getattr(self.wave_manager, 'wave_timer', None),
+                    wave_timer=self.wave_time_remaining if hasattr(self, 'wave_time_remaining') else None,
                     enemies_left=len(self.enemies) if hasattr(self, 'enemies') else None
                 )
     
@@ -194,7 +195,7 @@ class NeododgeGame(arcade.View):
                     text_obj.draw()
     
             # Draw wave message if active
-            if hasattr(self, 'wave_message') and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
+            if hasattr(self, 'wave_message') and self.wave_message and hasattr(self, 'wave_message_alpha') and self.wave_message_alpha > 0:
                 from src.ui.improved_hud import draw_wave_message
                 draw_wave_message(self.wave_message, self.wave_message_alpha)
     
@@ -219,12 +220,30 @@ class NeododgeGame(arcade.View):
             print("❌ Error in on_draw:", e)
             import traceback
             traceback.print_exc()
-
     def on_update(self, delta_time: float):
         update_game(delta_time, self)
+        
+        # Update all enemies in the sprite list
+        if hasattr(self, 'enemies') and self.enemies:
+            for enemy in self.enemies:
+                # Set target if not already set
+                if not hasattr(enemy, 'target') or enemy.target is None:
+                    if hasattr(self, 'player') and self.player:
+                        enemy.target = self.player
+                        print(f"[ENEMY] {enemy.__class__.__name__} target set to player")
+                
+                # Debug logging for enemy updates
+                if hasattr(enemy, 'update'):
+                    enemy.update(delta_time)
+                    if hasattr(enemy, 'target'):
+                        print(f"[ENEMY] {enemy.__class__.__name__} update called. Target: {enemy.target}")
+        
         check_collisions(self)
         check_orb_collisions(self)
         update_enemy_bullets(self, delta_time)
+        
+        if self.wave_time_remaining > 0:
+            self.wave_time_remaining -= delta_time
     
         
     def check_collisions(self):
@@ -422,13 +441,13 @@ class NeododgeGame(arcade.View):
                     # Calculate the conversion manually
                     x = x / self.camera.scale + self.camera.position[0]
                     y = y / self.camera.scale + self.camera.position[1]
-                    print(f"Converted mouse position to world coordinates: ({x}, {y})")
+                    #print(f"Converted mouse position to world coordinates: ({x}, {y})")
 
             # Set player target
             if self.player:
                 handle_mouse_targeting(self, x, y, held=False)
             self.right_mouse_down = True
-            print(f"🖱️ Right mouse button pressed")
+            #print(f"🖱️ Right mouse button pressed")
         elif button == arcade.MOUSE_BUTTON_LEFT:
             self.left_mouse_down = True
             
@@ -436,7 +455,7 @@ class NeododgeGame(arcade.View):
             if self.player:
                 handle_mouse_targeting(self, x, y, held=False)
             
-            print("🖱️ Left mouse button pressed")
+            #print("🖱️ Left mouse button pressed")
 
     def on_mouse_release(self, x, y, button, modifiers):
         """Handle mouse release events."""
@@ -447,10 +466,10 @@ class NeododgeGame(arcade.View):
         # Update mouse button state
         if button == arcade.MOUSE_BUTTON_LEFT:
             self.left_mouse_down = False
-            print("🖱️ Left mouse button released")
+            #print("🖱️ Left mouse button released")
         elif button == arcade.MOUSE_BUTTON_RIGHT:
             self.right_mouse_down = False
-            print("🖱️ Right mouse button released")
+            #print("🖱️ Right mouse button released")
 
     def on_mouse_motion(self, x, y, dx, dy):
         """Handle mouse motion events."""

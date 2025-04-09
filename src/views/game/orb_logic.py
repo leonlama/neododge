@@ -1,6 +1,31 @@
 import random
 import arcade
 
+def apply_orb_effect_to_player(player, orb):
+    """Apply orb effects to the player based on orb type."""
+    orb_type = orb.orb_type
+
+    if "speed" in orb_type:
+        player.status_effects.apply_status("speed", duration=10)
+    elif "mult" in orb_type:
+        player.status_effects.apply_status("mult", duration=10)
+    elif "cooldown" in orb_type:
+        player.status_effects.apply_status("cooldown", duration=10)
+    elif orb_type == "shield":
+        player.status_effects.apply_status("shield", duration=10)
+    elif orb_type == "vision":
+        player.status_effects.apply_status("vision", duration=10)
+    elif orb_type == "hitbox":
+        player.status_effects.apply_status("hitbox", duration=10)
+    elif orb_type == "slow":
+        player.status_effects.apply_status("slow", duration=10)
+    elif orb_type == "health":
+        player.heal(1)
+    elif orb_type == "gray_heart":
+        player.add_heart_slot()
+    elif orb_type == "gold_heart":
+        player.add_gold_heart()
+
 def spawn_orb(self, x=None, y=None, orb_type=None):
         """
         Spawn an orb at the specified position.
@@ -48,18 +73,18 @@ def spawn_orb(self, x=None, y=None, orb_type=None):
                 print(f"🔮 Spawned a default buff orb!")
 
             # Add the orb to the appropriate sprite lists
-            if hasattr(self, 'orbs'):
-                self.orbs.append(orb)
-            if hasattr(self, 'all_sprites'):
-                self.all_sprites.append(orb)
-            # Add to scene if using arcade's Scene system
-            if hasattr(self, 'scene') and hasattr(self.scene, 'add_sprite'):
+            if hasattr(self, 'scene') and self.scene:
                 self.scene.add_sprite("orbs", orb)
+            elif hasattr(self, 'orbs'):
+                self.orbs.append(orb)
+                self.all_sprites.append(orb)
+            else:
+                print("⚠️ Game view has no 'orbs' list to append to!")
 
         except Exception as e:
             print(f"Error spawning orb: {e}")
 
-def spawn_orbs(game_view, count, orb_types=None, min_distance_from_player=100):
+def spawn_orbs(game_view, count, orb_types=None, min_distance_from_player=40):
         """
         Spawn multiple orbs based on wave configuration.
 
@@ -116,7 +141,8 @@ def check_orb_collisions(game_view):
         # Handle each collision
         for orb in orb_hit_list:
             # Apply orb effect
-            game_view.player.apply_orb_effect(orb)
+            apply_orb_effect_to_player(game_view.player, orb)
+            
             # Add pickup text notification
             pickup_msg = "Buff collected!" if orb.orb_type in ["speed", "shield", "multiplier", "cooldown"] else "Debuff collected!"
             game_view.add_pickup_text(pickup_msg, game_view.player.center_x, game_view.player.center_y)

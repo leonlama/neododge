@@ -37,6 +37,9 @@ class WaveGenerator:
         else:  # normal
             wave = self._create_normal_wave(wave_number, params, player_profile)
 
+        # Ensure minimum number of orbs per wave
+        wave["orb_count"] = max(2, wave["orb_count"])
+        
         print(f"Wave configuration: {wave}")
         return wave
 
@@ -63,7 +66,7 @@ class WaveGenerator:
             "enemy_health": 0.8,
             "spawn_delay": 2.0,
             "duration": 30.0,
-            "orb_count": 1,
+            "orb_count": max(2, params.get("orb_count", 2)),
             "orb_types": {"buff": 1.0, "debuff": 0.0},
             "spawn_artifact": False,
             "coin_count": random.randint(5, 10),
@@ -83,7 +86,7 @@ class WaveGenerator:
             "enemy_health": params["enemy_health"] * 5.0,
             "spawn_delay": 0.0,
             "duration": 90.0,
-            "orb_count": params["orb_count"] + 1,
+            "orb_count": max(2, params["orb_count"] + 1),
             "orb_types": params["orb_types"],
             "spawn_artifact": True,
             "coin_count": random.randint(30, 50 + wave_number * 2),
@@ -98,18 +101,19 @@ class WaveGenerator:
 
     def _create_swarm_wave(self, wave_number, params):
         """Create a wave with many weak enemies."""
+        enemy_count = params["enemy_count"] * 2
         return {
             "type": "swarm",
             "wave_number": wave_number,
             "difficulty": params["difficulty"],
-            "enemy_count": params["enemy_count"] * 2,
-            "enemy_types": ["wander"] * (params["enemy_count"] * 2),
+            "enemy_count": enemy_count,
+            "enemy_types": ["wander"] * enemy_count,
             "enemy_speed": params["enemy_speed"] * 1.2,
             "enemy_health": params["enemy_health"] * 0.6,
             "formation": "random",
             "spawn_delay": 0.2,
             "duration": 40.0,
-            "orb_count": params["orb_count"],
+            "orb_count": max(2, min(params["orb_count"], enemy_count // 2)),
             "orb_types": params["orb_types"],
             "spawn_artifact": params["spawn_artifact"],
             "coin_count": random.randint(15, 25 + wave_number),
@@ -140,7 +144,7 @@ class WaveGenerator:
             "formation": formation,
             "spawn_delay": max(0.2, 1.0 - (params["difficulty"] * 0.5)),
             "duration": 45.0 + (wave_number * 0.5),
-            "orb_count": params["orb_count"],
+            "orb_count": max(2, params["enemy_count"] // 2),
             "orb_types": params["orb_types"],
             "spawn_artifact": params["spawn_artifact"],
             "coin_count": random.randint(10, 20 + wave_number),

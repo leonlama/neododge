@@ -73,6 +73,7 @@ class WaveManager:
         # Callbacks
         self.on_clear_enemies = None
         self.on_wave_complete = None
+        self.on_spawn_orbs = None
         self.callbacks = {}
 
         # Player data
@@ -169,6 +170,11 @@ class WaveManager:
         # Select formation
         formation = random.choice(type_config["formations"])
 
+        # Calculate orb count - ensure at least 2 orbs per wave
+        orb_count = max(2, int(base_orb_count * type_config["orb_count_multiplier"]))
+        # Also ensure orbs scale with enemy count
+        orb_count = max(orb_count, enemy_count // 2)
+
         # Configure wave
         config = {
             "type": wave_type,
@@ -181,13 +187,13 @@ class WaveManager:
             "formation": formation,
             "spawn_delay": max(0.2, 1.0 - self.difficulty * 0.5),  # Faster spawns at higher difficulty
             "duration": self.wave_duration,
-            "orb_count": int(base_orb_count * type_config["orb_count_multiplier"]),
+            "orb_count": orb_count,
             "orb_types": self._generate_orb_distribution(),
             "spawn_artifact": random.random() < 0.1 + self.difficulty * 0.05,  # Chance increases with difficulty
             "coin_count": int(base_coin_count * type_config["coin_count_multiplier"])
         }
 
-        print(f"🌊 Wave {self.current_wave}: {wave_type.upper()} | {enemy_count} enemies | Formation: {formation}")
+        print(f"🌊 Wave {self.current_wave}: {wave_type.upper()} | {enemy_count} enemies | {orb_count} orbs | Formation: {formation}")
 
         return config
 
@@ -277,8 +283,15 @@ class WaveManager:
 
         # Reset timers
         self.spawn_timer = 0
-        # Spawn orbs for this wave
-        if hasattr(self, 'game_view') and config['orb_count'] > 0:
+        
+        # Ensure minimum number of orbs per wave
+        config['orb_count'] = max(2, config['orb_count'])
+        
+        # Spawn orbs for this wave using callback
+        if self.on_spawn_orbs:
+            self.on_spawn_orbs(count=config['orb_count'], orb_types=config['orb_types'])
+        # Fallback to direct spawning if callback not set
+        elif hasattr(self, 'game_view') and config['orb_count'] > 0:
             try:
                 spawn_orbs(
                     game_view=self.game_view, 
@@ -319,7 +332,7 @@ class WaveManager:
         if hasattr(self, 'on_wave_start'):
             self.on_wave_start(self.current_wave)
 
-        print(f"Starting Wave {self.current_wave}")
+        print(f"Starting Wave {self.current_wave} with {config['orb_count']} orbs")
 
         return config
 

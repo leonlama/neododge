@@ -138,6 +138,9 @@ def draw_coin_count(coin_count: int):
 
 def draw_wave_message(text: str, alpha: float):
     """Draw the wave message in the center top with a given alpha."""
+    if text is None:
+        return
+        
     label = arcade.Text(
         text,
         start_x=arcade.get_window().width // 2,

@@ -27,6 +27,7 @@ class OrbSpawner:
             self.interval *= 0.3
 
         self.current_orb_weights = orb_types
+        print(f"🌌 [ORBS] Wave setup with {orb_count} orbs to spawn")
 
     def update(self, delta_time):
         """Update the orb spawner and spawn orbs as needed"""
@@ -66,6 +67,11 @@ def spawn_orbs(game_view, count=1, orb_type=None, positions=None):
     """Spawn orbs into the game."""
     from src.mechanics.orbs.orb_pool import get_random_orb
 
+    print(f"🌌 [ORBS] Attempting to spawn {count} orbs")
+    
+    # Ensure count is at least 1
+    count = max(1, count)
+    
     orbs_spawned = []
     for i in range(count):
         if positions and i < len(positions):
