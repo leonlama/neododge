@@ -1,4 +1,5 @@
 import arcade
+import time
 
 class StatusEffect:
     """Base class for player status effects."""
@@ -131,7 +132,7 @@ class StatusEffectManager:
 
     def __init__(self, player):
         self.player = player
-        self.effects = {}  # effect_type -> effect instance
+        self.effects = {}  # effect_id -> effect instance
 
         # For UI display
         self.icon_textures = {}
@@ -148,70 +149,59 @@ class StatusEffectManager:
             if texture:
                 self.icon_textures[effect_type] = texture
 
-    def add_effect(self, effect_type, duration=None, **kwargs):
-        """Add a status effect to the player."""
-        print(f"StatusEffectManager.add_effect called with: {effect_type}, {duration}, {kwargs}")
-
-        # Create the effect based on type
-        effect = None
-
-        if effect_type == "speed":
-            effect = SpeedEffect(duration or 5.0, 20)  # 20% speed boost
-        elif effect_type == "shield":
-            effect = ShieldEffect(duration or 5.0)
-        elif effect_type == "multiplier":
-            effect = MultiplierEffect(duration or 5.0, 1.5)  # 1.5x multiplier
-        elif effect_type == "slow":
-            effect = SlowEffect(duration or 5.0)
-        elif effect_type == "vision":
-            effect = VisionEffect(duration or 5.0)
-        elif effect_type == "hitbox":
-            effect = HitboxEffect(duration or 5.0)
-
-        # If we created an effect, apply and store it
-        if effect:
-            print(f"Created effect: {effect_type}")
-
-            # If this effect already exists, remove it first
-            if effect_type in self.effects:
-                old_effect = self.effects[effect_type]
-                old_effect.remove(self.player)
-
-                # If new effect has longer duration, use that, otherwise keep remaining time
-                if duration and duration > old_effect.remaining_time:
-                    effect.remaining_time = duration
-                else:
-                    effect.remaining_time = old_effect.remaining_time
-
-            # Apply the effect
-            effect.activate(self.player)
-
-            # Store the effect
-            self.effects[effect_type] = effect
-
-            print(f"Active effects after adding: {list(self.effects.keys())}")
-            return True
-
-        print(f"Failed to create effect for type: {effect_type}")
-        return False
+    def add_effect(self, effect_type, duration=None, effect_data=None):
+        """Add or refresh an effect with optional extra data."""
+        effect_id = f"{effect_type}_{int(time.time() * 1000)}"
+        
+        if effect_data is None:
+            effect_data = {}
+            
+        self.effects[effect_id] = {
+            "type": effect_type,
+            "duration": duration,
+            "remaining": duration,
+            "value": effect_data.get("value", 0) if effect_data else 0,
+            "color": effect_data.get("color", (255, 255, 255)) if effect_data else (255, 255, 255),
+            "icon": effect_data.get("icon", None) if effect_data else None,
+            "active": True,
+        }
+        
+        return True
 
     def update(self, delta_time):
-        """Update all status effects."""
-        expired_effects = []
+        """Update all effects, reducing time and cleaning up expired ones."""
+        expired_keys = []
+        for effect_id, effect in self.effects.items():
+            effect["remaining"] -= delta_time
+            if effect["remaining"] <= 0:
+                expired_keys.append(effect_id)
 
-        for effect_type, effect in self.effects.items():
-            if effect.update(delta_time):  # Effect expired
-                effect.remove(self.player)
-                expired_effects.append(effect_type)
+        for key in expired_keys:
+            del self.effects[key]
 
-        # Remove expired effects
-        for effect_type in expired_effects:
-            del self.effects[effect_type]
+    def get_active_effects(self):
+        """Get all currently active effects."""
+        return [effect for effect in self.effects.values() if effect["active"]]
+
+    def get_aggregated_effects(self):
+        """Aggregate values by type, used for HUD display."""
+        totals = {}
+        for effect in self.effects.values():
+            if effect["active"]:
+                if effect["type"] not in totals:
+                    totals[effect["type"]] = {
+                        "value": effect["value"],
+                        "color": effect["color"],
+                        "icon": effect["icon"]
+                    }
+                else:
+                    totals[effect["type"]]["value"] += effect["value"]
+        return totals
 
     def draw_effect_indicators(self, screen_width, screen_height):
         """Draw status effect indicators on screen."""
         # Add debug print
-        print(f"Drawing effects: {list(self.effects.keys())}")
+        print(f"Drawing effects: {[effect['type'] for effect in self.effects.values()]}")
 
         if not self.effects:
             return
@@ -223,7 +213,10 @@ class StatusEffectManager:
         start_y = screen_height - icon_size - spacing
 
         # Draw each active effect
-        for i, (effect_type, effect) in enumerate(self.effects.items()):
+        for i, (effect_id, effect) in enumerate(self.effects.items()):
+            if not effect["active"]:
+                continue
+                
             y_pos = start_y - (icon_size + spacing) * i
 
             # Draw icon background
@@ -235,6 +228,7 @@ class StatusEffectManager:
             )
 
             # Draw icon
+            effect_type = effect["type"]
             if effect_type in self.icon_textures:
                 arcade.draw_texture_rectangle(
                     start_x - icon_size/2,
@@ -248,12 +242,14 @@ class StatusEffectManager:
                     start_x - icon_size/2,
                     y_pos - icon_size/2,
                     icon_size/2,
-                    effect.color
+                    effect["color"]
                 )
 
             # Draw remaining time text
+            remaining_time = effect["remaining"]
+            formatted_time = f"{int(remaining_time)}s" if remaining_time >= 10 else f"{remaining_time:.1f}s"
             arcade.draw_text(
-                effect.get_formatted_time(),
+                formatted_time,
                 start_x - icon_size,
                 y_pos - icon_size/2 - 15,
                 arcade.color.WHITE,
@@ -264,7 +260,7 @@ class StatusEffectManager:
             # Draw duration bar
             bar_width = icon_size
             bar_height = 5
-            remaining_pct = effect.get_remaining_percentage()
+            remaining_pct = max(0, min(1, effect["remaining"] / effect["duration"]))
 
             # Background bar
             arcade.draw_rectangle_filled(
@@ -280,5 +276,5 @@ class StatusEffectManager:
                     start_x - icon_size/2 - (bar_width/2) * (1 - remaining_pct),
                     y_pos - icon_size,
                     bar_width * remaining_pct, bar_height,
-                    effect.color
+                    effect["color"]
                 )

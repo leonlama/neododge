@@ -3,25 +3,15 @@ from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.skins.skin_manager import skin_manager
 
 def draw_hud(player, score, wave=1, wave_timer=None, heart_textures=None):
-    """Draw the HUD with the specified layout."""
-    from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
-
-    # Draw hearts at top left
+    """Draw the full HUD layout with a clean roguelike feel."""
     draw_player_health(player, heart_textures, SCREEN_WIDTH, SCREEN_HEIGHT)
-
-    # Draw score below hearts
     draw_score(score)
-
-    # Draw wave info at top middle
     draw_wave_info(wave, wave_timer)
-
-    # Draw active effects at top right
-    if hasattr(player, 'active_effects'):
-        draw_active_effects(player.active_effects)
-
-    # Draw coin count at bottom right
-    coins = getattr(player, 'coins', 0)
-    draw_coin_count(coins)
+    draw_coin_count(getattr(player, 'coins', 0))
+    
+    # Status effects (buffs)
+    if hasattr(player, 'status_effects'):
+        draw_active_effects(player.status_effects.effects)
 
 def draw_player_health(player, heart_textures=None, screen_width=800, screen_height=600):
     """Draw player health hearts at top left."""
@@ -67,89 +57,90 @@ def draw_score(score):
 
     arcade.draw_text(
         f"Score: {int(score)}",
-        20, SCREEN_HEIGHT - 60,  # Position below hearts
+        20, SCREEN_HEIGHT - 90,  # Moved down from 60 to 90
         arcade.color.WHITE,
-        16,
+        15,
+        font_name="Kenney Pixel Square",
+        bold=True,
         anchor_x="left"
     )
 
 def draw_wave_info(wave, wave_timer):
-    """Draw wave info at top middle."""
-    from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
-
-    # Draw wave number
     arcade.draw_text(
-        f"Wave {wave}",
-        SCREEN_WIDTH // 2, SCREEN_HEIGHT - 30,
-        arcade.color.GREEN,
-        24,
-        anchor_x="center"
+        f"WAVE {wave}",
+        SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40,
+        arcade.color.LIME_GREEN,
+        16,
+        anchor_x="center",
+        font_name="Kenney Mini Square"
     )
 
-    # Draw wave timer if available
     if wave_timer is not None:
         arcade.draw_text(
             f"{int(wave_timer)}s",
-            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60,
-            arcade.color.WHITE,
-            16,
-            anchor_x="center"
+            SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70,
+            arcade.color.LIGHT_GRAY,
+            18,
+            anchor_x="center",
+            font_name="Kenney Pixel"
         )
 
 def draw_active_effects(active_effects):
-    """Draw active effects at top right, combining similar effects."""
+    """Draw buff/debuff effects in a clean top-right layout."""
     from src.core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
-    # Aggregate effects by type
-    aggregated_effects = {}
+    # Group by effect type
+    aggregated = {}
 
-    for effect_id, effect_data in active_effects.items():
-        if effect_data.get('active', False):
-            # Get the base effect type
-            effect_type = effect_data.get('type', effect_id.split('_')[0])
+    for effect_id, effect in active_effects.items():
+        if not effect.get('active', False):
+            continue
 
-            if effect_type not in aggregated_effects:
-                aggregated_effects[effect_type] = 0
+        effect_type = effect.get('type', effect_id.split('_')[0])
+        value = effect.get('value', 0)
+        icon = effect.get('icon', f"ui/effects/{effect_type}")
+        color = effect.get('color', arcade.color.WHITE)
 
-            # Add the effect value
-            aggregated_effects[effect_type] += effect_data.get('value', 0)
-
-    # Draw aggregated effects
-    y_offset = 0
-    for effect_type, total_value in aggregated_effects.items():
-        # Determine color based on effect type
-        if effect_type == 'speed':
-            color = arcade.color.YELLOW
-            display_name = "Speed"
-        elif effect_type == 'shield':
-            color = arcade.color.BLUE
-            display_name = "Shield"
-        elif effect_type == 'multiplier':
-            color = arcade.color.GREEN
-            display_name = "Score Mult"
-        elif effect_type == 'cooldown':
-            color = arcade.color.PURPLE
-            display_name = "Dash CD"
+        if effect_type not in aggregated:
+            aggregated[effect_type] = {
+                "value": value,
+                "icon": icon,
+                "color": color
+            }
         else:
-            color = arcade.color.WHITE
-            display_name = effect_type.replace('_', ' ').title()
+            aggregated[effect_type]["value"] += value
 
-        # Format effect text
-        if total_value > 0:
-            text = f"{display_name}: +{int(total_value)}%"
-        else:
-            text = f"{display_name}: {int(total_value)}%"
+    # Sort for consistent ordering
+    sorted_effects = sorted(aggregated.items())
 
-        # Draw effect text
+    # UI constants
+    x_base = SCREEN_WIDTH - 160
+    y_start = SCREEN_HEIGHT - 40
+    icon_size = 24
+    spacing = 32
+
+    for idx, (effect_type, data) in enumerate(sorted_effects):
+        y = y_start - idx * spacing
+        display_name = effect_type.replace("_", " ").title()
+        value_text = f"+{int(data['value'])}%" if data["value"] > 0 else f"{int(data['value'])}%"
+        icon = skin_manager.get_texture("ui", data["icon"])
+
+        # Draw icon
+        if icon:
+            arcade.draw_scaled_texture_rectangle(
+                x_base, y + icon_size // 2,
+                icon,
+                scale=icon_size / icon.width
+            )
+
+        # Draw text
         arcade.draw_text(
-            text,
-            SCREEN_WIDTH - 20, SCREEN_HEIGHT - 30 - y_offset,
-            color,
-            16,
-            anchor_x="right"
+            f"{display_name}: {value_text}",
+            x_base + icon_size + 10, y + 5,
+            data["color"],
+            font_size=14,
+            font_name="Kenney Pixel"
         )
-
-        y_offset += 25
 
 def draw_coin_count(coins):
     """Draw coin count at bottom right."""
@@ -157,10 +148,11 @@ def draw_coin_count(coins):
 
     arcade.draw_text(
         f"Coins: {coins}",
-        SCREEN_WIDTH - 20, 30,
+        SCREEN_WIDTH - 30, 30,
         arcade.color.GOLD,
-        18,
-        anchor_x="right"
+        14,
+        anchor_x="right",
+        font_name="Kenney Rocket"
     )
 
 def draw_wave_message(message, alpha=255):

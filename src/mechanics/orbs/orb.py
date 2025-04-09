@@ -68,7 +68,7 @@ class Orb(arcade.Sprite):
         # Any time-based updates can go here
         # For example, animation, movement patterns, etc.
         pass
-
+    
     def apply_effect(self, player):
         """Apply orb effect to the player."""
         print(f"Applying {self.orb_type} effect with duration {self.effect_duration}")
@@ -77,7 +77,14 @@ class Orb(arcade.Sprite):
         if hasattr(player, 'status_effects'):
             print(f"Player has status_effects attribute")
             # Try to add the effect
-            success = player.status_effects.add_effect(self.orb_type, self.effect_duration)
+            effect_data = {
+                "type": self.orb_type,
+                "duration": self.effect_duration,
+                "value": self._get_effect_value(),
+                "color": self.properties["color"],
+                "icon": f"ui/effects/{self.orb_type}"
+            }
+            success = player.status_effects.add_effect(self.orb_type, self.effect_duration, effect_data)
             print(f"Effect added successfully: {success}")
         else:
             print(f"Player missing status_effects attribute!")
@@ -96,6 +103,23 @@ class Orb(arcade.Sprite):
                 player.slow_timer = self.effect_duration
             elif self.orb_type == "damage":
                 player.take_damage(1)
+
+    def _get_effect_value(self):
+        """Return numeric value of the effect."""
+        if self.orb_type == "speed":
+            return 20  # e.g. +20% speed
+        elif self.orb_type == "slow":
+            return -30
+        elif self.orb_type == "multiplier":
+            return 50
+        elif self.orb_type == "mult_down_0_5":
+            return -50
+        elif self.orb_type == "cooldown":
+            return -20
+        elif self.orb_type == "cooldown_up":
+            return 25
+        else:
+            return 0
 
     @classmethod
     def get_orb_types_by_category(cls, category):

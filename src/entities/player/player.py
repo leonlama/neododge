@@ -5,6 +5,7 @@ from src.core.constants import PLAYER_SPEED, PLAYER_DASH_DISTANCE, PLAYER_DASH_C
 from src.skins.skin_manager import skin_manager
 from src.core.constants import PLAYER_DASH_SPEED
 from src.core.scaling import get_scale
+from src.entities.player.status_effects import StatusEffect
 from src.entities.player.status_effects import StatusEffectManager
 
 class Player(arcade.Sprite):
@@ -71,7 +72,7 @@ class Player(arcade.Sprite):
 
         # Heart-related attributes
         self.heart_textures = None  # Will be set by game_view
-        self.max_slots = 5  # Maximum heart slots
+        self.max_slots = 9  # Maximum heart slots
         self.current_hearts = 3  # Default value
 
         # Heart positioning
@@ -107,7 +108,7 @@ class Player(arcade.Sprite):
         self.hitbox_multiplier = 1.0
         self.hitbox_timer = 0.0
 
-        # Status effect manager
+        # Create StatusEffectManager with self
         self.status_effects = StatusEffectManager(self)
 
         # Pickup messages
@@ -247,7 +248,9 @@ class Player(arcade.Sprite):
             self.dash_speed = 0
     def apply_effect(self, effect_type, value, duration, is_percentage=True):
         """Apply an effect to the player."""
-        self.status_effects.add_effect(effect_type, duration=duration, value=value)
+        self.status_effects.add_effect(effect_type, duration, {
+            "value": value
+        })
 
     def set_target(self, x, y):
         """Set a target position for the player to move towards"""
@@ -360,7 +363,9 @@ class Player(arcade.Sprite):
 
         if duration:
             # Add as a status effect
-            self.status_effects.add_effect("speed", duration=duration, value=multiplier - 1)
+            self.status_effects.add_effect("speed", duration, {
+                "value": multiplier - 1
+            })
 
     def reset_speed_bonus(self):
         """Reset speed bonus to default value."""
@@ -375,7 +380,9 @@ class Player(arcade.Sprite):
             duration: Optional duration in seconds
         """
         # Use status effect manager to handle buffs
-        self.status_effects.add_effect(buff_type, duration=duration, value=value)
+        self.status_effects.add_effect(buff_type, duration, {
+            "value": value
+        })
 
     def add_orb_effect(self, orb_type, duration):
         """Add an orb effect to the player."""
