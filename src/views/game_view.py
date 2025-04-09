@@ -193,16 +193,21 @@ class NeododgeGame(arcade.View):
             return
 
         try:
-            # Use a very low volume for damage sound
-            if hasattr(self, 'damage_sound') and self.damage_sound:
-                arcade.play_sound(self.damage_sound, volume=0.05)  # Very low volume
-            else:
-                sound_manager.play_sound("player", "damage")
+            # Always use the sound manager for consistent volume control
+            sound_manager.play_sound("player", "damage")
 
             # Set cooldown
             self.player.damage_sound_cooldown = True
+
+            # Reset cooldown after a short delay
+            arcade.schedule(self.reset_damage_sound_cooldown, 0.5)
         except Exception as e:
             print(f"Error playing damage sound: {e}")
+
+    def reset_damage_sound_cooldown(self, dt):
+        """Reset the damage sound cooldown."""
+        if hasattr(self.player, 'damage_sound_cooldown'):
+            self.player.damage_sound_cooldown = False
 
     def play_buff_sound(self):
         """Play the buff pickup sound."""
