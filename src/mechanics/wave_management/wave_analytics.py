@@ -6,35 +6,67 @@ class WaveAnalytics:
     """Tracks and analyzes wave statistics."""
 
     def __init__(self):
+        """Initialize the wave analytics."""
         self.wave_stats = {}
-        self.current_wave = 0
 
-    def log_wave_start(self, wave_number, wave_config):
-        """Log the start of a wave."""
-        self.current_wave = wave_number
+    def start_wave_tracking(self, wave_number):
+        """Start tracking statistics for a wave."""
         self.wave_stats[wave_number] = {
-            "start_time": arcade.get_time(),
-            "config": wave_config,
-            "enemies_spawned": len(wave_config.get("enemies", [])),
-            "completed": False
+            "enemies_spawned": 0,
+            "enemies_killed": 0,
+            "damage_taken": 0,
+            "coins_collected": 0,
+            "orbs_collected": 0,
+            "start_time": 0,
+            "end_time": 0,
+            "duration": 0
         }
 
-    def log_wave_complete(self, wave_number, enemies_remaining, player_health):
-        """Log the completion of a wave."""
+    def update_wave_stat(self, wave_number, stat_name, value):
+        """Update a specific statistic for a wave."""
         if wave_number in self.wave_stats:
-            self.wave_stats[wave_number].update({
-                "end_time": arcade.get_time(),
-                "duration": arcade.get_time() - self.wave_stats[wave_number]["start_time"],
-                "enemies_remaining": enemies_remaining,
-                "player_health": player_health,
-                "completed": True
-            })
+            if stat_name in self.wave_stats[wave_number]:
+                self.wave_stats[wave_number][stat_name] += value
+            else:
+                self.wave_stats[wave_number][stat_name] = value
 
-    def get_wave_stats(self, wave_number=None):
-        """Get statistics for a specific wave or all waves."""
-        if wave_number is not None:
-            return self.wave_stats.get(wave_number, {})
-        return self.wave_stats
+    def get_wave_stats(self, wave_number):
+        """Get statistics for a specific wave."""
+        return self.wave_stats.get(wave_number, {})
+
+    def get_recent_stats(self, num_waves=3):
+        """Get aggregated statistics for the most recent waves."""
+        recent_stats = {
+            "enemies_spawned": 0,
+            "enemies_killed": 0,
+            "damage_taken": 0,
+            "coins_collected": 0,
+            "orbs_collected": 0,
+            "avg_duration": 0
+        }
+
+        # Get the most recent wave numbers
+        wave_numbers = sorted(self.wave_stats.keys())
+        if len(wave_numbers) > num_waves:
+            wave_numbers = wave_numbers[-num_waves:]
+
+        if not wave_numbers:
+            return recent_stats
+
+        # Aggregate stats
+        for wave in wave_numbers:
+            stats = self.wave_stats[wave]
+            recent_stats["enemies_spawned"] += stats.get("enemies_spawned", 0)
+            recent_stats["enemies_killed"] += stats.get("enemies_killed", 0)
+            recent_stats["damage_taken"] += stats.get("damage_taken", 0)
+            recent_stats["coins_collected"] += stats.get("coins_collected", 0)
+            recent_stats["orbs_collected"] += stats.get("orbs_collected", 0)
+            recent_stats["avg_duration"] += stats.get("duration", 0)
+
+        # Calculate averages
+        recent_stats["avg_duration"] /= len(wave_numbers)
+
+        return recent_stats
 
 class PlayerAnalytics:
     def __init__(self, player):

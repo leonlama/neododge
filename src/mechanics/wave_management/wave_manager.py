@@ -7,35 +7,38 @@ class WaveManager:
         """Initialize the wave manager."""
         self.game_view = game_view
         self.wave = 0
-        self.current_wave = 0  # Alias for wave number for consistency
-        self.player = game_view.player if hasattr(game_view, 'player') else None
-        self.wave_history = []
-        self.last_message_drawn = ""
-        self.base_enemies = 5
-        self.enemies_per_wave = 2
-        self.max_enemies = 20
-        
-        # Wave timing
-        self.in_wave = False
         self.wave_timer = 0
         self.enemy_spawn_timer = 0
-        self.wave_duration = 30.0  # 30 seconds per wave
         self.between_wave_timer = 0
-        self.between_wave_duration = 5.0  # 5 seconds between waves
-        
-        # Wave message
+        self.in_wave = False
+        self.wave_duration = 30.0
+        self.between_wave_duration = 5.0
         self.wave_message = ""
         self.wave_message_alpha = 0.0
-        
-        # Initialize wave generator
-        from src.mechanics.wave_management.wave_generator import WaveGenerator
-        self.wave_generator = WaveGenerator()
-        
-        # Callbacks
+        self.last_message_drawn = ""
+
+        # Enemy spawn parameters
+        self.base_enemies = 3
+        self.enemies_per_wave = 2
+        self.max_enemies = 20
+
+        # Event callbacks
         self.on_wave_start = None
         self.on_wave_end = None
         self.on_spawn_enemies = None
         self.on_clear_enemies = None
+
+        # Initialize wave generator
+        from src.mechanics.wave_management.wave_generator import WaveGenerator
+        self.wave_generator = WaveGenerator()
+
+        # Initialize wave analytics
+        from src.mechanics.wave_management.wave_analytics import WaveAnalytics
+        self.wave_analytics = WaveAnalytics()
+
+        # Initialize difficulty adjuster
+        from src.mechanics.wave_management.difficulty_adjuster import DifficultyAdjuster
+        self.difficulty_adjuster = DifficultyAdjuster()
 
     def update(self, delta_time):
         """Update the wave manager.

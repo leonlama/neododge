@@ -16,6 +16,7 @@ class SkinManager:
         self.current_skin = "default"
         self.skins_path = "assets/skins"
         self.textures = {}
+        self.skin_path = DEFAULT_SKIN_PATH
 
         # Create default textures for fallbacks
         self.create_default_textures()
@@ -116,6 +117,37 @@ class SkinManager:
             self.textures["ui"][key] = arcade.load_texture(path)
             print(f"✅ Loaded effect icon: {key}")
 
+    def load_orb_textures(self):
+        """Load orb textures."""
+        import os
+        import arcade
+
+        # Get the path to the orbs directory
+        orbs_path = os.path.join(self.skin_path, "orbs")
+
+        # Check if the directory exists
+        if not os.path.exists(orbs_path):
+            print(f"⚠️ Orbs directory not found: {orbs_path}")
+            return
+
+        # Initialize orbs dictionary if it doesn't exist
+        if "orbs" not in self.textures:
+            self.textures["orbs"] = {}
+
+        # Load all textures in the directory
+        for filename in os.listdir(orbs_path):
+            if filename.endswith(".png"):
+                # Get the texture name (without extension)
+                texture_name = os.path.splitext(filename)[0]
+
+                # Load the texture
+                texture_path = os.path.join(orbs_path, filename)
+                texture = arcade.load_texture(texture_path)
+
+                # Store the texture
+                self.textures["orbs"][texture_name] = texture
+                print(f"Loaded orb texture: {texture_name}")
+
     def discover_skins(self):
         """Discover available skins in the skins directory.
 
@@ -188,6 +220,7 @@ class SkinManager:
             print(f"⚠️ Unknown skin: {skin_name}, using default")
             skin_path = DEFAULT_SKIN_PATH
 
+        self.skin_path = skin_path
         print(f"🎨 Loading skin: {skin_name} from {skin_path}")
 
         # Load textures

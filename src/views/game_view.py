@@ -28,6 +28,7 @@ class NeododgeGame(arcade.View):
         self.game_controller = None
         self.score = 0
         self.pickup_texts = []
+        self.buff_display_text = []
 
         # Mouse tracking
         self.mouse_x = 0
@@ -288,6 +289,9 @@ class NeododgeGame(arcade.View):
                 print(f"Error drawing HUD: {e}")
                 # Fallback to simple HUD
                 self.draw_simple_hud()
+            
+            # Draw active buffs
+            self.draw_buffs()
     
             # Draw any pickup texts
             if hasattr(self, 'pickup_texts'):
@@ -305,6 +309,23 @@ class NeododgeGame(arcade.View):
             print("❌ Error in on_draw:", e)
             import traceback
             traceback.print_exc()
+    
+    def draw_buffs(self):
+        """Draw active buffs on screen."""
+        if not hasattr(self, 'buff_display_text'):
+            self.buff_display_text = []
+
+        # Draw each buff
+        y = self.window.height - 80  # Start below health
+        for buff_text in self.buff_display_text:
+            arcade.draw_text(
+                buff_text,
+                10,
+                y,
+                arcade.color.YELLOW,
+                font_size=14
+            )
+            y -= 20
 
     def draw_game_elements(self):
         """Draw all game elements."""
@@ -459,7 +480,8 @@ class NeododgeGame(arcade.View):
         self.player.update(delta_time)
 
         # Update wave manager
-        self.wave_manager.update(delta_time)
+        if hasattr(self, 'wave_manager'):
+            self.wave_manager.update(delta_time)
 
         # If right mouse is held down, continuously update target
         if self.right_mouse_down and self.player:
@@ -484,6 +506,7 @@ class NeododgeGame(arcade.View):
 
         # Update enemies
         self.update_enemies(delta_time)
+        self.enemies.update()
 
         # Update orbs
         self.orbs.update()
@@ -570,6 +593,9 @@ class NeododgeGame(arcade.View):
 
         # Check for collisions
         self.check_collisions()
+        
+        # Check for orb collisions
+        self.check_orb_collisions()
 
         # Update score
         self.score += delta_time * 10
@@ -593,7 +619,90 @@ class NeododgeGame(arcade.View):
                 "mult": self.player.score_multiplier
             })
             self.orbs.append(orb)
+            
+    def check_orb_collisions(self):
+        """Check for collisions between player and orbs."""
+        # Get collisions
+        orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
 
+        # Handle each collision
+        for orb in orb_hit_list:
+            # Apply orb effect
+            if orb.orb_type == "buff":
+                # Apply buff effect
+                buff_type = orb.buff_type if hasattr(orb, 'buff_type') else random.choice(["speed", "health", "damage"])
+                buff_amount = orb.buff_amount if hasattr(orb, 'buff_amount') else 0.2  # 20% buff
+
+                # Apply the buff
+                self.apply_buff(buff_type, buff_amount)
+
+                # Play buff sound
+                self.play_buff_sound()
+
+                # Show buff message
+                self.show_message(f"+{int(buff_amount*100)}% {buff_type.capitalize()} Buff!")
+
+            # Remove the orb
+            orb.remove_from_sprite_lists()
+
+            # Update analytics
+            if hasattr(self, 'wave_manager') and hasattr(self.wave_manager, 'wave_analytics'):
+                self.wave_manager.wave_analytics.update_wave_stat(self.wave_manager.wave, "orbs_collected", 1)
+                
+    def apply_buff(self, buff_type, amount):
+        """Apply a buff to the player.
+
+        Args:
+            buff_type: Type of buff (speed, health, damage)
+            amount: Amount to buff (0.2 = 20% increase)
+        """
+        print(f"Applying {buff_type} buff: +{amount*100:.0f}%")
+
+        if buff_type == "speed":
+            # Increase player speed
+            self.player.speed_multiplier = self.player.speed_multiplier * (1 + amount)
+            print(f"Player speed now: {self.player.speed_multiplier:.2f}x")
+
+        elif buff_type == "health":
+            # Increase player max health
+            old_max = self.player.max_health
+            self.player.max_health = int(self.player.max_health * (1 + amount))
+            # Also heal the player by the amount gained
+            health_gained = self.player.max_health - old_max
+            self.player.health = min(self.player.max_health, self.player.health + health_gained)
+            print(f"Player health now: {self.player.health}/{self.player.max_health}")
+
+        elif buff_type == "damage":
+            # Increase player damage
+            if hasattr(self.player, 'damage_multiplier'):
+                self.player.damage_multiplier = self.player.damage_multiplier * (1 + amount)
+            else:
+                self.player.damage_multiplier = 1 + amount
+            print(f"Player damage now: {self.player.damage_multiplier:.2f}x")
+
+        # Update UI to show new buff
+        self.update_buff_display()
+        
+    def update_buff_display(self):
+        """Update the buff display in the UI."""
+        # Create buff text to display
+        buff_text = []
+
+        if hasattr(self.player, 'speed_boost_timer') and self.player.speed_boost_timer > 0:
+            buff_text.append(f"Speed: +50% ({self.player.speed_boost_timer:.1f}s)")
+
+        if hasattr(self.player, 'slow_timer') and self.player.slow_timer > 0:
+            buff_text.append(f"Slow: -50% ({self.player.slow_timer:.1f}s)")
+
+        if hasattr(self.player, 'shield_timer') and self.player.shield_timer > 0:
+            buff_text.append(f"Shield: Active ({self.player.shield_timer:.1f}s)")
+
+        if hasattr(self.player, 'invincibility_timer') and self.player.invincibility_timer > 0:
+            buff_text.append(f"Invincible: ({self.player.invincibility_timer:.1f}s)")
+
+        # Store buff text for drawing in on_draw
+        self.buff_display_text = buff_text
+        
     def check_collisions(self):
         """Check for collisions between game objects."""
         # Player-Enemy collisions
@@ -637,36 +746,36 @@ class NeododgeGame(arcade.View):
                 self.add_pickup_text("Coin collected!", self.player.center_x, self.player.center_y)
 
         # Player-Orb collisions
-        for orb in list(self.orbs):  # Use list() to allow removal during iteration
-            if arcade.check_for_collision(self.player, orb):
+        print(f"Checking orb collisions. Player at ({self.player.center_x}, {self.player.center_y})")
+        print(f"Number of orbs: {len(self.orbs)}")
+
+        # Use a more reliable collision detection method
+        for orb in list(self.orbs):  # Use a copy of the list to safely modify during iteration
+            distance = ((self.player.center_x - orb.center_x) ** 2 + 
+                        (self.player.center_y - orb.center_y) ** 2) ** 0.5
+            print(f"Orb at ({orb.center_x}, {orb.center_y}), Distance: {distance}")
+
+            # Check if player is close enough to collect the orb
+            # Use a generous collision radius to make collection easier
+            collision_radius = getattr(self.player, 'collision_radius', 30) + getattr(orb, 'collision_radius', 15)
+
+            if distance <= collision_radius:
+                print(f"Collision detected with {orb.orb_type} orb!")
+
                 # Get orb type and message
                 orb_type = getattr(orb, 'orb_type', "unknown")
                 message = getattr(orb, 'message', "Orb collected!")
-                print(f"Player collided with orb of type: {orb_type}")
-
-                # Determine if it's a buff or debuff orb
-                # Import the orb classes if needed
-                from src.mechanics.orbs.buff_orbs import BuffOrb
-                from src.mechanics.orbs.debuff_orbs import DebuffOrb
-                
-                # Determine if it's a buff orb
-                is_buff = isinstance(orb, BuffOrb)
 
                 # Apply the orb effect
                 try:
-                    if hasattr(orb, 'apply_effect'):
-                        orb.apply_effect(self.player)
-                        print(f"Applied orb effect: {orb_type}")
-
-                        # Check if effect was added
-                        if hasattr(self.player, 'status_effects'):
-                            print(f"Player status effects: {list(self.player.status_effects.effects.keys())}")
+                    self.apply_orb_effect(orb)
+                    print(f"Applied orb effect: {orb_type}")
 
                     # Remove the orb
                     orb.remove_from_sprite_lists()
 
                     # Play appropriate sound
-                    if is_buff:
+                    if orb_type in ["speed", "shield", "invincibility"]:
                         self.play_buff_sound()
                     else:
                         self.play_debuff_sound()
@@ -679,30 +788,39 @@ class NeododgeGame(arcade.View):
                 except Exception as e:
                     print(f"Error applying orb effect: {e}")
 
-        # Player-Artifact collisions
-        if hasattr(self, 'dash_artifact') and self.dash_artifact:
-            if arcade.check_for_collision(self.player, self.dash_artifact):
-                # Store the message before removing the artifact
-                message = getattr(self.dash_artifact, 'name', "Artifact collected!")
+        # The original arcade.check_for_collision_with_list as a backup
+        orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
+        print(f"Orb hit list length: {len(orb_hit_list)}")
 
+        # Process any hits found by arcade's collision detection (unlikely if our custom detection worked)
+        for orb in orb_hit_list:
+            if orb in self.orbs:  # Make sure it wasn't already removed
+                print(f"Arcade collision detected with {orb.orb_type} orb!")
+                # Get orb type and message
+                orb_type = getattr(orb, 'orb_type', "unknown")
+                message = getattr(orb, 'message', "Orb collected!")
+
+                # Apply the orb effect
                 try:
-                    # Apply the effect
-                    self.dash_artifact.apply_effect(self.player)
+                    self.apply_orb_effect(orb)
+                    print(f"Applied orb effect: {orb_type}")
 
-                    # Remove the artifact
-                    self.dash_artifact.remove_from_sprite_lists()
-                    self.dash_artifact = None
+                    # Remove the orb
+                    orb.remove_from_sprite_lists()
 
-                    # Play buff sound (artifacts are generally positive)
-                    self.play_buff_sound()
+                    # Play appropriate sound
+                    if orb_type in ["speed", "shield", "invincibility"]:
+                        self.play_buff_sound()
+                    else:
+                        self.play_debuff_sound()
 
                     # Add pickup text
                     if hasattr(self, 'add_pickup_text'):
-                        self.add_pickup_text(f"{message} unlocked!", self.player.center_x, self.player.center_y)
+                        self.add_pickup_text(message, self.player.center_x, self.player.center_y)
                     elif hasattr(self, 'pickup_texts'):
-                        self.pickup_texts.append([f"{message} unlocked!", self.player.center_x, self.player.center_y, 1.0])
+                        self.pickup_texts.append([message, self.player.center_x, self.player.center_y, 1.0])
                 except Exception as e:
-                    print(f"Error applying artifact effect: {e}")
+                    print(f"Error applying orb effect: {e}")
 
         # Enemy bullet collisions with player
         for enemy in self.enemies:
@@ -719,10 +837,78 @@ class NeododgeGame(arcade.View):
                         # Play damage sound
                         self.play_damage_sound()
 
+    def apply_orb_effect(self, orb):
+        """Apply an orb's effect to the player."""
+        # Get orb type
+        orb_type = getattr(orb, 'orb_type', "unknown")
+
+        print(f"Applying orb effect: {orb_type}")
+
+        # Initialize attributes if they don't exist
+        if not hasattr(self.player, 'speed_multiplier'):
+            self.player.speed_multiplier = 1.0
+
+        if not hasattr(self.player, 'has_shield'):
+            self.player.has_shield = False
+
+        # Handle different orb types
+        if orb_type == "speed":
+            # Speed buff
+            self.player.speed_multiplier = 1.5
+            self.player.speed_boost_timer = 5.0  # 5 seconds
+            print(f"Applied speed buff: {self.player.speed_multiplier}x for {self.player.speed_boost_timer}s")
+
+        elif orb_type == "shield":
+            # Shield buff
+            self.player.has_shield = True
+            self.player.shield_timer = 5.0  # 5 seconds
+            print(f"Applied shield buff for {self.player.shield_timer}s")
+
+        elif orb_type == "vision":
+            # Vision buff (similar to invincibility)
+            self.player.is_invincible = True
+            self.player.invincibility_timer = 3.0  # 3 seconds
+            print(f"Applied vision buff for {self.player.invincibility_timer}s")
+
+        elif orb_type == "cooldown":
+            # Cooldown buff
+            if hasattr(self.player, 'dash_cooldown'):
+                self.player.dash_cooldown = 0  # Reset dash cooldown
+            print(f"Applied cooldown buff: Dash ready!")
+
+        elif orb_type == "multiplier":
+            # Score multiplier buff
+            if not hasattr(self.player, 'score_multiplier'):
+                self.player.score_multiplier = 1.0
+            self.player.score_multiplier = 2.0
+            self.player.multiplier_timer = 10.0  # 10 seconds
+            print(f"Applied score multiplier: {self.player.score_multiplier}x for {self.player.multiplier_timer}s")
+
+        elif orb_type == "slow":
+            # Slow debuff
+            self.player.speed_multiplier = 0.5
+            self.player.slow_timer = 4.0  # 4 seconds
+            print(f"Applied slow debuff: {self.player.speed_multiplier}x for {self.player.slow_timer}s")
+
+        elif orb_type == "hitbox":
+            # Hitbox debuff (similar to damage)
+            if hasattr(self.player, 'take_damage'):
+                self.player.take_damage()
+            print(f"Applied hitbox debuff: -1 health")
+
+        # Update buff display
+        self.update_buff_display()
+
     def show_shop(self):
         """Show the shop view."""
         shop_view = ShopView(self.player, self)
         self.window.show_view(shop_view)
+        
+    def show_message(self, message):
+        """Show a message on screen."""
+        if not hasattr(self, 'pickup_texts'):
+            self.pickup_texts = []
+        self.pickup_texts.append([message, self.player.center_x, self.player.center_y, 1.5])
 
     def draw_hud(self):
         """Draw the heads-up display."""
@@ -778,6 +964,19 @@ class NeododgeGame(arcade.View):
                     font_size=24,
                     anchor_x="center"
                 )
+                
+        # Draw buff display
+        if hasattr(self, 'buff_display_text'):
+            y_offset = arcade.get_window().height - 100
+            for buff_text in self.buff_display_text:
+                arcade.draw_text(
+                    buff_text,
+                    30,
+                    y_offset,
+                    arcade.color.LIGHT_BLUE,
+                    font_size=14
+                )
+                y_offset -= 20
 
     def add_pickup_text(self, text, x, y):
         """Add a pickup text that floats upward and fades out."""

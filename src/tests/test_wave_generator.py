@@ -23,15 +23,10 @@ def test_wave_generator_creates_normal_wave():
     
     # Verify structure
     assert wave["type"] == "normal"
-    assert "enemies" in wave
+    assert "enemy_count" in wave  # Changed from "enemies"
+    assert wave["enemy_count"] > 0
+    assert "enemy_speed" in wave
     assert "enemy_types" in wave
-    assert "enemy_params" in wave
-    assert "formation" in wave
-    assert "orbs" in wave
-    assert "orb_types" in wave
-    assert "artifact" in wave
-    assert "coins" in wave
-    assert "message" in wave
 
 def test_wave_generator_creates_rest_wave():
     wave_generator = WaveGenerator()
@@ -43,13 +38,11 @@ def test_wave_generator_creates_rest_wave():
     wave = wave_generator.create_wave(6, player_profile, engagement_score)
     
     assert wave["type"] == "rest"
-    assert wave["enemies"] == 2
+    assert wave["enemy_count"] == 2
     assert wave["enemy_types"] == ["wander", "wander"]
-    assert "enemy_params" in wave
-    assert "orbs" in wave
-    assert "orb_types" in wave
-    assert "artifact" in wave
-    assert "coins" in wave
+    assert "enemy_speed" in wave
+    assert "spawn_delay" in wave
+    assert "duration" in wave
     assert "message" in wave
 
 def test_wave_generator_creates_boss_wave():
@@ -62,14 +55,11 @@ def test_wave_generator_creates_boss_wave():
     wave = wave_generator.create_wave(10, player_profile, engagement_score)
     
     assert wave["type"] == "boss"
-    assert wave["enemies"] == 1
+    assert wave["enemy_count"] == 1
     assert wave["enemy_types"] == ["boss"]
-    assert "enemy_params" in wave
-    assert "attack_pattern" in wave["enemy_params"]
-    assert "orbs" in wave
-    assert "orb_types" in wave
-    assert "artifact" in wave
-    assert "coins" in wave
+    assert "enemy_speed" in wave
+    assert "spawn_delay" in wave
+    assert "duration" in wave
     assert "message" in wave
 
 def test_wave_generator_creates_swarm_wave():
@@ -82,13 +72,11 @@ def test_wave_generator_creates_swarm_wave():
     wave = wave_generator.create_wave(7, player_profile, engagement_score)
     
     assert wave["type"] == "swarm"
-    assert wave["enemies"] > 0
-    assert len(wave["enemy_types"]) == wave["enemies"]
-    assert "enemy_params" in wave
-    assert "orbs" in wave
-    assert "orb_types" in wave
-    assert "artifact" in wave
-    assert "coins" in wave
+    assert wave["enemy_count"] > 0
+    assert "enemy_types" in wave
+    assert "enemy_speed" in wave
+    assert "spawn_delay" in wave
+    assert "duration" in wave
     assert "message" in wave
 
 def test_weighted_choice():

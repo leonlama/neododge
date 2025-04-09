@@ -121,6 +121,9 @@ class Player(arcade.Sprite):
         # Dash effect
         self.dash_particles = []
 
+        # Collision radius for more accurate collision detection
+        self.collision_radius = 10  # Adjust as needed
+
         # Load textures
         self._load_textures()
 
@@ -145,6 +148,10 @@ class Player(arcade.Sprite):
         """
         # Update status effects
         self.status_effects.update(delta_time)
+
+        # Update position based on velocity
+        self.center_x += self.change_x * self.speed_multiplier
+        self.center_y += self.change_y * self.speed_multiplier
 
         # Update dash cooldown
         if not self.can_dash:
@@ -190,10 +197,32 @@ class Player(arcade.Sprite):
                     self.center_y += dy * delta_time
 
         # Update speed buff timer
-        if self.speed_buff_timer > 0:
-            self.speed_buff_timer -= delta_time
-            if self.speed_buff_timer <= 0:
+        if hasattr(self, 'speed_boost_timer') and self.speed_boost_timer > 0:
+            self.speed_boost_timer -= delta_time
+            if self.speed_boost_timer <= 0:
                 self.speed_multiplier = 1.0
+                print("Speed boost expired")
+
+        # Update slow timer
+        if hasattr(self, 'slow_timer') and self.slow_timer > 0:
+            self.slow_timer -= delta_time
+            if self.slow_timer <= 0:
+                self.speed_multiplier = 1.0
+                print("Slow effect expired")
+
+        # Update shield timer
+        if hasattr(self, 'shield_timer') and self.shield_timer > 0:
+            self.shield_timer -= delta_time
+            if self.shield_timer <= 0:
+                self.has_shield = False
+                print("Shield expired")
+
+        # Update invincibility timer
+        if hasattr(self, 'invincibility_timer') and self.invincibility_timer > 0:
+            self.invincibility_timer -= delta_time
+            if self.invincibility_timer <= 0:
+                self.is_invincible = False
+                print("Invincibility expired")
 
         # Update invincibility
         if self.invincible:
@@ -211,12 +240,6 @@ class Player(arcade.Sprite):
                 self.invincibility_timer = 0
                 self.alpha = 255  # Restore full opacity
                 self.damage_sound_cooldown = False  # Reset sound cooldown
-
-        # Update shield timer
-        if self.shield_active:
-            self.shield_timer -= delta_time
-            if self.shield_timer <= 0:
-                self.shield_active = False
 
         # Keep player on screen
         self.center_x = max(0, min(self.center_x, arcade.get_window().width))

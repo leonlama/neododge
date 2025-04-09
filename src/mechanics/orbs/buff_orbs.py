@@ -21,19 +21,39 @@ class BuffOrb(Orb):
         self.scale = get_scale('orb')
 
     def set_texture(self):
-        """Set the texture based on orb type."""
-        # Get texture from skin manager based on orb type
-        texture_name = self.get_texture_name()
-        self.texture = skin_manager.get_texture("orbs", texture_name)
+        """Set the texture for this orb."""
+        from src.skins.skin_manager import skin_manager
 
-        # If no texture found, create a default one
-        if not self.texture:
-            # Use make_soft_circle_texture instead of make_circle_texture with soft=True
-            # Using a neutral color for fallback to avoid visual tinting
-            self.texture = arcade.make_soft_circle_texture(
-                32, 
-                arcade.color.WHITE
-            )
+        # Map orb types to texture names
+        texture_map = {
+            "speed": "speed",
+            "shield": "shield",
+            #"vision": "vision",  # Assuming this is the closest match
+            "slow": "slow",
+            #"hitbox": "hitbox",  # Assuming this is the closest match
+            "cooldown": "cooldown",
+            "multiplier": "multiplier"
+        }
+
+        # Get the texture name from the map, or use the orb type if not found
+        texture_name = texture_map.get(self.orb_type, self.orb_type)
+
+        # Try to get the texture
+        texture = skin_manager.get_texture("orbs", texture_name)
+
+        # If texture not found, try fallback options
+        if texture is None:
+            # Create a simple colored circle texture
+            color = (0, 255, 0)  # Green for buff
+
+            # Create a texture
+            import arcade
+            texture = arcade.make_circle_texture(30, color)
+
+            print(f"Created fallback texture for {self.orb_type} orb")
+
+        # Set the texture
+        self.texture = texture
 
     def get_texture_name(self):
         """Get the texture name based on orb type."""
