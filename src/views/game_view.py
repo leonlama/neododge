@@ -236,7 +236,9 @@ class NeododgeGame(arcade.View):
         if hasattr(self, 'background') and self.background:
             self.background.draw()
 
-        # Draw game elements
+        # Use game camera for game elements
+        self.camera.use()
+
         try:
             # Draw player
             if hasattr(self, 'player') and self.player:
@@ -262,6 +264,13 @@ class NeododgeGame(arcade.View):
             for enemy in self.enemies:
                 if hasattr(enemy, 'bullets'):
                     enemy.bullets.draw()
+
+            # Use GUI camera for UI elements
+            self.gui_camera.use()
+
+            # Draw player status effects
+            if hasattr(self, 'player') and self.player:
+                self.player.draw_effects(self.window.width, self.window.height)
 
             # Draw HUD
             try:
@@ -619,35 +628,42 @@ class NeododgeGame(arcade.View):
                 self.add_pickup_text("Coin collected!", self.player.center_x, self.player.center_y)
 
         # Player-Orb collisions
-        orb_hit_list = arcade.check_for_collision_with_list(self.player, self.orbs)
-        for orb in orb_hit_list:
-            # Store the message before removing the orb
-            message = getattr(orb, 'message', "Orb collected!")
+        for orb in list(self.orbs):  # Use list() to allow removal during iteration
+            if arcade.check_for_collision(self.player, orb):
+                # Get orb type and message
+                orb_type = getattr(orb, 'orb_type', "unknown")
+                message = getattr(orb, 'message', "Orb collected!")
+                print(f"Player collided with orb of type: {orb_type}")
 
-            # Determine if it's a buff or debuff orb
-            is_buff = isinstance(orb, BuffOrb) if 'BuffOrb' in globals() else 'buff' in str(orb.__class__).lower()
+                # Determine if it's a buff or debuff orb
+                is_buff = isinstance(orb, BuffOrb) if 'BuffOrb' in globals() else 'buff' in str(orb.__class__).lower()
 
-            # Remove the orb
-            orb.remove_from_sprite_lists()
+                # Apply the orb effect
+                try:
+                    if hasattr(orb, 'apply_effect'):
+                        orb.apply_effect(self.player)
+                        print(f"Applied orb effect: {orb_type}")
 
-            try:
-                # Try to apply the effect
-                if hasattr(orb, 'apply_effect'):
-                    orb.apply_effect(self.player)
+                        # Check if effect was added
+                        if hasattr(self.player, 'status_effects'):
+                            print(f"Player status effects: {list(self.player.status_effects.effects.keys())}")
 
-                # Play appropriate sound
-                if is_buff:
-                    self.play_buff_sound()
-                else:
-                    self.play_debuff_sound()
+                    # Remove the orb
+                    orb.remove_from_sprite_lists()
 
-                # Add pickup text
-                if hasattr(self, 'add_pickup_text'):
-                    self.add_pickup_text(message, self.player.center_x, self.player.center_y)
-                elif hasattr(self, 'pickup_texts'):
-                    self.pickup_texts.append([message, self.player.center_x, self.player.center_y, 1.0])
-            except Exception as e:
-                print(f"Error applying orb effect: {e}")
+                    # Play appropriate sound
+                    if is_buff:
+                        self.play_buff_sound()
+                    else:
+                        self.play_debuff_sound()
+
+                    # Add pickup text
+                    if hasattr(self, 'add_pickup_text'):
+                        self.add_pickup_text(message, self.player.center_x, self.player.center_y)
+                    elif hasattr(self, 'pickup_texts'):
+                        self.pickup_texts.append([message, self.player.center_x, self.player.center_y, 1.0])
+                except Exception as e:
+                    print(f"Error applying orb effect: {e}")
 
         # Player-Artifact collisions
         if hasattr(self, 'dash_artifact') and self.dash_artifact:

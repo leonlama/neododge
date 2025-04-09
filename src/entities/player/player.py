@@ -377,16 +377,20 @@ class Player(arcade.Sprite):
         # Use status effect manager to handle buffs
         self.status_effects.add_effect(buff_type, duration=duration, value=value)
 
-    def add_orb_effect(self, orb_type, duration, value=None, is_percentage=True):
-        """Add an orb effect to the player
-        
-        Args:
-            orb_type: Type of orb effect to apply
-            duration: Duration of the effect in seconds
-            value: Optional value for the effect
-            is_percentage: Whether the value is a percentage (default: True)
-        """
-        self.status_effects.add_effect(orb_type, duration, value, is_percentage)
+    def add_orb_effect(self, orb_type, duration):
+        """Add an orb effect to the player."""
+        print(f"Player.add_orb_effect called with: {orb_type}, {duration}")
+
+        # Make sure status_effects exists
+        if not hasattr(self, 'status_effects'):
+            print("Creating status_effects manager")
+            from src.entities.player.status_effects import StatusEffectManager
+            self.status_effects = StatusEffectManager(self)
+
+        # Add the effect
+        success = self.status_effects.add_effect(orb_type, duration)
+        print(f"Effect added to player: {success}, active effects: {list(self.status_effects.effects.keys())}")
+        return success
 
     def draw_hearts(self):
         """Draw the player's health as hearts."""
@@ -444,4 +448,5 @@ class Player(arcade.Sprite):
 
     def draw_effects(self, screen_width, screen_height):
         """Draw status effect indicators."""
-        self.status_effects.draw_effect_indicators(screen_width, screen_height)
+        if hasattr(self, 'status_effects'):
+            self.status_effects.draw_effect_indicators(screen_width, screen_height)

@@ -126,7 +126,6 @@ class HitboxEffect(StatusEffect):
         player.hitbox_multiplier = 1.0
         player.update_hitbox()
 
-
 class StatusEffectManager:
     """Manages player status effects."""
 
@@ -149,54 +148,30 @@ class StatusEffectManager:
             if texture:
                 self.icon_textures[effect_type] = texture
 
-    def add_effect(self, effect_type, duration=None, value=None, is_percentage=True):
-        """Add a status effect to the player.
+    def add_effect(self, effect_type, duration=None, **kwargs):
+        """Add a status effect to the player."""
+        print(f"StatusEffectManager.add_effect called with: {effect_type}, {duration}, {kwargs}")
 
-        Args:
-            effect_type (str): The type of effect to add
-            duration (float, optional): Duration of the effect in seconds
-            **kwargs: Additional parameters for specific effect types
-        """
         # Create the effect based on type
         effect = None
 
-        if effect_type.startswith("speed_"):
-            # Extract speed value from effect_type (e.g., "speed_10" -> 10% speed increase)
-            try:
-                speed_value = int(effect_type.split('_')[1])
-                effect = SpeedEffect(duration or 5.0, speed_value)
-            except:
-                effect = SpeedEffect(duration or 5.0, 20)  # Default 20% boost
-
+        if effect_type == "speed":
+            effect = SpeedEffect(duration or 5.0, 20)  # 20% speed boost
         elif effect_type == "shield":
             effect = ShieldEffect(duration or 5.0)
-
-        elif effect_type.startswith("mult_"):
-            # Extract multiplier value from effect_type
-            try:
-                mult_parts = effect_type.split('_')
-                if len(mult_parts) > 2:
-                    # Handle format like "mult_1_5" (1.5x)
-                    mult_value = float(f"{mult_parts[1]}.{mult_parts[2]}")
-                else:
-                    # Direct value format
-                    mult_value = float(mult_parts[1]) / 100 + 1.0
-
-                effect = MultiplierEffect(duration or 5.0, mult_value)
-            except:
-                effect = MultiplierEffect(duration or 5.0, 1.5)  # Default 1.5x
-
+        elif effect_type == "multiplier":
+            effect = MultiplierEffect(duration or 5.0, 1.5)  # 1.5x multiplier
         elif effect_type == "slow":
             effect = SlowEffect(duration or 5.0)
-
         elif effect_type == "vision":
             effect = VisionEffect(duration or 5.0)
-
         elif effect_type == "hitbox":
             effect = HitboxEffect(duration or 5.0)
 
         # If we created an effect, apply and store it
         if effect:
+            print(f"Created effect: {effect_type}")
+
             # If this effect already exists, remove it first
             if effect_type in self.effects:
                 old_effect = self.effects[effect_type]
@@ -214,8 +189,10 @@ class StatusEffectManager:
             # Store the effect
             self.effects[effect_type] = effect
 
+            print(f"Active effects after adding: {list(self.effects.keys())}")
             return True
 
+        print(f"Failed to create effect for type: {effect_type}")
         return False
 
     def update(self, delta_time):
@@ -233,6 +210,9 @@ class StatusEffectManager:
 
     def draw_effect_indicators(self, screen_width, screen_height):
         """Draw status effect indicators on screen."""
+        # Add debug print
+        print(f"Drawing effects: {list(self.effects.keys())}")
+
         if not self.effects:
             return
 

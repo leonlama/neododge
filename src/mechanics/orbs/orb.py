@@ -71,20 +71,31 @@ class Orb(arcade.Sprite):
 
     def apply_effect(self, player):
         """Apply orb effect to the player."""
-        if self.orb_type == "speed":
-            player.speed_multiplier = 1.5
-            player.speed_boost_timer = self.effect_duration
-        elif self.orb_type == "shield":
-            player.has_shield = True
-            player.shield_timer = self.effect_duration
-        elif self.orb_type == "invincibility":
-            player.is_invincible = True
-            player.invincibility_timer = self.effect_duration
-        elif self.orb_type == "slow":
-            player.speed_multiplier = 0.5
-            player.slow_timer = self.effect_duration
-        elif self.orb_type == "damage":
-            player.take_damage(1)
+        print(f"Applying {self.orb_type} effect with duration {self.effect_duration}")
+
+        # Add debug to check if player has status_effects
+        if hasattr(player, 'status_effects'):
+            print(f"Player has status_effects attribute")
+            # Try to add the effect
+            success = player.status_effects.add_effect(self.orb_type, self.effect_duration)
+            print(f"Effect added successfully: {success}")
+        else:
+            print(f"Player missing status_effects attribute!")
+            # Fall back to legacy implementation
+            if self.orb_type == "speed":
+                player.speed_multiplier = 1.5
+                player.speed_boost_timer = self.effect_duration
+            elif self.orb_type == "shield":
+                player.has_shield = True
+                player.shield_timer = self.effect_duration
+            elif self.orb_type == "invincibility":
+                player.is_invincible = True
+                player.invincibility_timer = self.effect_duration
+            elif self.orb_type == "slow":
+                player.speed_multiplier = 0.5
+                player.slow_timer = self.effect_duration
+            elif self.orb_type == "damage":
+                player.take_damage(1)
 
     @classmethod
     def get_orb_types_by_category(cls, category):
