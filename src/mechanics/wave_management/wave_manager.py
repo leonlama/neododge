@@ -45,14 +45,18 @@ class WaveManager:
         }
     }
 
-    def __init__(self, game_view=None):
+    def __init__(self, wave_generator, on_spawn_enemy, analytics=None):
         """Initialize the wave manager.
 
         Args:
-            game_view: The game view that this wave manager is associated with.
+            wave_generator: The wave generator to use for creating waves.
+            on_spawn_enemy: Callback function for spawning enemies.
+            analytics: Optional analytics object for tracking wave data.
         """
-        self.game_view = game_view
-        self.wave_generator = WaveGenerator()
+        self.wave_generator = wave_generator
+        self.on_spawn_enemy = on_spawn_enemy
+        self.wave_analytics = analytics
+        self.game_view = None
         self.current_wave = 0
         self.wave_timer = 0
         self.wave_duration = 45  # Default duration
@@ -65,9 +69,9 @@ class WaveManager:
         self.current_config = None  # Add this line to fix the attribute error
 
         # Callbacks
-        self.on_spawn_enemy = None
         self.on_clear_enemies = None
         self.on_wave_complete = None
+        self.callbacks = {}
 
         # Player data
         self.player_profile = {
@@ -82,11 +86,6 @@ class WaveManager:
         # Wave progression
         self.waves_until_boss = random.randint(8, 12)
         self.wave_history = []
-        self.wave_analytics = None  # Will be initialized if analytics module is available
-
-        # Set up callbacks if game_view is provided
-        if game_view:
-            self._setup_callbacks()
 
     def _setup_callbacks(self):
         """Set up callbacks based on the game_view."""

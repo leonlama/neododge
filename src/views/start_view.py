@@ -5,6 +5,7 @@ from src.core.resource_manager import load_texture, load_sound
 from src.views.game_view import NeododgeGame
 from src.skins.skin_manager import skin_manager
 import pyglet.media
+from src.views.game.setup import setup_game
 
 class StartView(arcade.View):
     def __init__(self):
@@ -206,5 +207,5 @@ class StartView(arcade.View):
             arcade.stop_sound(self.music_player)
             
         game_view = NeododgeGame()
-        game_view.setup()
+        setup_game(game_view)
         self.window.show_view(game_view)

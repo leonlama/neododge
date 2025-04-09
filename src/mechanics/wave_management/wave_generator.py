@@ -6,8 +6,9 @@ from src.mechanics.wave_management.formation_generator import FormationGenerator
 class WaveGenerator:
     """Generates wave configurations based on wave number and player profile."""
 
-    def __init__(self):
+    def __init__(self, wave_analytics):
         """Initialize the wave generator."""
+        self.wave_analytics = wave_analytics
         self.formation_generator = FormationGenerator()
         self.difficulty_adjuster = DifficultyAdjuster()
 
