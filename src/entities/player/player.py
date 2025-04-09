@@ -22,6 +22,7 @@ class Player(arcade.Sprite):
         # Initialize target position
         self.target_x = None
         self.target_y = None
+        self.target_speed_factor = 1.0
 
         # Initialize health and hearts
         self.health = 3
@@ -198,8 +199,8 @@ class Player(arcade.Sprite):
         dx /= distance
         dy /= distance
 
-        # Set velocity based on speed
-        actual_speed = getattr(self, 'speed', 5.0) * getattr(self, 'speed_multiplier', 1.0)
+        # Set velocity based on speed and target_speed_factor
+        actual_speed = getattr(self, 'speed', 5.0) * getattr(self, 'speed_multiplier', 1.0) * self.target_speed_factor
         self.change_x = dx * actual_speed
         self.change_y = dy * actual_speed
 
@@ -261,10 +262,11 @@ class Player(arcade.Sprite):
             "value": value
         })
 
-    def set_target(self, x, y):
+    def set_target(self, x, y, speed_factor=1.0):
         """Set a new movement target"""
         self.target_x = x
         self.target_y = y
+        self.target_speed_factor = speed_factor
         self.is_moving = True
 
         # Log only when target is set, not every frame

@@ -11,6 +11,22 @@ from src.mechanics.wave_management.wave_manager import WaveManager
 
 def setup_game(game_view):
         """Set up the game."""
+        # Import spawn methods
+        from src.views.game.spawn_logic import (
+            spawn_enemy,
+            clear_enemies,
+            spawn_artifact,
+            spawn_orbs,
+            spawn_coin,
+        )
+        
+        # Bind spawn methods to game_view
+        game_view.spawn_enemy = lambda *args, **kwargs: spawn_enemy(game_view, *args, **kwargs)
+        game_view.clear_enemies = lambda *args, **kwargs: clear_enemies(game_view, *args, **kwargs)
+        game_view.spawn_artifact = lambda *args, **kwargs: spawn_artifact(game_view, *args, **kwargs)
+        game_view.spawn_orbs = lambda *args, **kwargs: spawn_orbs(game_view, *args, **kwargs)
+        game_view.spawn_coin = lambda *args, **kwargs: spawn_coin(game_view, *args, **kwargs)
+        
         # Create sprite lists
         game_view.enemies = arcade.SpriteList()
         game_view.orbs = arcade.SpriteList()
@@ -80,6 +96,22 @@ def setup_game(game_view):
         # Initialize game controller
         game_view.game_controller = GameController(game_view, game_view.window.width, game_view.window.height)
 
+        # Import audio functions
+        from src.views.game.audio_logic import (
+            play_coin_sound,
+            play_buff_sound,
+            play_debuff_sound,
+            play_damage_sound,
+            setup_sounds,
+        )
+
+        # Bind audio logic
+        game_view.play_coin_sound = lambda: play_coin_sound(game_view)
+        game_view.play_buff_sound = lambda: play_buff_sound(game_view)
+        game_view.play_debuff_sound = lambda: play_debuff_sound(game_view)
+        game_view.play_damage_sound = lambda: play_damage_sound(game_view)
+        game_view.setup_sounds = lambda: setup_sounds(game_view)
+
         # Load sounds using sound manager
         game_view.setup_sounds()
 
@@ -102,7 +134,7 @@ def setup_wave_manager(game_view):
     # Set game view reference
     game_view.wave_manager.game_view = game_view
     
-    # Set callbacks
+    # Set callbacks directly using bound methods
     game_view.wave_manager.on_spawn_enemy = game_view.spawn_enemy
     game_view.wave_manager.on_clear_enemies = game_view.clear_enemies
 

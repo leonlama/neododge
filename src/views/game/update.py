@@ -6,6 +6,7 @@ from src.views.game.orb_logic import (
     spawn_orbs, spawn_orb, check_orb_collisions, apply_orb_effect
 )
 from src.views.game.artifact_logic import update_artifacts
+from src.views.game.wave_logic import update_wave_message
 
 def update_game(delta_time, game_view):
     # Basic logic
@@ -28,6 +29,9 @@ def update_game(delta_time, game_view):
 
     # Artifact system
     update_artifacts(game_view, delta_time)
+
+    # Wave message
+    update_wave_message(game_view, delta_time)
 
     # Scoring
     game_view.score += 1 * getattr(game_view, 'score_multiplier', 1) * delta_time
