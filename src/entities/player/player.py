@@ -544,6 +544,10 @@ class Player(arcade.Sprite):
                 num_segments=8
             )
 
+    def heal(self, amount: float):
+        """Heal the player by the specified amount, up to the maximum heart slots."""
+        self.current_hearts = min(self.current_hearts + amount, self.max_slots)
+    
     def draw_effects(self, screen_width, screen_height):
         """Draw status effect indicators."""
         if hasattr(self, 'status_effects'):

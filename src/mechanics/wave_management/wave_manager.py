@@ -170,10 +170,12 @@ class WaveManager:
         # Select formation
         formation = random.choice(type_config["formations"])
 
-        # Calculate orb count - ensure at least 2 orbs per wave
-        orb_count = max(2, int(base_orb_count * type_config["orb_count_multiplier"]))
-        # Also ensure orbs scale with enemy count
-        orb_count = max(orb_count, enemy_count // 2)
+        # Calculate orb count - ensure at least 2 orbs per wave (except for waves 1 and 2)
+        orb_count = 0
+        if self.current_wave > 2:  # No orbs in waves 1 and 2
+            orb_count = max(2, int(base_orb_count * type_config["orb_count_multiplier"]))
+            # Also ensure orbs scale with enemy count
+            orb_count = max(orb_count, enemy_count // 2)
 
         # Configure wave
         config = {
@@ -284,11 +286,8 @@ class WaveManager:
         # Reset timers
         self.spawn_timer = 0
         
-        # Ensure minimum number of orbs per wave
-        config['orb_count'] = max(2, config['orb_count'])
-        
-        # Spawn orbs for this wave using callback
-        if self.on_spawn_orbs:
+        # Spawn orbs for this wave using callback (only if orb_count > 0)
+        if self.on_spawn_orbs and config['orb_count'] > 0:
             self.on_spawn_orbs(count=config['orb_count'], orb_types=config['orb_types'])
         # Fallback to direct spawning if callback not set
         elif hasattr(self, 'game_view') and config['orb_count'] > 0:

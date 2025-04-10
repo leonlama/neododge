@@ -24,32 +24,29 @@ def test_game_view_spawn_enemy():
     game_view.enemies = arcade.SpriteList()
     game_view.all_sprites = arcade.SpriteList()
     
-    # Bind spawn_enemy to game_view
-    game_view.spawn_enemy = lambda *args, **kwargs: spawn_enemy(game_view, *args, **kwargs)
-
-    # Patch the spawn_enemy function
-    with patch('src.views.game.spawn_logic.spawn_enemy', wraps=lambda game_view, enemy_type, position, speed=1.0, health=1.0: None) as mock_spawn_enemy:
-        # Mock all possible enemy types that might be used
-        with patch('src.entities.enemies.chaser.Chaser') as MockChaser, \
-             patch('src.entities.enemies.wanderer.Wanderer') as MockWanderer, \
-             patch('src.entities.enemies.enemy.Enemy') as MockBasicEnemy:
-            
-            # Set up the mock for the enemy type we expect to be called
-            mock_enemy = MagicMock()
-            MockBasicEnemy.return_value = mock_enemy
-            
-            # Add the enemy to the sprite lists when spawn_enemy is called
+    # Mock all possible enemy types that might be used
+    with patch('src.entities.enemies.chaser.Chaser') as MockChaser, \
+         patch('src.entities.enemies.wanderer.Wanderer') as MockWanderer, \
+         patch('src.entities.enemies.enemy.Enemy') as MockBasicEnemy:
+        
+        # Set up the mock for the enemy type we expect to be called
+        mock_enemy = MagicMock()
+        MockBasicEnemy.return_value = mock_enemy
+        
+        # Patch the spawn_enemy function directly in the module where it's imported from
+        with patch('src.views.game.spawn_logic.spawn_enemy') as mock_spawn_enemy:
+            # Set up the side effect to add the enemy to sprite lists
             def side_effect(game_view, enemy_type, position, speed=1.0, health=1.0):
                 if enemy_type == "basic":
-                    enemy = MockBasicEnemy(position[0], position[1])
+                    enemy = MockBasicEnemy()
                     game_view.enemies.append(enemy)
                     game_view.all_sprites.append(enemy)
                     return enemy
             
             mock_spawn_enemy.side_effect = side_effect
             
-            # Call spawn_enemy with "basic" type
-            game_view.spawn_enemy("basic", (100, 200), 1.5, 2.0)
+            # Call spawn_enemy directly from the patched module
+            spawn_enemy(game_view, "basic", (100, 200), 1.5, 2.0)
             
             # Check that the mock spawn_enemy was called with correct parameters
             mock_spawn_enemy.assert_called_once_with(game_view, "basic", (100, 200), 1.5, 2.0)

@@ -3,7 +3,7 @@ def update_wave_message(game_view, delta_time):
     if hasattr(game_view, 'wave_message_timer') and game_view.wave_message_timer > 0:
         game_view.wave_message_timer -= delta_time
         
-        # Display for 2.5 seconds, then fade out for 1 second
+        # Display for 4 seconds, then fade out for 1 second
         if game_view.wave_message_timer <= 0:
             game_view.wave_message = None
             game_view.wave_message_timer = 0
@@ -18,4 +18,4 @@ def update_wave_message(game_view, delta_time):
             # Use Kenny Pixel Square font
             game_view.wave_message_font = "kenney_pixel_square"
             game_view.wave_message_alpha = 255
-            game_view.wave_message_timer = 3.5  # 2.5s display + 1s fade
+            game_view.wave_message_timer = 5  # 4s display + 1s fade

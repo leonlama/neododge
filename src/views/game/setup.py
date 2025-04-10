@@ -34,6 +34,15 @@ def setup_game(game_view):
         game_view.artifacts = arcade.SpriteList()
         game_view.bullets = arcade.SpriteList()
 
+        # Initialize scene for sprite management
+        game_view.scene = arcade.Scene()
+        game_view.scene.add_sprite_list("enemies", sprite_list=game_view.enemies)
+        game_view.scene.add_sprite_list("orbs", sprite_list=game_view.orbs)
+        game_view.scene.add_sprite_list("coins", sprite_list=game_view.coins)
+        game_view.scene.add_sprite_list("artifacts", sprite_list=game_view.artifacts)
+        game_view.scene.add_sprite_list("bullets", sprite_list=game_view.bullets)
+        game_view.scene.add_sprite_list("player")
+
         # Initialize mouse state
         game_view.left_mouse_down = False
         game_view.right_mouse_down = False
@@ -44,6 +53,7 @@ def setup_game(game_view):
         game_view.player = Player(game_view.window.width // 2, game_view.window.height // 2)
         game_view.player.window = game_view.window
         game_view.player.parent_view = game_view
+        game_view.scene.add_sprite("player", game_view.player)
         
         # Load heart textures from skin manager
         game_view.heart_textures = {

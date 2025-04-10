@@ -149,7 +149,7 @@ def draw_wave_message(text: str, alpha: float):
         font_size=28,
         anchor_x="center",
         anchor_y="center",
-        font_name="Kenney Mini Square"
+        font_name="Kenney Pixel"  # Changed to a more delicate font
     )
     label.draw()
 

@@ -1,35 +1,40 @@
 from .base import BaseArtifact
 from src.skins.skin_manager import skin_manager
+from src.core.scaling import get_scale
 
 class BulletTimeArtifact(BaseArtifact):
-    def __init__(self, x, y):
-        super().__init__("bullet_time")
-        self.center_x = x
-        self.center_y = y
-        self.name = "Bullet Time"
-        self.cooldown = 10.0
-        self.cooldown_timer = self.cooldown
+    def __init__(self, position_x, position_y):
+        super().__init__(artifact_id="bullet_time", position_x=position_x, position_y=position_y, name="Bullet Time")
+        self.cooldown_max = 10.0  # Override default cooldown
+        self.cooldown_timer = 0.0  # Start ready to use
         
-    def update_texture(self):
-        """Update the texture based on current skin settings"""
-        self.texture = skin_manager.get_texture("artifacts", "bullet_time", force_reload=True)
-        self.scale = skin_manager.get_artifact_scale()
+        # Load initial texture
+        self._load_texture()
+        
+    def _load_texture(self):
+        """Load the artifact texture"""
+        self.texture = skin_manager.get_texture("artifacts", "bullet_time", force_reload=False)
+        self.scale = get_scale('artifact')
 
-    def apply_effect(self, player, enemies):
-        if self.cooldown_timer >= self.cooldown:
-            for enemy in enemies:
-                for bullet in enemy.bullets:
-                    bullet.change_x *= 0.5
-                    bullet.change_y *= 0.5
-            self.cooldown_timer = 0
+    def apply_effect(self, player, game_state):
+        """Apply bullet time effect to the game"""
+        if self.is_ready():
+            if game_state and hasattr(game_state, "enemies"):
+                for enemy in game_state.enemies:
+                    if hasattr(enemy, "bullets"):
+                        for bullet in enemy.bullets:
+                            bullet.change_x *= 0.5
+                            bullet.change_y *= 0.5
+            
+            # Set cooldown
+            self.cooldown_timer = self.cooldown_max
             print("⏱️ Bullet Time used!")
+            return True
         else:
             print("❌ Bullet Time on cooldown.")
+            return False
 
     def update(self, delta_time):
-        if self.cooldown_timer < self.cooldown:
-            self.cooldown_timer += delta_time
-        
-        # Update texture each frame to ensure current skin is used
-        self.update_texture()
-
+        """Update the artifact state"""
+        # Call parent update to handle cooldown
+        super().update(delta_time)

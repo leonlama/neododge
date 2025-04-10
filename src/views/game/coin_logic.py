@@ -153,7 +153,7 @@ def spawn_wave_reward(game_view, wave_number):
             game_view.spawn_artifact()
 
         # Show a message
-        game_view.show_message(f"Wave {wave_number} Complete!")
+       # game_view.show_message(f"Wave {wave_number} Complete!")
 
         print(f"🎁 Spawned wave completion reward: {reward_coins} coins")
 

@@ -4,7 +4,11 @@ from src.mechanics.artifacts.dash_artifact import DashArtifact
 
 def update_artifacts(game_view, delta_time):
     for artifact in game_view.artifacts:
-        artifact.update()
+        if hasattr(artifact, "update"):
+            try:
+                artifact.update(delta_time)
+            except TypeError:
+                artifact.update()  # fallback
 
     if hasattr(game_view, 'artifact_spawn_timer'):
         game_view.artifact_spawn_timer -= delta_time

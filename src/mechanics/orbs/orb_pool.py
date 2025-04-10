@@ -38,7 +38,10 @@ def get_random_orb(x, y, context=None):
     """Get a random orb based on game context."""
     if context is None:
         context = {}
-
+        
+    # Check if there's a hint for specific orb type
+    hint = context.get("hint", None)
+    
     # Extract context variables with defaults
     wave_number = context.get('wave', 1)
     if isinstance(wave_number, dict):
@@ -48,6 +51,13 @@ def get_random_orb(x, y, context=None):
     player_health = context.get('player_health', 3)
     max_player_health = context.get('max_player_health', 3)
     score = context.get('score', 0)
+
+    # If hint is provided, use it to determine orb type
+    if hint:
+        if hint in BUFF_ORBS or hint.startswith(("speed", "mult", "cooldown", "shield", "health", "invincible", "score_2x")):
+            return get_random_buff_orb(x, y, context)
+        elif hint in DEBUFF_ORBS or hint.startswith(("slow", "reverse", "blind", "confusion", "vision", "hitbox", "score_0.5x")):
+            return get_random_debuff_orb(x, y, context)
 
     # Base chance for buff vs debuff
     base_buff_chance = 0.7
@@ -76,6 +86,9 @@ def get_random_buff_orb(x, y, context=None):
     """Get a random buff orb."""
     if context is None:
         context = {}
+        
+    # Check if there's a hint for specific orb type
+    hint = context.get("hint", None)
 
     # List of possible buff orbs with weights
     buff_types = {
@@ -95,12 +108,16 @@ def get_random_buff_orb(x, y, context=None):
         buff_types["health"] += 15
         buff_types["shield"] += 10
         buff_types["invincible"] += 5
-
-    # Choose a buff type based on weights
-    buff_type = random.choices(
-        list(buff_types.keys()),
-        weights=list(buff_types.values())
-    )[0]
+        
+    # If hint is provided and it's a valid buff type, use it
+    if hint and (hint in buff_types or hint.startswith(("speed", "mult", "cooldown", "shield"))):
+        buff_type = hint
+    else:
+        # Choose a buff type based on weights
+        buff_type = random.choices(
+            list(buff_types.keys()),
+            weights=list(buff_types.values())
+        )[0]
 
     # Create the orb
     from src.mechanics.orbs.buff_orbs import BuffOrb
@@ -110,6 +127,9 @@ def get_random_debuff_orb(x, y, context=None):
     """Get a random debuff orb."""
     if context is None:
         context = {}
+        
+    # Check if there's a hint for specific orb type
+    hint = context.get("hint", None)
 
     # List of possible debuff orbs with weights
     debuff_types = {
@@ -130,12 +150,16 @@ def get_random_debuff_orb(x, y, context=None):
         debuff_types["blind"] += 5
         debuff_types["confusion"] += 5
         debuff_types["score_0.5x"] += 5
-
-    # Choose a debuff type based on weights
-    debuff_type = random.choices(
-        list(debuff_types.keys()),
-        weights=list(debuff_types.values())
-    )[0]
+        
+    # If hint is provided and it's a valid debuff type, use it
+    if hint and (hint in debuff_types or hint.startswith(("slow", "vision", "hitbox"))):
+        debuff_type = hint
+    else:
+        # Choose a debuff type based on weights
+        debuff_type = random.choices(
+            list(debuff_types.keys()),
+            weights=list(debuff_types.values())
+        )[0]
 
     # Create the orb
     from src.mechanics.orbs.debuff_orbs import DebuffOrb

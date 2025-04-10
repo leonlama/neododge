@@ -6,19 +6,19 @@ def apply_orb_effect_to_player(player, orb):
     orb_type = orb.orb_type
 
     if "speed" in orb_type:
-        player.status_effects.apply_status("speed", duration=10)
+        player.status_effects.add_effect("speed", duration=10)
     elif "mult" in orb_type:
-        player.status_effects.apply_status("mult", duration=10)
+        player.status_effects.add_effect("mult", duration=10)
     elif "cooldown" in orb_type:
-        player.status_effects.apply_status("cooldown", duration=10)
+        player.status_effects.add_effect("cooldown", duration=10)
     elif orb_type == "shield":
-        player.status_effects.apply_status("shield", duration=10)
+        player.status_effects.add_effect("shield", duration=10)
     elif orb_type == "vision":
-        player.status_effects.apply_status("vision", duration=10)
+        player.status_effects.add_effect("vision", duration=10)
     elif orb_type == "hitbox":
-        player.status_effects.apply_status("hitbox", duration=10)
+        player.status_effects.add_effect("hitbox", duration=10)
     elif orb_type == "slow":
-        player.status_effects.apply_status("slow", duration=10)
+        player.status_effects.add_effect("slow", duration=10)
     elif orb_type == "health":
         player.heal(1)
     elif orb_type == "gray_heart":
@@ -126,7 +126,7 @@ def spawn_orbs(game_view, count, orb_types=None, min_distance_from_player=40):
 
             # Choose specific orb type based on category
             if orb_category == "buff":
-                orb_type = random.choice(["speed", "shield", "multiplier", "cooldown"])
+                orb_type = random.choice(["speed", "shield", "mult", "cooldown"])
             else:  # debuff
                 orb_type = random.choice(["slow", "vision", "hitbox"])
 

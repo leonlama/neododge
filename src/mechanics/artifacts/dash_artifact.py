@@ -14,7 +14,7 @@ class DashArtifact(BaseArtifact):
             position_x: X position of the artifact.
             position_y: Y position of the artifact.
         """
-        super().__init__(position_x, position_y, name="Dash")
+        super().__init__(artifact_id="dash", position_x=position_x, position_y=position_y, name="Dash")
 
         # Override default cooldown
         self.cooldown_max = 5.0
@@ -37,14 +37,29 @@ class DashArtifact(BaseArtifact):
         if self.dash_trail and len(self.dash_trail) > 0:
             self.dash_trail = []
 
-    def use(self):
-        """Use the artifact.
-
+    def apply_effect(self, player, game_state=None):
+        """Apply dash effect to the player.
+        
+        Args:
+            player: The player to apply the effect to.
+            game_state: The current game state (not used for dash).
+            
         Returns:
-            bool: True if the artifact was used, False otherwise.
+            bool: True if the effect was applied, False otherwise.
         """
-        if super().use():
-            # Dash-specific activation code here
+        if self.is_ready():
+            # Store current position for trail effect
+            start_pos = (player.center_x, player.center_y)
+            
+            # Apply dash to player
+            player.dash()
+            
+            # Store end position for trail effect
+            end_pos = (player.center_x, player.center_y)
+            self.dash_trail = [start_pos, end_pos]
+            
+            # Set cooldown
+            self.cooldown_timer = self.cooldown_max
             return True
         return False
         

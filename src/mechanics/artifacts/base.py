@@ -5,7 +5,7 @@ from src.core.scaling import get_scale
 class BaseArtifact(arcade.Sprite):
     """Base class for all artifacts in the game"""
 
-    def __init__(self, position_x=0, position_y=0, name="Artifact"):
+    def __init__(self, artifact_id=None, position_x=0, position_y=0, name="Artifact"):
         super().__init__()
 
         # Position
@@ -14,6 +14,7 @@ class BaseArtifact(arcade.Sprite):
 
         # Metadata
         self.name = name
+        self.artifact_id = artifact_id or name.lower().replace(" ", "_")
 
         # Cooldown system
         self.cooldown_max = 5.0  # Default cooldown time in seconds
@@ -32,8 +33,7 @@ class BaseArtifact(arcade.Sprite):
 
     def _load_texture(self):
         """Load the artifact texture"""
-        artifact_id = self.name.lower().replace(" ", "_")
-        self.texture = skin_manager.get_texture("artifacts", artifact_id)
+        self.texture = skin_manager.get_texture("artifacts", self.artifact_id)
 
         # Fallback texture if not found
         if not self.texture:

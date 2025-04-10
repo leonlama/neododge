@@ -273,10 +273,10 @@ class GameController:
             self.wave_timer = 0
 
             # Update wave message
-            if hasattr(self.game_view, 'wave_message'):
-                self.game_view.wave_message = f"Wave {getattr(wave_manager, 'wave', 1)} completed!"
-            if hasattr(self.game_view, 'wave_message_alpha'):
-                self.game_view.wave_message_alpha = 1.0
+            #if hasattr(self.game_view, 'wave_message'):
+                #self.game_view.wave_message = f"Wave {getattr(wave_manager, 'wave', 1)} completed!"
+            #if hasattr(self.game_view, 'wave_message_alpha'):
+                #self.game_view.wave_message_alpha = 1.0
 
             # Increment wave
             if wave_manager and hasattr(wave_manager, 'next_wave'):

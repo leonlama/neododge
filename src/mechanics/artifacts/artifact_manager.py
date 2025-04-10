@@ -1,15 +1,15 @@
 import arcade
 import random
+from src.mechanics.artifacts.base import BaseArtifact
 
-class Artifact(arcade.Sprite):
+class Artifact(BaseArtifact):
     def __init__(self, x, y, artifact_type="dash"):
-        super().__init__()
+        super().__init__(artifact_id=artifact_type, position_x=x, position_y=y, name=self._get_display_name(artifact_type))
         self.center_x = x
         self.center_y = y
         self.artifact_type = artifact_type
-        self.name = self._get_display_name()
-        self.cooldown = self._get_cooldown()
-        self.current_cooldown = 0
+        self.cooldown_max = self._get_cooldown()
+        self.cooldown_timer = 0
 
         # Set appearance
         self._set_appearance()
@@ -19,7 +19,7 @@ class Artifact(arcade.Sprite):
         color = arcade.color.GOLD
         self.texture = arcade.make_soft_square_texture(24, color, outer_alpha=255)
 
-    def _get_display_name(self):
+    def _get_display_name(self, artifact_type):
         """Get the display name for the artifact type."""
         names = {
             "dash": "Dash",
@@ -28,7 +28,7 @@ class Artifact(arcade.Sprite):
             "bullet_time": "Bullet Time",
             "clone": "Clone Dash"
         }
-        return names.get(self.artifact_type, self.artifact_type.title())
+        return names.get(artifact_type, artifact_type.title())
 
     def _get_cooldown(self):
         """Get the cooldown duration for the artifact type."""
@@ -43,7 +43,7 @@ class Artifact(arcade.Sprite):
 
     def activate(self, player, game_state=None):
         """Activate the artifact ability."""
-        if self.current_cooldown <= 0:
+        if self.is_ready():
             if self.artifact_type == "dash":
                 self._activate_dash(player)
             elif self.artifact_type == "magnet":
@@ -55,14 +55,13 @@ class Artifact(arcade.Sprite):
             elif self.artifact_type == "clone":
                 self._activate_clone(player)
 
-            self.current_cooldown = self.cooldown
+            self.cooldown_timer = self.cooldown_max
             return True
         return False
 
     def update(self, delta_time):
         """Update artifact cooldown."""
-        if self.current_cooldown > 0:
-            self.current_cooldown -= delta_time
+        super().update(delta_time)
 
     def _activate_dash(self, player):
         """Activate dash ability."""

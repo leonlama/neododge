@@ -25,10 +25,10 @@ def test_apply_orb_effect_triggers_correct_status(orb_type, expected_effect):
 
     apply_orb_effect_to_player(player, orb)
 
-    # ✅ Verify that apply_status was called with correct effect type
-    assert player.status_effects.apply_status.called, f"{orb_type} didn't call apply_status"
-    called_args = player.status_effects.apply_status.call_args[0][0]
-    assert expected_effect in called_args, f"Expected effect '{expected_effect}' not in '{called_args}'"
+    # ✅ Verify that add_effect was called with correct effect type
+    assert player.status_effects.add_effect.called, f"{orb_type} didn't call add_effect"
+    called_args = player.status_effects.add_effect.call_args[0][0]
+    assert expected_effect == called_args, f"Expected effect '{expected_effect}' not equal to '{called_args}'"
 
 @pytest.mark.parametrize("orb_type,expected_method", [
     ("health", "heal"),

@@ -107,7 +107,7 @@ class NeododgeGame(arcade.View):
         Args:
             wave_number (int): The completed wave number
         """
-        self.show_message(f"Wave {wave_number} Complete!")
+        #self.show_message(f"Wave {wave_number} Complete!")
         self.score += wave_number * 100  # Bonus points for completing a wave
         print(f"🌊 Wave {wave_number} completed! Score: {self.score}")
         
@@ -236,14 +236,20 @@ class NeododgeGame(arcade.View):
                 if hasattr(enemy, 'update'):
                     enemy.update(delta_time)
                     if hasattr(enemy, 'target'):
-                        print(f"[ENEMY] {enemy.__class__.__name__} update called. Target: {enemy.target}")
+                        #print(f"[ENEMY] {enemy.__class__.__name__} update called. Target: {enemy.target}")
+                        pass
         
         check_collisions(self)
         check_orb_collisions(self)
         update_enemy_bullets(self, delta_time)
         
-        if self.wave_time_remaining > 0:
+        # Update wave timer if it exists
+        if hasattr(self, 'wave_time_remaining') and self.wave_time_remaining > 0:
             self.wave_time_remaining -= delta_time
+            
+        # Update remaining time if it exists
+        if hasattr(self, 'remaining_time') and self.remaining_time > 0:
+            self.remaining_time -= delta_time
     
         
     def check_collisions(self):
